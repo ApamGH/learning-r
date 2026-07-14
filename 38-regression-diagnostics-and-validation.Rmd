@@ -1,0 +1,1395 @@
+---
+title: "Lesson 38: Regression Diagnostics, Model Validation and Reporting"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+A fitted regression model is not complete until its assumptions, stability and
+predictive performance have been assessed.
+
+Diagnostics examine whether:
+
+- the functional form is adequate;
+- residual variance is reasonably constant;
+- residual distribution is suitable for inference;
+- observations are independent;
+- individual records exert excessive influence;
+- predictors are collinear;
+- and predictions generalise beyond the fitted sample.
+
+This lesson combines residual diagnostics, influence analysis, validation and
+reporting.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. distinguish residuals, leverage and influence;
+2. inspect linearity;
+3. assess constant variance;
+4. assess residual normality;
+5. identify unusual residuals;
+6. calculate leverage;
+7. calculate Cook's distance;
+8. inspect DFBETAs;
+9. assess multicollinearity;
+10. compare ordinary and robust uncertainty conceptually;
+11. split data for validation;
+12. calculate prediction-error measures;
+13. perform k-fold cross-validation manually;
+14. assess model stability;
+15. create a diagnostic report; and
+16. write a complete regression-results section.
+
+# 1. Importing data and fitting a model
+
+```{r import-diagnostic-data}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+student_data$programme <- factor(
+  student_data$programme
+)
+
+diagnostic_model <- lm(
+  examination_score ~
+    coursework_score +
+    programme,
+  data = student_data
+)
+
+summary(
+  diagnostic_model
+)
+```
+
+# 2. Core diagnostic quantities
+
+```{r extract-diagnostic-quantities}
+fitted_values <- fitted(
+  diagnostic_model
+)
+
+raw_residuals <- residuals(
+  diagnostic_model
+)
+
+standardised_residuals <- rstandard(
+  diagnostic_model
+)
+
+studentised_residuals <- rstudent(
+  diagnostic_model
+)
+
+leverage_values <- hatvalues(
+  diagnostic_model
+)
+
+cooks_values <- cooks.distance(
+  diagnostic_model
+)
+```
+
+# 3. Diagnostic data frame
+
+```{r diagnostic-data-frame}
+diagnostic_output <- data.frame(
+  observation =
+    seq_len(
+      nobs(
+        diagnostic_model
+      )
+    ),
+  fitted =
+    fitted_values,
+  residual =
+    raw_residuals,
+  standardised_residual =
+    standardised_residuals,
+  studentised_residual =
+    studentised_residuals,
+  leverage =
+    leverage_values,
+  cooks_distance =
+    cooks_values
+)
+
+head(diagnostic_output)
+```
+
+# 4. Linearity assessment
+
+```{r diagnostic-linearity}
+plot(
+  fitted_values,
+  raw_residuals,
+  main = "Residuals versus Fitted Values",
+  xlab = "Fitted value",
+  ylab = "Residual",
+  pch = 19
+)
+
+abline(
+  h = 0,
+  lty = 2
+)
+
+lines(
+  lowess(
+    fitted_values,
+    raw_residuals
+  ),
+  lwd = 2
+)
+```
+
+Systematic curvature suggests functional-form inadequacy.
+
+# 5. Component-plus-residual concept
+
+For a continuous predictor, a partial-residual plot helps examine its adjusted
+functional form.
+
+```{r partial-residual-manual}
+coursework_coefficient <- coef(
+  diagnostic_model
+)[
+  "coursework_score"
+]
+
+partial_residual <-
+  raw_residuals +
+  coursework_coefficient *
+  student_data$coursework_score
+
+plot(
+  student_data$coursework_score,
+  partial_residual,
+  main = "Partial Residual Plot for Coursework",
+  xlab = "Coursework score",
+  ylab = "Partial residual",
+  pch = 19
+)
+
+lines(
+  lowess(
+    student_data$coursework_score,
+    partial_residual
+  ),
+  lwd = 2
+)
+```
+
+# 6. Constant-variance assessment
+
+```{r diagnostic-scale-location}
+plot(
+  fitted_values,
+  sqrt(
+    abs(
+      standardised_residuals
+    )
+  ),
+  main = "Scale-Location Plot",
+  xlab = "Fitted value",
+  ylab = "Square root of absolute standardised residual",
+  pch = 19
+)
+
+lines(
+  lowess(
+    fitted_values,
+    sqrt(
+      abs(
+        standardised_residuals
+      )
+    )
+  ),
+  lwd = 2
+)
+```
+
+A widening or narrowing pattern may indicate heteroskedasticity.
+
+# 7. Breusch-Pagan concept through auxiliary regression
+
+A simple teaching version regresses squared residuals on fitted values.
+
+```{r auxiliary-heteroskedasticity-test}
+auxiliary_model <- lm(
+  I(
+    raw_residuals ^ 2
+  ) ~ fitted_values
+)
+
+auxiliary_r_squared <- summary(
+  auxiliary_model
+)$r.squared
+
+lagrange_multiplier <- nobs(
+  diagnostic_model
+) * auxiliary_r_squared
+
+bp_p_value <- pchisq(
+  lagrange_multiplier,
+  df = 1,
+  lower.tail = FALSE
+)
+
+data.frame(
+  statistic =
+    lagrange_multiplier,
+  degrees_of_freedom = 1,
+  p_value =
+    bp_p_value
+)
+```
+
+This is pedagogical and not a complete replacement for established package
+implementations.
+
+# 8. Residual normality
+
+```{r diagnostic-residual-normality}
+hist(
+  raw_residuals,
+  main = "Residual Distribution",
+  xlab = "Residual"
+)
+
+qqnorm(
+  raw_residuals,
+  main = "Normal Q-Q Plot of Residuals"
+)
+
+qqline(
+  raw_residuals
+)
+
+shapiro.test(
+  raw_residuals
+)
+```
+
+Normality is most relevant to small-sample coefficient inference, not to the
+existence of the fitted line itself.
+
+# 9. Unusual residuals
+
+```{r unusual-residuals}
+unusual_residual_rows <- which(
+  abs(
+    studentised_residuals
+  ) > 2
+)
+
+diagnostic_output[
+  unusual_residual_rows,
+]
+```
+
+# 10. Leverage
+
+Leverage reflects unusual predictor combinations.
+
+A common screening value is:
+
+\[
+\frac{2p}{n},
+\]
+
+where \(p\) includes the intercept.
+
+```{r leverage-screen}
+number_parameters <- length(
+  coef(
+    diagnostic_model
+  )
+)
+
+leverage_cutoff <- 2 *
+  number_parameters /
+  nobs(
+    diagnostic_model
+  )
+
+high_leverage_rows <- which(
+  leverage_values >
+    leverage_cutoff
+)
+
+leverage_cutoff
+
+diagnostic_output[
+  high_leverage_rows,
+]
+```
+
+# 11. Cook's distance
+
+```{r cooks-screen}
+cooks_cutoff <- 4 /
+  nobs(
+    diagnostic_model
+  )
+
+influential_rows <- which(
+  cooks_values >
+    cooks_cutoff
+)
+
+cooks_cutoff
+
+diagnostic_output[
+  influential_rows,
+]
+```
+
+# 12. Influence plot
+
+```{r influence-plot-base}
+plot(
+  leverage_values,
+  studentised_residuals,
+  main = "Leverage and Studentised Residuals",
+  xlab = "Leverage",
+  ylab = "Studentised residual",
+  pch = 19,
+  cex = 1 +
+    5 *
+    sqrt(
+      cooks_values /
+      max(
+        cooks_values
+      )
+    )
+)
+
+abline(
+  h = c(
+    -2,
+    2
+  ),
+  lty = 2
+)
+
+abline(
+  v = leverage_cutoff,
+  lty = 2
+)
+```
+
+# 13. DFBETAs
+
+DFBETAs measure how much each coefficient changes when an observation is
+removed.
+
+```{r diagnostic-dfbetas}
+dfbeta_values <- dfbetas(
+  diagnostic_model
+)
+
+head(
+  dfbeta_values
+)
+```
+
+Screening:
+
+```{r dfbetas-screen}
+dfbeta_cutoff <- 2 /
+  sqrt(
+    nobs(
+      diagnostic_model
+    )
+  )
+
+dfbeta_flags <- apply(
+  abs(
+    dfbeta_values
+  ) >
+    dfbeta_cutoff,
+  1,
+  any
+)
+
+which(
+  dfbeta_flags
+)
+```
+
+# 14. Multicollinearity function
+
+```{r diagnostic-vif-function}
+calculate_vif <- function(
+  model
+) {
+  design <- model.matrix(
+    model
+  )
+
+  design <- design[
+    ,
+    colnames(design) !=
+      "(Intercept)",
+    drop = FALSE
+  ]
+
+  if (ncol(design) == 1L) {
+    return(
+      setNames(
+        1,
+        colnames(design)
+      )
+    )
+  }
+
+  result <- vapply(
+    seq_len(
+      ncol(design)
+    ),
+    function(index) {
+      auxiliary <- lm(
+        design[
+          ,
+          index
+        ] ~
+          design[
+            ,
+            -index,
+            drop = FALSE
+          ]
+      )
+
+      1 / (
+        1 -
+          summary(
+            auxiliary
+          )$r.squared
+      )
+    },
+    FUN.VALUE = numeric(1)
+  )
+
+  names(result) <- colnames(
+    design
+  )
+
+  result
+}
+
+calculate_vif(
+  diagnostic_model
+)
+```
+
+# 15. Standard model diagnostic panel
+
+```{r standard-diagnostic-panel}
+old_parameters <- par(
+  mfrow = c(
+    2,
+    2
+  )
+)
+
+plot(
+  diagnostic_model
+)
+
+par(
+  old_parameters
+)
+```
+
+# 16. Sensitivity analysis excluding flagged observations
+
+```{r sensitivity-model}
+rows_to_review <- sort(
+  unique(
+    c(
+      unusual_residual_rows,
+      high_leverage_rows,
+      influential_rows,
+      which(
+        dfbeta_flags
+      )
+    )
+  )
+)
+
+sensitivity_data <- if (
+  length(rows_to_review) > 0L
+) {
+  student_data[
+    -rows_to_review,
+  ]
+} else {
+  student_data
+}
+
+sensitivity_model <- lm(
+  examination_score ~
+    coursework_score +
+    programme,
+  data = sensitivity_data
+)
+
+coefficient_comparison <- cbind(
+  original = coef(
+    diagnostic_model
+  ),
+  sensitivity = coef(
+    sensitivity_model
+  )
+)
+
+coefficient_comparison
+```
+
+Sensitivity analysis should be reported transparently and should not be used to
+hide inconvenient observations.
+
+# 17. Stratified training and test split
+
+A completely random split can omit a small programme from the training data.
+The fitted model would then be unable to predict observations from that unseen
+factor level.
+
+Because this teaching dataset contains only two observations per programme, one
+observation from each programme is assigned to training and the other to
+testing.
+
+```{r train-test-split}
+set.seed(20260714)
+
+rows_by_programme <- split(
+  seq_len(
+    nrow(
+      student_data
+    )
+  ),
+  student_data$programme
+)
+
+programme_counts <- lengths(
+  rows_by_programme
+)
+
+if (any(
+  programme_counts < 2L
+)) {
+  stop(
+    paste(
+      "Each programme requires at least two observations for this stratified",
+      "training-test demonstration."
+    ),
+    call. = FALSE
+  )
+}
+
+training_rows <- unlist(
+  lapply(
+    rows_by_programme,
+    function(rows) {
+      sample(
+        rows,
+        size = 1L
+      )
+    }
+  ),
+  use.names = FALSE
+)
+
+training_data <- droplevels(
+  student_data[
+    training_rows,
+  ]
+)
+
+test_data <- student_data[
+  -training_rows,
+]
+
+test_data$programme <- factor(
+  test_data$programme,
+  levels = levels(
+    training_data$programme
+  )
+)
+
+nrow(training_data)
+nrow(test_data)
+
+table(
+  training_data$programme
+)
+
+table(
+  test_data$programme
+)
+
+stopifnot(
+  all(
+    levels(
+      test_data$programme
+    ) %in%
+      levels(
+        training_data$programme
+      )
+  )
+)
+```
+
+# 18. Fit on training data
+
+```{r fit-training-model}
+training_model <- lm(
+  examination_score ~
+    coursework_score +
+    programme,
+  data = training_data
+)
+
+summary(
+  training_model
+)
+```
+
+# 19. Test predictions
+
+```{r test-set-predictions}
+test_predictions <- predict(
+  training_model,
+  newdata = test_data
+)
+
+prediction_errors <-
+  test_data$examination_score -
+  test_predictions
+```
+
+# 20. Prediction error measures
+
+```{r prediction-error-measures}
+mean_absolute_error <- mean(
+  abs(
+    prediction_errors
+  )
+)
+
+root_mean_squared_error <- sqrt(
+  mean(
+    prediction_errors ^ 2
+  )
+)
+
+test_r_squared <- 1 -
+  sum(
+    prediction_errors ^ 2
+  ) /
+  sum(
+    (
+      test_data$examination_score -
+        mean(
+          test_data$examination_score
+        )
+    ) ^ 2
+  )
+
+data.frame(
+  MAE =
+    mean_absolute_error,
+  RMSE =
+    root_mean_squared_error,
+  test_R_squared =
+    test_r_squared
+)
+```
+
+# 21. Stratified k-fold cross-validation
+
+For a model containing a categorical predictor, each training fold must contain
+every factor level that may appear in its validation fold.
+
+The maximum feasible number of stratified folds is limited by the smallest
+programme size. Since each programme contains two observations, this example
+uses two folds.
+
+```{r k-fold-cross-validation-function}
+cross_validate_lm <- function(
+  data,
+  formula,
+  group_variable,
+  k = 2,
+  seed = 20260714
+) {
+  required_variables <- c(
+    all.vars(
+      formula
+    ),
+    group_variable
+  )
+
+  missing_variables <- setdiff(
+    required_variables,
+    names(data)
+  )
+
+  if (length(
+    missing_variables
+  ) > 0L) {
+    stop(
+      paste(
+        "Variables not found:",
+        paste(
+          missing_variables,
+          collapse = ", "
+        )
+      ),
+      call. = FALSE
+    )
+  }
+
+  group_counts <- table(
+    data[[
+      group_variable
+    ]]
+  )
+
+  maximum_folds <- min(
+    group_counts
+  )
+
+  if (
+    k < 2L ||
+    k > maximum_folds
+  ) {
+    stop(
+      paste(
+        "`k` must be between 2 and",
+        maximum_folds,
+        "for stratified validation with the available group sizes."
+      ),
+      call. = FALSE
+    )
+  }
+
+  set.seed(seed)
+
+  fold_id <- integer(
+    nrow(data)
+  )
+
+  rows_by_group <- split(
+    seq_len(
+      nrow(data)
+    ),
+    data[[
+      group_variable
+    ]]
+  )
+
+  for (rows in rows_by_group) {
+    shuffled_rows <- sample(
+      rows
+    )
+
+    fold_id[
+      shuffled_rows
+    ] <- rep(
+      seq_len(k),
+      length.out = length(
+        shuffled_rows
+      )
+    )
+  }
+
+  outcome_name <- all.vars(
+    formula
+  )[1]
+
+  fold_results <- lapply(
+    seq_len(k),
+    function(current_fold) {
+      training <- droplevels(
+        data[
+          fold_id != current_fold,
+        ]
+      )
+
+      validation <- data[
+        fold_id == current_fold,
+      ]
+
+      factor_variables <- names(
+        training
+      )[
+        vapply(
+          training,
+          is.factor,
+          FUN.VALUE = logical(1)
+        )
+      ]
+
+      for (variable in factor_variables) {
+        validation[[
+          variable
+        ]] <- factor(
+          validation[[
+            variable
+          ]],
+          levels = levels(
+            training[[
+              variable
+            ]]
+          )
+        )
+      }
+
+      if (any(
+        !complete.cases(
+          validation[
+            factor_variables
+          ]
+        )
+      )) {
+        stop(
+          paste(
+            "A validation fold contains a factor level absent from its",
+            "training fold."
+          ),
+          call. = FALSE
+        )
+      }
+
+      model <- lm(
+        formula,
+        data = training
+      )
+
+      predictions <- predict(
+        model,
+        newdata = validation
+      )
+
+      errors <- validation[[
+        outcome_name
+      ]] - predictions
+
+      data.frame(
+        fold = current_fold,
+        n = nrow(validation),
+        MAE = mean(
+          abs(errors)
+        ),
+        RMSE = sqrt(
+          mean(
+            errors ^ 2
+          )
+        )
+      )
+    }
+  )
+
+  do.call(
+    rbind,
+    fold_results
+  )
+}
+
+cross_validation_results <- cross_validate_lm(
+  student_data,
+  examination_score ~
+    coursework_score +
+    programme,
+  group_variable = "programme",
+  k = 2
+)
+
+cross_validation_results
+```
+
+# 22. Summarising cross-validation
+
+```{r summarise-cross-validation}
+data.frame(
+  mean_MAE =
+    mean(
+      cross_validation_results$MAE
+    ),
+  mean_RMSE =
+    mean(
+      cross_validation_results$RMSE
+    ),
+  standard_deviation_RMSE =
+    sd(
+      cross_validation_results$RMSE
+    )
+)
+```
+
+# 23. Model stability across folds
+
+```{r coefficient-stability-function}
+cross_validate_coefficients <- function(
+  data,
+  formula,
+  group_variable,
+  k = 2,
+  seed = 20260714
+) {
+  group_counts <- table(
+    data[[
+      group_variable
+    ]]
+  )
+
+  maximum_folds <- min(
+    group_counts
+  )
+
+  if (
+    k < 2L ||
+    k > maximum_folds
+  ) {
+    stop(
+      paste(
+        "`k` must be between 2 and",
+        maximum_folds,
+        "for the available group sizes."
+      ),
+      call. = FALSE
+    )
+  }
+
+  set.seed(seed)
+
+  fold_id <- integer(
+    nrow(data)
+  )
+
+  rows_by_group <- split(
+    seq_len(
+      nrow(data)
+    ),
+    data[[
+      group_variable
+    ]]
+  )
+
+  for (rows in rows_by_group) {
+    shuffled_rows <- sample(
+      rows
+    )
+
+    fold_id[
+      shuffled_rows
+    ] <- rep(
+      seq_len(k),
+      length.out = length(
+        shuffled_rows
+      )
+    )
+  }
+
+  coefficient_list <- lapply(
+    seq_len(k),
+    function(current_fold) {
+      training <- droplevels(
+        data[
+          fold_id != current_fold,
+        ]
+      )
+
+      model <- lm(
+        formula,
+        data = training
+      )
+
+      coefficients <- coef(
+        model
+      )
+
+      data.frame(
+        fold = current_fold,
+        term = names(
+          coefficients
+        ),
+        estimate =
+          unname(
+            coefficients
+          ),
+        stringsAsFactors = FALSE
+      )
+    }
+  )
+
+  do.call(
+    rbind,
+    coefficient_list
+  )
+}
+
+coefficient_stability <- cross_validate_coefficients(
+  student_data,
+  examination_score ~
+    coursework_score +
+    programme,
+  group_variable = "programme",
+  k = 2
+)
+
+coefficient_stability
+```
+
+# 24. Robust standard errors concept
+
+Ordinary least-squares coefficients remain the same under heteroskedasticity,
+but conventional standard errors may be inappropriate.
+
+Robust standard errors can be calculated with packages such as `sandwich` and
+`lmtest`.
+
+```{r robust-standard-errors-template, eval=FALSE}
+if (
+  requireNamespace(
+    "sandwich",
+    quietly = TRUE
+  ) &&
+  requireNamespace(
+    "lmtest",
+    quietly = TRUE
+  )
+) {
+  lmtest::coeftest(
+    diagnostic_model,
+    vcov. =
+      sandwich::vcovHC(
+        diagnostic_model,
+        type = "HC3"
+      )
+  )
+}
+```
+
+# 25. Diagnostic-reporting function
+
+```{r diagnostic-report-function}
+create_regression_diagnostic_report <- function(
+  model
+) {
+  if (!inherits(
+    model,
+    "lm"
+  )) {
+    stop(
+      "`model` must be an lm object.",
+      call. = FALSE
+    )
+  }
+
+  n <- nobs(model)
+  p <- length(
+    coef(model)
+  )
+
+  studentised <- rstudent(
+    model
+  )
+
+  leverage <- hatvalues(
+    model
+  )
+
+  cooks <- cooks.distance(
+    model
+  )
+
+  dfbeta_matrix <- dfbetas(
+    model
+  )
+
+  data.frame(
+    n = n,
+    parameters = p,
+    maximum_absolute_studentised_residual =
+      max(
+        abs(
+          studentised
+        )
+      ),
+    residuals_above_two =
+      sum(
+        abs(
+          studentised
+        ) > 2
+      ),
+    leverage_cutoff =
+      2 *
+      p /
+      n,
+    high_leverage_count =
+      sum(
+        leverage >
+          2 *
+          p /
+          n
+      ),
+    cooks_cutoff =
+      4 /
+      n,
+    influential_count =
+      sum(
+        cooks >
+          4 /
+          n
+      ),
+    dfbeta_cutoff =
+      2 /
+      sqrt(n),
+    dfbeta_flagged_count =
+      sum(
+        apply(
+          abs(
+            dfbeta_matrix
+          ) >
+            2 /
+            sqrt(n),
+          1,
+          any
+        )
+      ),
+    residual_shapiro_p =
+      shapiro.test(
+        residuals(model)
+      )$p.value,
+    stringsAsFactors = FALSE
+  )
+}
+
+create_regression_diagnostic_report(
+  diagnostic_model
+)
+```
+
+# 26. Full model-reporting function
+
+```{r full-regression-report-function}
+create_full_regression_report <- function(
+  model
+) {
+  model_summary <- summary(
+    model
+  )
+
+  coefficients <- as.data.frame(
+    model_summary$coefficients
+  )
+
+  coefficients$term <- rownames(
+    coefficients
+  )
+
+  rownames(coefficients) <- NULL
+
+  intervals <- as.data.frame(
+    confint(model)
+  )
+
+  intervals$term <- rownames(
+    intervals
+  )
+
+  rownames(intervals) <- NULL
+
+  names(intervals)[1:2] <- c(
+    "confidence_lower",
+    "confidence_upper"
+  )
+
+  coefficients <- merge(
+    coefficients,
+    intervals,
+    by = "term",
+    sort = FALSE
+  )
+
+  fit <- data.frame(
+    n = nobs(model),
+    r_squared =
+      model_summary$r.squared,
+    adjusted_r_squared =
+      model_summary$adj.r.squared,
+    residual_standard_error =
+      model_summary$sigma,
+    AIC = AIC(model),
+    BIC = BIC(model)
+  )
+
+  list(
+    coefficients = coefficients,
+    fit = fit,
+    diagnostics =
+      create_regression_diagnostic_report(
+        model
+      )
+  )
+}
+
+full_report <- create_full_regression_report(
+  diagnostic_model
+)
+
+full_report
+```
+
+# 27. Reporting structure
+
+A clear regression report should present:
+
+1. research question and model specification;
+2. descriptive information;
+3. coefficient estimates and confidence intervals;
+4. model fit;
+5. diagnostic findings;
+6. sensitivity analysis;
+7. validation performance;
+8. limitations;
+9. and non-causal interpretation unless design supports causality.
+
+# 28. Common mistakes
+
+- treating residual normality as the only assumption;
+- deleting observations solely because they are flagged;
+- confusing leverage with influence;
+- using test-set results to repeatedly modify the model;
+- reporting training \(R^2\) as predictive performance;
+- conducting validation after selecting the best result on the same data;
+- ignoring factor levels absent from training data;
+- relying on one random split only;
+- reporting robust standard errors without explaining why;
+- hiding sensitivity-analysis decisions.
+
+# 29. Independent exercises
+
+1. extract residual and influence measures.
+2. create a diagnostic data frame.
+3. assess linearity.
+4. assess constant variance.
+5. assess residual normality.
+6. identify unusual residuals.
+7. calculate leverage cutoffs.
+8. identify influential observations.
+9. inspect DFBETAs.
+10. calculate VIFs.
+11. conduct a transparent sensitivity analysis.
+12. create a train-test split.
+13. calculate MAE, RMSE and test \(R^2\).
+14. conduct manual k-fold cross-validation.
+15. assess coefficient stability.
+16. create complete diagnostic and model reports.
+
+# 30. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. fits a multiple regression model;
+2. produces all standard diagnostic plots;
+3. assesses functional form and variance;
+4. assesses residual distribution;
+5. identifies unusual, high-leverage and influential records;
+6. conducts a transparent sensitivity analysis;
+7. assesses multicollinearity;
+8. performs a training-test validation;
+9. performs k-fold cross-validation;
+10. compares prediction-error measures;
+11. creates reusable diagnostic functions; and
+12. presents a complete regression report.
+
+# 31. Completion checklist
+
+Confirm that you can:
+
+- distinguish residuals, leverage and influence;
+- assess linearity;
+- assess constant variance;
+- assess residual normality;
+- identify unusual residuals;
+- calculate leverage;
+- calculate Cook's distance;
+- inspect DFBETAs;
+- assess multicollinearity;
+- conduct sensitivity analysis;
+- create train-test splits;
+- calculate MAE and RMSE;
+- conduct k-fold cross-validation;
+- assess coefficient stability; and
+- report diagnostics transparently.
+
+# Lesson conclusion
+
+Regression diagnostics and validation determine whether a model is credible,
+stable and useful beyond the fitted sample. Flagged observations should be
+investigated, not automatically removed.
+
+\[
+\boxed{
+\text{fit}
+\rightarrow
+\text{diagnose}
+\rightarrow
+\text{investigate}
+\rightarrow
+\text{validate}
+\rightarrow
+\text{report transparently}
+}
+\]

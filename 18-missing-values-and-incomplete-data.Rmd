@@ -1,0 +1,916 @@
+---
+title: "Lesson 18: Missing Values and Incomplete Data"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Missing data are common in surveys, administrative records, experiments and
+routine monitoring systems. A missing value may arise because:
+
+- a respondent refused to answer;
+- a question was not applicable;
+- a measurement was not taken;
+- a value was lost during transfer;
+- a field was left blank;
+- an instrument failed; or
+- a value was deliberately suppressed.
+
+Missingness is not simply a software inconvenience. It can affect descriptive
+statistics, sample size, uncertainty and the validity of conclusions.
+
+This lesson develops practical methods for detecting, summarising, visualising
+and managing incomplete data. It also distinguishes computational handling from
+statistical treatment. The use of `na.rm = TRUE` may allow a calculation to run,
+but it does not by itself solve a missing-data problem.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. distinguish missing values from zero, blanks and special codes;
+2. detect missing values in vectors and data frames;
+3. count missing and observed values;
+4. calculate missingness percentages;
+5. identify complete and incomplete records;
+6. examine missingness by group;
+7. understand propagation of missing values;
+8. use `na.rm` appropriately;
+9. replace special missing-value codes with `NA`;
+10. create missingness indicators;
+11. distinguish listwise and pairwise deletion;
+12. understand basic missing-data mechanisms;
+13. perform simple deterministic replacements cautiously;
+14. document missing-data decisions; and
+15. create a reproducible missing-data report.
+
+# 1. What counts as missing?
+
+R uses `NA` to represent a missing value.
+
+```{r basic-missing-value}
+x <- c(
+  10,
+  NA,
+  20
+)
+
+x
+```
+
+Missing is not the same as zero:
+
+```{r missing-versus-zero}
+is.na(NA)
+is.na(0)
+```
+
+Missing is also not the same as an empty character string:
+
+```{r missing-versus-empty-string}
+is.na("")
+"" == ""
+```
+
+# 2. Detecting missing values
+
+```{r detect-missing-vector}
+scores <- c(
+  65,
+  NA,
+  72,
+  81,
+  NA
+)
+
+is.na(scores)
+```
+
+Count missing values:
+
+```{r count-missing-vector}
+sum(
+  is.na(scores)
+)
+```
+
+Count observed values:
+
+```{r count-observed-vector}
+sum(
+  !is.na(scores)
+)
+```
+
+Check whether any value is missing:
+
+```{r any-missing-vector}
+anyNA(scores)
+```
+
+# 3. Locating missing positions
+
+```{r locate-missing-positions}
+which(
+  is.na(scores)
+)
+```
+
+Extract observed values:
+
+```{r extract-observed-values}
+scores[
+  !is.na(scores)
+]
+```
+
+# 4. Missing-value propagation
+
+```{r missing-propagation}
+sum(scores)
+mean(scores)
+min(scores)
+max(scores)
+```
+
+By default, many functions return `NA` when missing values are present.
+
+# 5. Removing missing values during a calculation
+
+```{r remove-missing-in-summary}
+sum(
+  scores,
+  na.rm = TRUE
+)
+
+mean(
+  scores,
+  na.rm = TRUE
+)
+
+min(
+  scores,
+  na.rm = TRUE
+)
+
+max(
+  scores,
+  na.rm = TRUE
+)
+```
+
+`na.rm = TRUE` excludes missing values from that operation only.
+
+# 6. Effective sample size
+
+```{r effective-sample-size}
+total_positions <- length(scores)
+
+observed_positions <- sum(
+  !is.na(scores)
+)
+
+missing_positions <- sum(
+  is.na(scores)
+)
+
+total_positions
+observed_positions
+missing_positions
+```
+
+A summary statistic should often be reported with the observed sample size.
+
+# 7. Missingness percentage
+
+```{r vector-missing-percentage}
+missing_percentage <-
+  mean(
+    is.na(scores)
+  ) * 100
+
+missing_percentage
+```
+
+# 8. Missing values in data frames
+
+Import rainfall data:
+
+```{r import-rainfall-missing}
+rainfall_data <- read.csv(
+  "data/rainfall_records.csv",
+  stringsAsFactors = FALSE
+)
+
+head(rainfall_data)
+```
+
+Missing counts by variable:
+
+```{r data-frame-missing-counts}
+colSums(
+  is.na(
+    rainfall_data
+  )
+)
+```
+
+Missing percentages:
+
+```{r data-frame-missing-percentages}
+colMeans(
+  is.na(
+    rainfall_data
+  )
+) * 100
+```
+
+# 9. Missingness report
+
+```{r missingness-report}
+create_missingness_report <- function(
+  data
+) {
+  data.frame(
+    variable = names(data),
+    total = nrow(data),
+    observed = vapply(
+      data,
+      function(x) {
+        sum(
+          !is.na(x)
+        )
+      },
+      FUN.VALUE = integer(1)
+    ),
+    missing = vapply(
+      data,
+      function(x) {
+        sum(
+          is.na(x)
+        )
+      },
+      FUN.VALUE = integer(1)
+    ),
+    missing_percentage = vapply(
+      data,
+      function(x) {
+        mean(
+          is.na(x)
+        ) * 100
+      },
+      FUN.VALUE = numeric(1)
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
+create_missingness_report(
+  rainfall_data
+)
+```
+
+# 10. Complete and incomplete records
+
+```{r complete-cases-rainfall}
+complete_status <- complete.cases(
+  rainfall_data
+)
+
+complete_status
+```
+
+Complete rows:
+
+```{r extract-complete-rainfall}
+complete_rainfall_data <- rainfall_data[
+  complete_status,
+]
+
+complete_rainfall_data
+```
+
+Incomplete rows:
+
+```{r extract-incomplete-rainfall}
+incomplete_rainfall_data <- rainfall_data[
+  !complete_status,
+]
+
+incomplete_rainfall_data
+```
+
+# 11. Missingness across selected variables
+
+```{r selected-variable-completeness}
+selected_complete <- complete.cases(
+  rainfall_data[
+    c(
+      "rainfall_mm"
+    )
+  ]
+)
+
+rainfall_data[
+  selected_complete,
+]
+```
+
+A record may be complete for the variables required by one analysis but
+incomplete for another.
+
+# 12. Number of missing values per record
+
+```{r row-missing-count}
+rainfall_data$missing_count <-
+  rowSums(
+    is.na(
+      rainfall_data
+    )
+  )
+
+rainfall_data
+```
+
+# 13. Missingness indicator variables
+
+```{r missing-indicator}
+rainfall_data$rainfall_missing <-
+  is.na(
+    rainfall_data$rainfall_mm
+  )
+
+table(
+  rainfall_data$rainfall_missing
+)
+```
+
+An indicator may be useful for describing patterns of missingness.
+
+# 14. Special missing-value codes
+
+```{r special-missing-codes}
+raw_values <- c(
+  10,
+  20,
+  999,
+  -99,
+  30
+)
+
+raw_values
+```
+
+Assume the codebook states:
+
+- `999` means not recorded;
+- `-99` means not applicable.
+
+Convert:
+
+```{r replace-special-codes}
+clean_values <- raw_values
+
+clean_values[
+  clean_values %in%
+    c(
+      999,
+      -99
+    )
+] <- NA
+
+clean_values
+```
+
+Never replace codes without a documented codebook.
+
+# 15. Blank strings and whitespace
+
+```{r blank-string-missing}
+raw_text <- c(
+  "Statistics",
+  "",
+  " ",
+  NA,
+  "Procurement"
+)
+
+raw_text
+```
+
+Standardise:
+
+```{r standardise-blank-missing}
+clean_text <- trimws(
+  raw_text
+)
+
+clean_text[
+  clean_text == ""
+] <- NA
+
+clean_text
+```
+
+# 16. Character missing codes
+
+```{r character-missing-codes}
+responses <- c(
+  "Yes",
+  "No",
+  "Missing",
+  "N/A",
+  "."
+)
+
+responses[
+  responses %in%
+    c(
+      "Missing",
+      "N/A",
+      "."
+    )
+] <- NA
+
+responses
+```
+
+# 17. Grouped missingness
+
+Import clinic data:
+
+```{r import-clinic-missing}
+clinic_data <- read.csv(
+  "data/clinic_visits.csv",
+  stringsAsFactors = FALSE
+)
+```
+
+Missing waiting-time percentage by sex:
+
+```{r grouped-missingness}
+missing_by_sex <- tapply(
+  is.na(
+    clinic_data$waiting_minutes
+  ),
+  clinic_data$sex,
+  mean
+) * 100
+
+missing_by_sex
+```
+
+Missingness may differ across groups and should be investigated.
+
+# 18. Cross-tabulation of missingness
+
+```{r missingness-cross-tabulation}
+table(
+  clinic_data$sex,
+  is.na(
+    clinic_data$waiting_minutes
+  ),
+  useNA = "ifany"
+)
+```
+
+# 19. Basic missing-data mechanisms
+
+## 19.1 Missing completely at random
+
+Missingness is unrelated to observed or unobserved values.
+
+## 19.2 Missing at random
+
+Missingness may depend on observed variables but not on the missing value after
+conditioning on those observed variables.
+
+## 19.3 Missing not at random
+
+Missingness depends on the missing value itself or an unobserved cause.
+
+These mechanisms are assumptions, not labels that R can determine
+automatically.
+
+# 20. Listwise deletion
+
+Listwise deletion removes every record missing any variable required by the
+analysis.
+
+```{r listwise-deletion}
+analysis_variables <- clinic_data[
+  c(
+    "age",
+    "waiting_minutes",
+    "consultation_minutes"
+  )
+]
+
+complete_analysis_data <-
+  analysis_variables[
+    complete.cases(
+      analysis_variables
+    ),
+  ]
+
+nrow(
+  analysis_variables
+)
+
+nrow(
+  complete_analysis_data
+)
+```
+
+# 21. Pairwise deletion
+
+Some functions use available pairs for each calculation.
+
+```{r pairwise-correlation-example}
+cor(
+  analysis_variables,
+  use = "pairwise.complete.obs"
+)
+```
+
+Pairwise deletion can lead to different effective sample sizes across
+statistics.
+
+# 22. Complete-case correlation
+
+```{r complete-case-correlation}
+cor(
+  analysis_variables,
+  use = "complete.obs"
+)
+```
+
+# 23. Mean replacement
+
+```{r mean-replacement-example}
+waiting_values <-
+  clinic_data$waiting_minutes
+
+mean_waiting <- mean(
+  waiting_values,
+  na.rm = TRUE
+)
+
+mean_imputed_waiting <-
+  waiting_values
+
+mean_imputed_waiting[
+  is.na(
+    mean_imputed_waiting
+  )
+] <- mean_waiting
+
+mean_imputed_waiting
+```
+
+Mean replacement is simple but can reduce variance and distort relationships.
+It should not be treated as a generally preferred method.
+
+# 24. Median replacement
+
+```{r median-replacement-example}
+median_waiting <- median(
+  waiting_values,
+  na.rm = TRUE
+)
+
+median_imputed_waiting <-
+  waiting_values
+
+median_imputed_waiting[
+  is.na(
+    median_imputed_waiting
+  )
+] <- median_waiting
+
+median_imputed_waiting
+```
+
+# 25. Group-based replacement
+
+```{r group-based-replacement}
+group_medians <- tapply(
+  clinic_data$waiting_minutes,
+  clinic_data$sex,
+  median,
+  na.rm = TRUE
+)
+
+group_medians
+```
+
+Apply cautiously:
+
+```{r apply-group-replacement}
+group_imputed_waiting <-
+  clinic_data$waiting_minutes
+
+for (i in seq_len(
+  nrow(clinic_data)
+)) {
+  if (is.na(
+    group_imputed_waiting[i]
+  )) {
+    current_group <-
+      clinic_data$sex[i]
+
+    group_imputed_waiting[i] <-
+      group_medians[
+        current_group
+      ]
+  }
+}
+
+group_imputed_waiting
+```
+
+# 26. Comparing original and replacement summaries
+
+```{r compare-imputation-summaries}
+data.frame(
+  dataset = c(
+    "Observed only",
+    "Mean replacement",
+    "Median replacement",
+    "Group replacement"
+  ),
+  mean = c(
+    mean(
+      waiting_values,
+      na.rm = TRUE
+    ),
+    mean(
+      mean_imputed_waiting
+    ),
+    mean(
+      median_imputed_waiting
+    ),
+    mean(
+      group_imputed_waiting
+    )
+  ),
+  standard_deviation = c(
+    sd(
+      waiting_values,
+      na.rm = TRUE
+    ),
+    sd(
+      mean_imputed_waiting
+    ),
+    sd(
+      median_imputed_waiting
+    ),
+    sd(
+      group_imputed_waiting
+    )
+  ),
+  stringsAsFactors = FALSE
+)
+```
+
+# 27. Missing-data decision log
+
+```{r missing-data-decision-log}
+missing_data_log <- data.frame(
+  variable = c(
+    "rainfall_mm",
+    "waiting_minutes"
+  ),
+  missing_count = c(
+    sum(
+      is.na(
+        rainfall_data$rainfall_mm
+      )
+    ),
+    sum(
+      is.na(
+        clinic_data$waiting_minutes
+      )
+    )
+  ),
+  decision = c(
+    "Use observed values for descriptive summary",
+    "Retain missing values pending model review"
+  ),
+  justification = c(
+    "Low missingness and descriptive purpose",
+    "Cause and pattern require investigation"
+  ),
+  stringsAsFactors = FALSE
+)
+
+missing_data_log
+```
+
+# 28. Visualising missingness with base R
+
+```{r missingness-barplot}
+missing_counts <- colSums(
+  is.na(
+    clinic_data
+  )
+)
+
+barplot(
+  missing_counts,
+  main = "Missing Values by Variable",
+  xlab = "Variable",
+  ylab = "Number missing",
+  las = 2
+)
+```
+
+# 29. Optional packages
+
+Useful packages include:
+
+- `naniar`;
+- `VIM`;
+- `mice`;
+- `Amelia`.
+
+Check availability:
+
+```{r check-missing-packages}
+vapply(
+  c(
+    "naniar",
+    "VIM",
+    "mice",
+    "Amelia"
+  ),
+  requireNamespace,
+  quietly = TRUE,
+  FUN.VALUE = logical(1)
+)
+```
+
+Multiple imputation is an advanced statistical procedure and requires a later,
+more specialised treatment.
+
+# 30. Integrated missing-data audit
+
+```{r integrated-missing-audit}
+audit_missing_data <- function(
+  data
+) {
+  report <- create_missingness_report(
+    data
+  )
+
+  list(
+    variable_report = report,
+    complete_records = sum(
+      complete.cases(data)
+    ),
+    incomplete_records = sum(
+      !complete.cases(data)
+    ),
+    complete_percentage = mean(
+      complete.cases(data)
+    ) * 100,
+    rows_with_two_or_more_missing =
+      sum(
+        rowSums(
+          is.na(data)
+        ) >= 2
+      )
+  )
+}
+
+audit_missing_data(
+  clinic_data
+)
+```
+
+# 31. Common mistakes
+
+- treating zero as missing without evidence;
+- treating special codes as valid values;
+- using `x == NA`;
+- applying `na.rm = TRUE` without reporting effective sample size;
+- deleting records before examining missingness patterns;
+- replacing missing values silently;
+- assuming mean replacement solves missing-data bias;
+- confusing listwise and pairwise deletion;
+- ignoring group differences in missingness;
+- failing to document decisions.
+
+# 32. Independent exercises
+
+1. create vectors containing missing values.
+2. count and locate missing positions.
+3. calculate observed sample sizes.
+4. create a missingness report.
+5. identify complete and incomplete rows.
+6. calculate row-level missing counts.
+7. replace documented special codes.
+8. standardise blank strings to `NA`.
+9. compare missingness across groups.
+10. demonstrate listwise and pairwise deletion.
+11. perform and critique simple replacement methods.
+12. create a missing-data decision log.
+13. visualise missing counts.
+14. audit missingness in clinic data.
+
+# 33. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. distinguishes `NA`, zero, blanks and special codes;
+2. reports variable-level and row-level missingness;
+3. identifies complete and incomplete records;
+4. compares missingness by group;
+5. explains missing-data mechanisms;
+6. demonstrates listwise and pairwise deletion;
+7. demonstrates two simple replacement methods;
+8. compares resulting summaries;
+9. creates a missing-data decision log; and
+10. states the limitations of the chosen approach.
+
+# 34. Completion checklist
+
+Confirm that you can:
+
+- identify missing values;
+- count observed and missing values;
+- calculate missing percentages;
+- create missingness reports;
+- identify complete cases;
+- create row missing counts;
+- convert special codes;
+- standardise blank text;
+- compare missingness by group;
+- explain missing-data mechanisms;
+- distinguish listwise and pairwise deletion;
+- perform simple replacement cautiously;
+- document missing-data decisions; and
+- create a reproducible audit.
+
+# Lesson conclusion
+
+Missing-data management requires more than making functions run. It requires
+describing the pattern, considering the likely cause, choosing a defensible
+method and documenting the effect on analysis.
+
+\[
+\boxed{
+\text{detect}
+\rightarrow
+\text{describe}
+\rightarrow
+\text{investigate}
+\rightarrow
+\text{decide}
+\rightarrow
+\text{document}
+}
+\]

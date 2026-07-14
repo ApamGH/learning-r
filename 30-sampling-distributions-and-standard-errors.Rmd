@@ -1,0 +1,697 @@
+---
+title: "Lesson 30: Sampling Distributions and Standard Errors"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Statistical inference uses sample information to learn about a population.
+Because different random samples produce different results, every sample
+statistic has sampling variability.
+
+A sampling distribution describes how a statistic would vary over repeated
+samples drawn under the same process. Standard errors quantify the expected
+sampling variation.
+
+This lesson develops the logic of repeated sampling through simulation and
+connects sample size, variability and precision.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. distinguish populations, samples, parameters and statistics;
+2. explain sampling variability;
+3. define a sampling distribution;
+4. simulate repeated random samples;
+5. calculate the standard error of a mean;
+6. explain the central limit theorem;
+7. compare sampling distributions across sample sizes;
+8. calculate the standard error of a proportion;
+9. distinguish standard deviation from standard error;
+10. understand bias and precision;
+11. assess Monte Carlo error;
+12. create reusable sampling-distribution functions; and
+13. interpret simulation results.
+
+# 1. Population and sample
+
+A **population** is the complete set of units of interest.
+
+A **sample** is a subset observed from that population.
+
+A **parameter** summarises the population.
+
+A **statistic** summarises a sample.
+
+Examples:
+
+- population mean: \(\mu\);
+- sample mean: \(\bar{x}\);
+- population proportion: \(p\);
+- sample proportion: \(\hat{p}\).
+
+# 2. Creating a teaching population
+
+```{r create-teaching-population}
+population <- rnorm(
+  n = 100000,
+  mean = 70,
+  sd = 12
+)
+
+mean(population)
+sd(population)
+```
+
+# 3. Drawing one random sample
+
+```{r draw-one-sample}
+one_sample <- sample(
+  population,
+  size = 30,
+  replace = FALSE
+)
+
+mean(one_sample)
+sd(one_sample)
+```
+
+The sample mean is unlikely to equal the population mean exactly.
+
+# 4. Repeated sample means
+
+```{r repeated-sample-means}
+number_of_samples <- 1000
+sample_size <- 30
+
+sample_means <- replicate(
+  number_of_samples,
+  mean(
+    sample(
+      population,
+      size = sample_size,
+      replace = TRUE
+    )
+  )
+)
+
+head(sample_means)
+```
+
+# 5. Sampling distribution
+
+```{r sampling-distribution-summary}
+mean(sample_means)
+sd(sample_means)
+summary(sample_means)
+```
+
+The mean of the sampling distribution should be close to the population mean.
+
+# 6. Standard error of a mean
+
+The theoretical standard error is:
+
+\[
+SE(\bar{x})
+=
+\frac{\sigma}{\sqrt{n}}.
+\]
+
+```{r theoretical-standard-error}
+population_sd <- sd(population)
+
+theoretical_standard_error <-
+  population_sd /
+  sqrt(sample_size)
+
+simulated_standard_error <-
+  sd(sample_means)
+
+theoretical_standard_error
+simulated_standard_error
+```
+
+# 7. Visualising the sampling distribution
+
+```{r sampling-distribution-histogram}
+hist(
+  sample_means,
+  breaks = 30,
+  main = "Sampling Distribution of the Mean",
+  xlab = "Sample mean",
+  ylab = "Frequency"
+)
+
+abline(
+  v = mean(population),
+  lwd = 2
+)
+```
+
+# 8. Effect of sample size
+
+```{r compare-sample-sizes}
+sample_sizes <- c(
+  5,
+  30,
+  100
+)
+
+sampling_results <- lapply(
+  sample_sizes,
+  function(current_size) {
+    replicate(
+      2000,
+      mean(
+        sample(
+          population,
+          size = current_size,
+          replace = TRUE
+        )
+      )
+    )
+  }
+)
+
+names(sampling_results) <- paste0(
+  "n_",
+  sample_sizes
+)
+
+vapply(
+  sampling_results,
+  sd,
+  FUN.VALUE = numeric(1)
+)
+```
+
+Larger samples produce smaller standard errors.
+
+# 9. Multi-panel comparison
+
+```{r sample-size-histograms}
+old_parameters <- par(
+  mfrow = c(
+    1,
+    3
+  )
+)
+
+for (i in seq_along(
+  sampling_results
+)) {
+  hist(
+    sampling_results[[i]],
+    breaks = 25,
+    main = names(
+      sampling_results
+    )[i],
+    xlab = "Sample mean"
+  )
+}
+
+par(
+  old_parameters
+)
+```
+
+# 10. Central limit theorem
+
+The central limit theorem states that, under broad conditions, the sampling
+distribution of the mean becomes approximately normal as sample size increases,
+even when the population distribution is not normal.
+
+# 11. Skewed population demonstration
+
+```{r skewed-population}
+skewed_population <- rexp(
+  n = 100000,
+  rate = 0.10
+)
+
+hist(
+  skewed_population,
+  breaks = 40,
+  main = "Skewed Population",
+  xlab = "Value"
+)
+```
+
+# 12. Sample means from a skewed population
+
+```{r skewed-population-sample-means}
+skewed_means_small <- replicate(
+  2000,
+  mean(
+    sample(
+      skewed_population,
+      size = 5,
+      replace = TRUE
+    )
+  )
+)
+
+skewed_means_large <- replicate(
+  2000,
+  mean(
+    sample(
+      skewed_population,
+      size = 50,
+      replace = TRUE
+    )
+  )
+)
+```
+
+```{r skewed-sampling-comparison}
+old_parameters <- par(
+  mfrow = c(
+    1,
+    2
+  )
+)
+
+hist(
+  skewed_means_small,
+  breaks = 30,
+  main = "Sample Means: n = 5",
+  xlab = "Sample mean"
+)
+
+hist(
+  skewed_means_large,
+  breaks = 30,
+  main = "Sample Means: n = 50",
+  xlab = "Sample mean"
+)
+
+par(
+  old_parameters
+)
+```
+
+# 13. Standard deviation versus standard error
+
+**Standard deviation** describes variation among observed values.
+
+**Standard error** describes variation among repeated sample statistics.
+
+```{r sd-versus-se}
+sample_standard_deviation <- sd(
+  one_sample
+)
+
+estimated_standard_error <-
+  sample_standard_deviation /
+  sqrt(
+    length(one_sample)
+  )
+
+sample_standard_deviation
+estimated_standard_error
+```
+
+# 14. Sampling distribution of a proportion
+
+Create a binary population:
+
+```{r binary-population}
+binary_population <- rbinom(
+  n = 100000,
+  size = 1,
+  prob = 0.60
+)
+
+mean(binary_population)
+```
+
+Repeated sample proportions:
+
+```{r repeated-sample-proportions}
+sample_proportions <- replicate(
+  2000,
+  mean(
+    sample(
+      binary_population,
+      size = 100,
+      replace = TRUE
+    )
+  )
+)
+
+mean(sample_proportions)
+sd(sample_proportions)
+```
+
+# 15. Standard error of a proportion
+
+\[
+SE(\hat{p})
+=
+\sqrt{
+\frac{
+p(1-p)
+}{
+n
+}
+}.
+\]
+
+```{r theoretical-proportion-se}
+population_proportion <- mean(
+  binary_population
+)
+
+theoretical_proportion_se <- sqrt(
+  population_proportion *
+    (
+      1 -
+      population_proportion
+    ) /
+    100
+)
+
+simulated_proportion_se <- sd(
+  sample_proportions
+)
+
+theoretical_proportion_se
+simulated_proportion_se
+```
+
+# 16. Bias
+
+An estimator is unbiased if its expected value equals the population parameter.
+
+```{r estimate-bias}
+estimated_bias <- mean(
+  sample_means
+) - mean(
+  population
+)
+
+estimated_bias
+```
+
+# 17. Precision
+
+Precision refers to how tightly the sampling distribution is concentrated.
+
+A smaller standard error indicates greater precision.
+
+# 18. Monte Carlo error
+
+Simulation estimates vary because only a finite number of replications are
+used.
+
+```{r monte-carlo-comparison}
+replication_counts <- c(
+  100,
+  1000,
+  10000
+)
+
+monte_carlo_means <- vapply(
+  replication_counts,
+  function(repetitions) {
+    simulated_means <- replicate(
+      repetitions,
+      mean(
+        sample(
+          population,
+          size = 30,
+          replace = TRUE
+        )
+      )
+    )
+
+    mean(simulated_means)
+  },
+  FUN.VALUE = numeric(1)
+)
+
+data.frame(
+  replications =
+    replication_counts,
+  estimated_sampling_mean =
+    monte_carlo_means
+)
+```
+
+More replications generally reduce Monte Carlo uncertainty.
+
+# 19. Bootstrap-style resampling
+
+```{r bootstrap-sample-means}
+observed_sample <- sample(
+  population,
+  size = 40,
+  replace = FALSE
+)
+
+bootstrap_means <- replicate(
+  2000,
+  mean(
+    sample(
+      observed_sample,
+      size = length(
+        observed_sample
+      ),
+      replace = TRUE
+    )
+  )
+)
+
+sd(
+  bootstrap_means
+)
+```
+
+This estimates the sampling variability from the observed sample.
+
+# 20. Reusable simulation function
+
+```{r sampling-function}
+simulate_sample_means <- function(
+  population,
+  sample_size,
+  replications = 1000
+) {
+  if (!is.numeric(population)) {
+    stop(
+      "`population` must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  if (sample_size < 1 ||
+      sample_size !=
+      as.integer(sample_size)) {
+    stop(
+      "`sample_size` must be a positive whole number.",
+      call. = FALSE
+    )
+  }
+
+  if (replications < 1 ||
+      replications !=
+      as.integer(replications)) {
+    stop(
+      "`replications` must be a positive whole number.",
+      call. = FALSE
+    )
+  }
+
+  replicate(
+    replications,
+    mean(
+      sample(
+        population,
+        size = sample_size,
+        replace = TRUE
+      )
+    )
+  )
+}
+
+simulated_means <- simulate_sample_means(
+  population,
+  sample_size = 50,
+  replications = 2000
+)
+
+summary(simulated_means)
+```
+
+# 21. Sampling-distribution report
+
+```{r sampling-report-function}
+create_sampling_report <- function(
+  population,
+  sample_size,
+  replications = 2000
+) {
+  simulated_statistics <- simulate_sample_means(
+    population,
+    sample_size,
+    replications
+  )
+
+  data.frame(
+    population_mean =
+      mean(population),
+    population_sd =
+      sd(population),
+    sample_size =
+      sample_size,
+    replications =
+      replications,
+    simulated_mean =
+      mean(
+        simulated_statistics
+      ),
+    simulated_standard_error =
+      sd(
+        simulated_statistics
+      ),
+    theoretical_standard_error =
+      sd(population) /
+      sqrt(sample_size),
+    estimated_bias =
+      mean(
+        simulated_statistics
+      ) -
+      mean(population)
+  )
+}
+
+create_sampling_report(
+  population,
+  sample_size = 30
+)
+```
+
+# 22. Common mistakes
+
+- confusing the sample distribution with the sampling distribution;
+- confusing standard deviation with standard error;
+- assuming larger samples reduce population variability;
+- treating one simulated result as proof;
+- failing to set a random seed;
+- using too few simulation replications;
+- assuming the central limit theorem applies without conditions;
+- ignoring dependence between observations;
+- using the wrong standard-error formula;
+- interpreting precision as accuracy.
+
+# 23. Independent exercises
+
+1. distinguish populations, samples, parameters and statistics.
+2. draw one random sample.
+3. simulate repeated sample means.
+4. estimate the sampling mean and standard error.
+5. compare theoretical and simulated standard errors.
+6. compare several sample sizes.
+7. demonstrate the central limit theorem with skewed data.
+8. compare standard deviation and standard error.
+9. simulate sample proportions.
+10. estimate bias.
+11. compare Monte Carlo replication counts.
+12. create reusable simulation functions.
+13. write a sampling-distribution interpretation.
+
+# 24. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. defines the inferential concepts;
+2. creates a population;
+3. draws repeated samples;
+4. compares simulated and theoretical standard errors;
+5. examines three sample sizes;
+6. demonstrates the central limit theorem;
+7. simulates proportions;
+8. evaluates bias and precision;
+9. creates reusable simulation functions; and
+10. interprets all results.
+
+# 25. Completion checklist
+
+Confirm that you can:
+
+- distinguish parameters and statistics;
+- explain sampling variability;
+- simulate sampling distributions;
+- calculate standard errors;
+- explain the central limit theorem;
+- assess sample-size effects;
+- simulate proportions;
+- distinguish standard deviation and standard error;
+- assess bias and precision;
+- understand Monte Carlo error; and
+- create reusable simulation functions.
+
+# Lesson conclusion
+
+Sampling distributions connect observed samples to population inference.
+Standard errors quantify uncertainty and become smaller as effective sample size
+increases.
+
+\[
+\boxed{
+\text{population}
+\rightarrow
+\text{sample repeatedly}
+\rightarrow
+\text{sampling distribution}
+\rightarrow
+\text{standard error}
+\rightarrow
+\text{inference}
+}
+\]

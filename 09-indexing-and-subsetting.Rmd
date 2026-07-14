@@ -1,0 +1,1169 @@
+---
+title: "Lesson 9: Indexing, Subsetting and Extracting Values"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+A dataset becomes useful only when the analyst can locate and extract the
+observations and variables required for a particular question. In R, this is
+done through indexing and subsetting.
+
+Indexing answers questions such as:
+
+- What is the third score?
+- Which students passed?
+- Which rows belong to the Statistics programme?
+- Which columns contain assessment information?
+- Which observations have missing rainfall values?
+- Which records satisfy several conditions at the same time?
+
+Subsetting is not merely a technical operation. It is a translation of an
+analytical condition into code. An incorrect subset may produce a convincing
+but invalid result. This lesson therefore treats indexing as both a programming
+skill and a data-validation responsibility.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. explain one-dimensional and two-dimensional indexing;
+2. use positive, negative and logical indices;
+3. extract values by position and by name;
+4. understand the difference between `[`, `[[` and `$`;
+5. subset vectors, matrices, lists and data frames;
+6. preserve or drop dimensions deliberately;
+7. select rows using logical conditions;
+8. select columns using names and positions;
+9. combine row and column conditions;
+10. use `which()`, `which.min()` and `which.max()`;
+11. identify and extract missing or duplicate observations;
+12. modify selected elements safely;
+13. avoid common indexing errors; and
+14. construct reproducible analytical subsets.
+
+# 1. The meaning of an index
+
+An index identifies the position or name of an element.
+
+Consider:
+
+```{r create-score-vector}
+scores <- c(
+  68,
+  74,
+  81,
+  59,
+  90
+)
+
+scores
+```
+
+The five positions are:
+
+\[
+1,\ 2,\ 3,\ 4,\ 5.
+\]
+
+The third position contains 81.
+
+```{r extract-third-score}
+scores[3]
+```
+
+The general structure is:
+
+```text
+object[index]
+```
+
+# 2. Positive positional indexing
+
+Positive indices select positions.
+
+```{r positive-single-index}
+scores[1]
+```
+
+```{r positive-multiple-index}
+scores[
+  c(
+    1,
+    3,
+    5
+  )
+]
+```
+
+Repeated indices are allowed:
+
+```{r repeated-positive-index}
+scores[
+  c(
+    2,
+    2,
+    4
+  )
+]
+```
+
+The selected value at position 2 is returned twice.
+
+## 2.1 Ordering follows the index
+
+```{r positive-index-order}
+scores[
+  c(
+    5,
+    1,
+    3
+  )
+]
+```
+
+R returns values in the order specified by the index.
+
+# 3. Negative indexing
+
+Negative indices exclude positions.
+
+```{r negative-single-index}
+scores[-2]
+```
+
+This returns every score except the second.
+
+```{r negative-multiple-index}
+scores[
+  -c(
+    1,
+    5
+  )
+]
+```
+
+This excludes the first and fifth values.
+
+## 3.1 Do not mix positive and negative indices
+
+```{r mixed-index-error, error=TRUE}
+scores[
+  c(
+    1,
+    -2
+  )
+]
+```
+
+Except for zero, positive and negative indices cannot be mixed in the same
+selection.
+
+# 4. Zero and out-of-range indices
+
+```{r zero-index}
+scores[0]
+```
+
+Position zero selects nothing.
+
+```{r out-of-range-index}
+scores[10]
+```
+
+A positive position beyond the vector length returns `NA`.
+
+Negative exclusion beyond the vector length has no practical effect:
+
+```{r negative-out-of-range}
+scores[-10]
+```
+
+# 5. Logical indexing
+
+A logical index selects positions corresponding to `TRUE`.
+
+```{r logical-index-explicit}
+logical_index <- c(
+  TRUE,
+  FALSE,
+  TRUE,
+  FALSE,
+  TRUE
+)
+
+scores[logical_index]
+```
+
+Logical indexing is particularly useful when the index is generated from a
+condition.
+
+```{r logical-index-condition}
+scores[
+  scores >= 70
+]
+```
+
+The expression:
+
+```r
+scores >= 70
+```
+
+produces:
+
+```{r inspect-logical-condition}
+scores >= 70
+```
+
+R then extracts values corresponding to `TRUE`.
+
+# 6. Compound conditions
+
+Select scores from 70 through 85:
+
+```{r compound-range-condition}
+scores[
+  scores >= 70 &
+    scores <= 85
+]
+```
+
+Select scores below 60 or above 85:
+
+```{r compound-or-condition}
+scores[
+  scores < 60 |
+    scores > 85
+]
+```
+
+Exclude scores equal to 74:
+
+```{r compound-not-condition}
+scores[
+  scores != 74
+]
+```
+
+# 7. Named-vector indexing
+
+```{r create-named-vector}
+programme_counts <- c(
+  Statistics = 35,
+  Procurement = 42,
+  Hospitality = 28,
+  Agriculture = 31
+)
+
+programme_counts
+```
+
+Extract by name:
+
+```{r extract-named-vector}
+programme_counts[
+  "Statistics"
+]
+```
+
+Extract several names:
+
+```{r extract-multiple-names}
+programme_counts[
+  c(
+    "Statistics",
+    "Agriculture"
+  )
+]
+```
+
+Unknown names return `NA`:
+
+```{r unknown-vector-name}
+programme_counts[
+  "Engineering"
+]
+```
+
+# 8. `which()`
+
+`which()` returns the positions where a logical condition is `TRUE`.
+
+```{r which-example}
+which(
+  scores >= 70
+)
+```
+
+Use positions to extract values:
+
+```{r which-extraction}
+high_score_positions <- which(
+  scores >= 70
+)
+
+scores[
+  high_score_positions
+]
+```
+
+Direct logical indexing is often shorter, but `which()` is useful when the
+positions themselves are required.
+
+# 9. Minimum and maximum positions
+
+```{r which-minimum-maximum}
+which.min(scores)
+which.max(scores)
+```
+
+Extract corresponding values:
+
+```{r extract-minimum-maximum}
+scores[
+  which.min(scores)
+]
+
+scores[
+  which.max(scores)
+]
+```
+
+# 10. Missing-value indexing
+
+```{r vector-with-missing}
+rainfall <- c(
+  115.2,
+  98.4,
+  NA,
+  121.7,
+  110.5
+)
+```
+
+Select missing positions:
+
+```{r select-missing-values}
+rainfall[
+  is.na(rainfall)
+]
+```
+
+Select observed values:
+
+```{r select-observed-values}
+rainfall[
+  !is.na(rainfall)
+]
+```
+
+Locate missing positions:
+
+```{r locate-missing-values}
+which(
+  is.na(rainfall)
+)
+```
+
+# 11. Duplicate indexing
+
+```{r duplicate-identifiers}
+student_ids <- c(
+  "S001",
+  "S002",
+  "S003",
+  "S002",
+  "S004",
+  "S003"
+)
+```
+
+Identify repeated occurrences:
+
+```{r duplicate-status}
+duplicated(student_ids)
+```
+
+Extract repeated values:
+
+```{r extract-duplicates}
+student_ids[
+  duplicated(student_ids)
+]
+```
+
+Extract all observations participating in duplication:
+
+```{r extract-all-duplicate-members}
+student_ids[
+  duplicated(student_ids) |
+    duplicated(
+      student_ids,
+      fromLast = TRUE
+    )
+]
+```
+
+# 12. Replacing selected vector elements
+
+```{r replace-vector-element}
+corrected_scores <- scores
+
+corrected_scores[4] <- 62
+
+corrected_scores
+```
+
+Replace several positions:
+
+```{r replace-multiple-elements}
+corrected_scores[
+  c(
+    1,
+    2
+  )
+] <- c(
+  70,
+  76
+)
+
+corrected_scores
+```
+
+Replace using a condition:
+
+```{r replace-by-condition}
+capped_scores <- c(
+  45,
+  72,
+  108,
+  95
+)
+
+capped_scores[
+  capped_scores > 100
+] <- 100
+
+capped_scores
+```
+
+# 13. Matrix indexing
+
+Create a matrix:
+
+```{r create-indexing-matrix}
+score_matrix <- matrix(
+  c(
+    30,
+    48,
+    28,
+    42,
+    35,
+    51
+  ),
+  nrow = 3,
+  byrow = TRUE,
+  dimnames = list(
+    c(
+      "Ama",
+      "Kojo",
+      "Esi"
+    ),
+    c(
+      "Coursework",
+      "Examination"
+    )
+  )
+)
+
+score_matrix
+```
+
+The general matrix structure is:
+
+```text
+matrix[row, column]
+```
+
+## 13.1 Extract one cell
+
+```{r extract-matrix-cell}
+score_matrix[
+  2,
+  1
+]
+```
+
+## 13.2 Extract one row
+
+```{r extract-matrix-row}
+score_matrix[
+  1,
+]
+```
+
+## 13.3 Extract one column
+
+```{r extract-matrix-column}
+score_matrix[
+  ,
+  2
+]
+```
+
+## 13.4 Extract by names
+
+```{r extract-matrix-names}
+score_matrix[
+  "Esi",
+  "Examination"
+]
+```
+
+# 14. Dimension dropping
+
+When one matrix row or column is selected, R may simplify the result to a
+vector.
+
+```{r matrix-dimension-drop}
+class(
+  score_matrix[
+    1,
+  ]
+)
+```
+
+Preserve matrix form:
+
+```{r preserve-matrix-dimension}
+score_matrix[
+  1,
+  ,
+  drop = FALSE
+]
+```
+
+```{r inspect-preserved-matrix}
+class(
+  score_matrix[
+    1,
+    ,
+    drop = FALSE
+  ]
+)
+```
+
+# 15. Logical indexing in matrices
+
+```{r matrix-logical-selection}
+score_matrix[
+  score_matrix >= 40
+]
+```
+
+This returns a vector of cells satisfying the condition.
+
+Replace selected values:
+
+```{r matrix-logical-replacement}
+adjusted_matrix <- score_matrix
+
+adjusted_matrix[
+  adjusted_matrix < 30
+] <- 30
+
+adjusted_matrix
+```
+
+# 16. List indexing
+
+```{r create-indexing-list}
+student_record <- list(
+  name = "Ama",
+  age = 22L,
+  programme = "Statistics",
+  scores = c(
+    68,
+    74,
+    81
+  )
+)
+```
+
+## 16.1 Single brackets
+
+```{r list-single-bracket}
+student_record[
+  "programme"
+]
+```
+
+The result is a smaller list.
+
+## 16.2 Double brackets
+
+```{r list-double-bracket}
+student_record[[
+  "programme"
+]]
+```
+
+The result is the component itself.
+
+## 16.3 Dollar operator
+
+```{r list-dollar-operator}
+student_record$programme
+```
+
+## 16.4 Positional extraction
+
+```{r list-positional-extraction}
+student_record[[4]]
+```
+
+# 17. Data-frame indexing
+
+Import the student dataset:
+
+```{r import-student-data}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+head(student_data)
+```
+
+The general structure is:
+
+```text
+data_frame[row, column]
+```
+
+# 18. Extracting data-frame cells and rows
+
+```{r data-frame-cell}
+student_data[
+  1,
+  1
+]
+```
+
+```{r data-frame-first-row}
+student_data[
+  1,
+]
+```
+
+```{r data-frame-multiple-rows}
+student_data[
+  c(
+    1,
+    3,
+    5
+  ),
+]
+```
+
+# 19. Extracting data-frame columns
+
+```{r data-frame-column-position}
+student_data[
+  ,
+  2
+]
+```
+
+```{r data-frame-column-name}
+student_data[
+  ,
+  "programme"
+]
+```
+
+Both may return a vector.
+
+Preserve a one-column data frame:
+
+```{r preserve-data-frame-column}
+student_data[
+  ,
+  "programme",
+  drop = FALSE
+]
+```
+
+# 20. `$`, `[[` and `[` for data frames
+
+```{r data-frame-dollar}
+student_data$final_score
+```
+
+```{r data-frame-double-bracket}
+student_data[[
+  "final_score"
+]]
+```
+
+```{r data-frame-single-bracket}
+student_data[
+  "final_score"
+]
+```
+
+The first two return a vector. The third returns a one-column data frame.
+
+# 21. Selecting several columns
+
+```{r select-several-columns}
+student_data[
+  c(
+    "student_id",
+    "programme",
+    "final_score"
+  )
+]
+```
+
+Select by positions:
+
+```{r select-several-column-positions}
+student_data[
+  ,
+  c(
+    1,
+    2,
+    6
+  )
+]
+```
+
+# 22. Selecting rows with conditions
+
+Students who passed:
+
+```{r select-passing-students}
+passing_students <- student_data[
+  student_data$final_score >= 50,
+]
+
+passing_students
+```
+
+Students with distinctions:
+
+```{r select-distinction-students}
+distinction_students <- student_data[
+  student_data$final_score >= 80,
+]
+
+distinction_students
+```
+
+# 23. Combining row and column selection
+
+```{r combine-row-column-selection}
+student_data[
+  student_data$final_score >= 80,
+  c(
+    "student_id",
+    "programme",
+    "final_score"
+  )
+]
+```
+
+This selects only distinction records and only the named columns.
+
+# 24. Multiple conditions in data frames
+
+```{r multiple-data-frame-conditions}
+selected_students <- student_data[
+  student_data$final_score >= 70 &
+    student_data$programme == "Statistics",
+]
+
+selected_students
+```
+
+Use `%in%` for several categories:
+
+```{r membership-data-frame-condition}
+selected_programmes <- student_data[
+  student_data$programme %in%
+    c(
+      "Statistics",
+      "Procurement"
+    ),
+]
+
+selected_programmes
+```
+
+# 25. Excluding rows and columns
+
+Exclude the first row:
+
+```{r exclude-first-row}
+student_data[
+  -1,
+]
+```
+
+Exclude selected columns:
+
+```{r exclude-selected-columns}
+student_data[
+  ,
+  !names(student_data) %in%
+    c(
+      "coursework_score",
+      "examination_score"
+    )
+]
+```
+
+# 26. `subset()`
+
+```{r subset-function}
+subset(
+  student_data,
+  final_score >= 70,
+  select = c(
+    student_id,
+    programme,
+    final_score
+  )
+)
+```
+
+`subset()` can be convenient interactively, but bracket indexing is more
+explicit and is generally preferred inside functions.
+
+# 27. Selecting complete cases
+
+```{r create-incomplete-data-frame}
+incomplete_data <- data.frame(
+  id = 1:5,
+  score = c(
+    65,
+    NA,
+    72,
+    81,
+    NA
+  ),
+  attendance = c(
+    0.90,
+    0.85,
+    NA,
+    0.95,
+    0.70
+  )
+)
+
+incomplete_data
+```
+
+Rows complete across all columns:
+
+```{r complete-case-rows}
+incomplete_data[
+  complete.cases(
+    incomplete_data
+  ),
+]
+```
+
+Rows complete for one variable:
+
+```{r complete-specific-variable}
+incomplete_data[
+  !is.na(
+    incomplete_data$score
+  ),
+]
+```
+
+# 28. Row numbers
+
+```{r row-number-selection}
+row_numbers <- seq_len(
+  nrow(student_data)
+)
+
+row_numbers
+```
+
+Use a condition to retrieve row numbers:
+
+```{r row-number-condition}
+which(
+  student_data$final_score >= 80
+)
+```
+
+# 29. Ordering and indexing
+
+Order students from highest to lowest score:
+
+```{r order-data-frame}
+score_order <- order(
+  student_data$final_score,
+  decreasing = TRUE
+)
+
+student_data[
+  score_order,
+]
+```
+
+Order by programme and then descending score:
+
+```{r multi-variable-order}
+programme_score_order <- order(
+  student_data$programme,
+  -student_data$final_score
+)
+
+student_data[
+  programme_score_order,
+]
+```
+
+# 30. Modifying selected data-frame values
+
+```{r modify-data-frame-copy}
+corrected_student_data <- student_data
+```
+
+Correct one cell:
+
+```{r correct-one-cell}
+corrected_student_data[
+  1,
+  "coursework_score"
+] <- 35
+```
+
+Recalculate the corresponding final score:
+
+```{r recalculate-one-final-score}
+corrected_student_data[
+  1,
+  "final_score"
+] <-
+  corrected_student_data[
+    1,
+    "coursework_score"
+  ] +
+  corrected_student_data[
+    1,
+    "examination_score"
+  ]
+```
+
+Inspect:
+
+```{r inspect-corrected-row}
+corrected_student_data[
+  1,
+]
+```
+
+# 31. Safe modification with validation
+
+```{r validate-corrected-scores}
+all(
+  corrected_student_data$final_score ==
+    corrected_student_data$coursework_score +
+    corrected_student_data$examination_score
+)
+```
+
+Never alter a derived variable without checking whether related variables must
+also be updated.
+
+# 32. Integrated example: clinic subsetting
+
+```{r import-clinic-data}
+clinic <- read.csv(
+  "data/clinic_visits.csv",
+  stringsAsFactors = FALSE
+)
+
+head(clinic)
+names(clinic)
+```
+
+Visits with waiting times greater than 30 minutes:
+
+```{r clinic-long-wait}
+long_wait_records <- clinic[
+  clinic$waiting_minutes > 30,
+]
+
+long_wait_records
+```
+
+Long waits for new visits:
+
+```{r clinic-multiple-condition}
+selected_clinic_records <- clinic[
+  clinic$waiting_minutes > 30 &
+    clinic$visit_type == "New",
+  c(
+    "visit_id",
+    "sex",
+    "age",
+    "waiting_minutes",
+    "visit_type"
+  )
+]
+
+selected_clinic_records
+```
+
+The record with the longest waiting time:
+
+```{r clinic-longest-wait}
+clinic[
+  which.max(
+    clinic$waiting_minutes
+  ),
+]
+```
+
+# 33. Common mistakes
+
+- using zero-based indexing as in some other languages;
+- mixing positive and negative indices;
+- forgetting the comma in data-frame indexing;
+- confusing `[` and `[[`;
+- allowing dimensions to drop unintentionally;
+- comparing missing values with `== NA`;
+- using `&` where `|` is intended;
+- forgetting parentheses around complex conditions;
+- modifying derived values without recalculating dependencies;
+- assuming an unknown name produces an error rather than `NA`.
+
+# 34. Independent exercises
+
+1. Extract selected positions from a numeric vector.
+2. Exclude positions using negative indices.
+3. Select values with logical conditions.
+4. Create and index a named vector.
+5. locate minimum, maximum and missing positions.
+6. extract duplicates.
+7. modify selected vector values.
+8. index a matrix by positions and names.
+9. preserve matrix dimensions.
+10. demonstrate `[`, `[[` and `$` on a list.
+11. import student data and select passing students.
+12. select distinction students from specified programmes.
+13. identify complete cases in rainfall or clinic data.
+14. order records by one and then two variables.
+15. modify a copied dataset and validate the result.
+
+# 35. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. demonstrates positive, negative and logical vector indexing;
+2. uses named indexing;
+3. identifies missing and duplicate values;
+4. indexes a matrix by row, column and names;
+5. demonstrates `[`, `[[` and `$`;
+6. imports `student_scores.csv`;
+7. selects rows using one and multiple conditions;
+8. selects specified columns;
+9. orders records;
+10. modifies a copied value safely; and
+11. validates the modified dataset.
+
+# 36. Completion checklist
+
+Confirm that you can:
+
+- index vectors by position;
+- exclude positions;
+- use logical indices;
+- select by name;
+- locate positions with `which()`;
+- identify minimum and maximum positions;
+- extract missing and duplicate observations;
+- modify selected elements;
+- index matrices;
+- preserve dimensions;
+- distinguish `[`, `[[` and `$`;
+- subset data-frame rows and columns;
+- combine conditions;
+- select complete cases;
+- order records; and
+- validate modifications.
+
+# Lesson conclusion
+
+Indexing translates analytical conditions into selected observations and
+variables. Reliable subsetting requires careful attention to positions, names,
+logical conditions, dimensions and missing values.
+
+The working sequence is:
+
+\[
+\boxed{
+\text{define condition}
+\rightarrow
+\text{inspect index}
+\rightarrow
+\text{subset}
+\rightarrow
+\text{verify result}
+\rightarrow
+\text{analyse}
+}
+\]

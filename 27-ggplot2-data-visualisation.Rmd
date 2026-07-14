@@ -1,0 +1,736 @@
+---
+title: "Lesson 27: Data Visualisation with ggplot2"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+`ggplot2` is a widely used R package for building graphics from a consistent
+grammar. A plot is constructed by combining:
+
+- data;
+- aesthetic mappings;
+- geometric objects;
+- statistical transformations;
+- scales;
+- coordinate systems;
+- facets;
+- and themes.
+
+This approach separates what the graph shows from how it is displayed.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. explain the grammar of graphics;
+2. create a basic `ggplot` object;
+3. map variables to aesthetics;
+4. distinguish mapped and fixed aesthetics;
+5. create bar charts, histograms, box plots and scatter plots;
+6. add fitted lines;
+7. create grouped plots;
+8. use facets;
+9. control scales and labels;
+10. apply themes;
+11. annotate graphs;
+12. save plots with `ggsave()`;
+13. create reusable plotting functions; and
+14. avoid misleading designs.
+
+# 1. Package availability
+
+```{r check-ggplot2}
+ggplot2_available <- requireNamespace(
+  "ggplot2",
+  quietly = TRUE
+)
+
+ggplot2_available
+```
+
+Install once when needed:
+
+```{r install-ggplot2, eval=FALSE}
+install.packages(
+  "ggplot2"
+)
+```
+
+# 2. Importing data
+
+```{r import-ggplot-data}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+clinic_data <- read.csv(
+  "data/clinic_visits.csv",
+  stringsAsFactors = FALSE
+)
+```
+
+# 3. Grammar of graphics
+
+A typical plot has the form:
+
+```r
+ggplot2::ggplot(
+  data,
+  ggplot2::aes(
+    x = variable_x,
+    y = variable_y
+  )
+) +
+  ggplot2::geom_point()
+```
+
+# 4. Basic scatter plot
+
+```{r ggplot-basic-scatter, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = coursework_score,
+    y = examination_score
+  )
+) +
+  ggplot2::geom_point()
+```
+
+# 5. Mapped versus fixed aesthetics
+
+Mapped:
+
+```{r ggplot-mapped-aesthetic, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = coursework_score,
+    y = examination_score,
+    shape = programme
+  )
+) +
+  ggplot2::geom_point()
+```
+
+Fixed:
+
+```{r ggplot-fixed-aesthetic, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = coursework_score,
+    y = examination_score
+  )
+) +
+  ggplot2::geom_point(
+    size = 3
+  )
+```
+
+# 6. Bar chart of counts
+
+```{r ggplot-bar-counts, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = programme
+  )
+) +
+  ggplot2::geom_bar() +
+  ggplot2::labs(
+    title = "Students by Programme",
+    x = "Programme",
+    y = "Number of students"
+  )
+```
+
+# 7. Pre-computed bar chart
+
+```{r ggplot-precomputed-bar, eval=FALSE}
+programme_summary <- as.data.frame(
+  table(
+    student_data$programme
+  ),
+  stringsAsFactors = FALSE
+)
+
+names(programme_summary) <- c(
+  "programme",
+  "frequency"
+)
+
+ggplot2::ggplot(
+  programme_summary,
+  ggplot2::aes(
+    x = programme,
+    y = frequency
+  )
+) +
+  ggplot2::geom_col()
+```
+
+# 8. Horizontal bars
+
+```{r ggplot-horizontal-bars, eval=FALSE}
+ggplot2::ggplot(
+  programme_summary,
+  ggplot2::aes(
+    x = programme,
+    y = frequency
+  )
+) +
+  ggplot2::geom_col() +
+  ggplot2::coord_flip()
+```
+
+# 9. Histogram
+
+```{r ggplot-histogram, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = final_score
+  )
+) +
+  ggplot2::geom_histogram(
+    bins = 10
+  ) +
+  ggplot2::labs(
+    title = "Distribution of Final Scores",
+    x = "Final score",
+    y = "Frequency"
+  )
+```
+
+# 10. Histogram with bin width
+
+```{r ggplot-binwidth, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = final_score
+  )
+) +
+  ggplot2::geom_histogram(
+    binwidth = 5,
+    boundary = 0
+  )
+```
+
+# 11. Density plot
+
+```{r ggplot-density, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = final_score
+  )
+) +
+  ggplot2::geom_density()
+```
+
+# 12. Box plot
+
+```{r ggplot-boxplot, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    y = final_score
+  )
+) +
+  ggplot2::geom_boxplot()
+```
+
+# 13. Grouped box plot
+
+```{r ggplot-grouped-boxplot, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = programme,
+    y = final_score
+  )
+) +
+  ggplot2::geom_boxplot() +
+  ggplot2::labs(
+    title = "Final Scores by Programme",
+    x = "Programme",
+    y = "Final score"
+  )
+```
+
+# 14. Scatter plot with fitted line
+
+```{r ggplot-fitted-line, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = coursework_score,
+    y = examination_score
+  )
+) +
+  ggplot2::geom_point() +
+  ggplot2::geom_smooth(
+    method = "lm",
+    se = TRUE
+  )
+```
+
+# 15. Group mapping
+
+```{r ggplot-group-mapping, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = coursework_score,
+    y = examination_score,
+    shape = programme
+  )
+) +
+  ggplot2::geom_point(
+    size = 3
+  )
+```
+
+# 16. Position adjustments
+
+```{r ggplot-position-dodge, eval=FALSE}
+student_data$result <- ifelse(
+  student_data$final_score >= 50,
+  "Pass",
+  "Fail"
+)
+
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = programme,
+    fill = result
+  )
+) +
+  ggplot2::geom_bar(
+    position = "dodge"
+  )
+```
+
+Stacked proportions:
+
+```{r ggplot-position-fill, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = programme,
+    fill = result
+  )
+) +
+  ggplot2::geom_bar(
+    position = "fill"
+  ) +
+  ggplot2::labs(
+    y = "Proportion"
+  )
+```
+
+# 17. Faceting
+
+```{r ggplot-facet-wrap, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = final_score
+  )
+) +
+  ggplot2::geom_histogram(
+    bins = 8
+  ) +
+  ggplot2::facet_wrap(
+    ~ programme
+  )
+```
+
+# 18. Facet grid
+
+```{r ggplot-facet-grid, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = coursework_score,
+    y = examination_score
+  )
+) +
+  ggplot2::geom_point() +
+  ggplot2::facet_grid(
+    rows = ggplot2::vars(
+      programme
+    )
+  )
+```
+
+# 19. Labels
+
+```{r ggplot-labels, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = coursework_score,
+    y = examination_score
+  )
+) +
+  ggplot2::geom_point() +
+  ggplot2::labs(
+    title = "Relationship between Assessment Components",
+    subtitle = "Student assessment records",
+    x = "Coursework score",
+    y = "Examination score",
+    caption = "Source: Synthetic teaching dataset"
+  )
+```
+
+# 20. Themes
+
+```{r ggplot-themes, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = final_score
+  )
+) +
+  ggplot2::geom_histogram(
+    bins = 10
+  ) +
+  ggplot2::theme_minimal()
+```
+
+Other built-in themes include:
+
+- `theme_classic()`;
+- `theme_bw()`;
+- `theme_light()`;
+- `theme_void()`.
+
+# 21. Rotating axis text
+
+```{r ggplot-rotate-axis, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = programme
+  )
+) +
+  ggplot2::geom_bar() +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(
+      angle = 45,
+      hjust = 1
+    )
+  )
+```
+
+# 22. Continuous scales
+
+```{r ggplot-continuous-scale, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = coursework_score,
+    y = examination_score
+  )
+) +
+  ggplot2::geom_point() +
+  ggplot2::scale_x_continuous(
+    limits = c(
+      0,
+      40
+    ),
+    breaks = seq(
+      0,
+      40,
+      10
+    )
+  ) +
+  ggplot2::scale_y_continuous(
+    limits = c(
+      0,
+      60
+    ),
+    breaks = seq(
+      0,
+      60,
+      10
+    )
+  )
+```
+
+# 23. Discrete scales
+
+```{r ggplot-discrete-scale, eval=FALSE}
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = programme
+  )
+) +
+  ggplot2::geom_bar() +
+  ggplot2::scale_x_discrete(
+    limits = c(
+      "Statistics",
+      "Procurement",
+      "Hospitality",
+      "Agriculture"
+    )
+  )
+```
+
+# 24. Annotation
+
+```{r ggplot-annotation, eval=FALSE}
+highest_index <- which.max(
+  student_data$final_score
+)
+
+highest_student <- student_data[
+  highest_index,
+]
+
+ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = coursework_score,
+    y = examination_score
+  )
+) +
+  ggplot2::geom_point() +
+  ggplot2::annotate(
+    "text",
+    x = highest_student$coursework_score,
+    y = highest_student$examination_score,
+    label = highest_student$student_id,
+    vjust = -1
+  )
+```
+
+# 25. Saving a plot object
+
+```{r ggplot-save-object, eval=FALSE}
+score_plot <- ggplot2::ggplot(
+  student_data,
+  ggplot2::aes(
+    x = final_score
+  )
+) +
+  ggplot2::geom_histogram(
+    bins = 10
+  ) +
+  ggplot2::labs(
+    title = "Distribution of Final Scores",
+    x = "Final score",
+    y = "Frequency"
+  )
+
+score_plot
+```
+
+# 26. Saving with `ggsave()`
+
+```{r ggsave-example, eval=FALSE}
+ggplot2::ggsave(
+  filename = "final_score_histogram.png",
+  plot = score_plot,
+  width = 7,
+  height = 5,
+  dpi = 300
+)
+```
+
+# 27. Reusable plotting function
+
+```{r ggplot-function, eval=FALSE}
+create_scatter_plot <- function(
+  data,
+  x_variable,
+  y_variable,
+  title = NULL
+) {
+  if (!all(
+    c(
+      x_variable,
+      y_variable
+    ) %in%
+      names(data)
+  )) {
+    stop(
+      "Required variables are missing.",
+      call. = FALSE
+    )
+  }
+
+  ggplot2::ggplot(
+    data,
+    ggplot2::aes(
+      x = .data[[
+        x_variable
+      ]],
+      y = .data[[
+        y_variable
+      ]]
+    )
+  ) +
+    ggplot2::geom_point() +
+    ggplot2::geom_smooth(
+      method = "lm"
+    ) +
+    ggplot2::labs(
+      title = title,
+      x = x_variable,
+      y = y_variable
+    )
+}
+```
+
+# 28. Safe execution when `ggplot2` is absent
+
+```{r safe-ggplot-execution}
+if (ggplot2_available) {
+  basic_plot <- ggplot2::ggplot(
+    student_data,
+    ggplot2::aes(
+      x = final_score
+    )
+  ) +
+    ggplot2::geom_histogram(
+      bins = 10
+    )
+
+  print(basic_plot)
+}
+```
+
+# 29. Common mistakes
+
+- placing fixed values inside `aes()`;
+- placing mapped variables outside `aes()`;
+- using `geom_bar()` when values are already summarised;
+- ignoring the denominator in stacked proportion charts;
+- adding too many aesthetics;
+- using facets with too few observations;
+- truncating scales misleadingly;
+- failing to label axes;
+- saving without specifying size or resolution;
+- treating theme changes as substantive analysis.
+
+# 30. Independent exercises
+
+1. check and install `ggplot2`.
+2. create a basic scatter plot.
+3. demonstrate mapped and fixed aesthetics.
+4. create count and pre-computed bar charts.
+5. create histograms and density plots.
+6. create grouped box plots.
+7. add fitted lines.
+8. create grouped and proportional bar charts.
+9. use faceting.
+10. add labels and themes.
+11. adjust scales.
+12. annotate a point.
+13. save a plot.
+14. create a reusable plotting function.
+
+# 31. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. explains the grammar of graphics;
+2. creates at least six `ggplot2` graphs;
+3. distinguishes mapped and fixed aesthetics;
+4. uses grouping and faceting;
+5. controls labels and scales;
+6. applies a suitable theme;
+7. annotates an important point;
+8. saves a high-resolution graph;
+9. uses a reusable plotting function; and
+10. interprets each graph.
+
+# 32. Completion checklist
+
+Confirm that you can:
+
+- create `ggplot` objects;
+- map aesthetics;
+- fix aesthetic values;
+- create bar charts;
+- create histograms;
+- create box plots;
+- create scatter plots;
+- add fitted lines;
+- use groups and facets;
+- control scales and labels;
+- apply themes;
+- annotate graphs;
+- save plots; and
+- create reusable graph functions.
+
+# Lesson conclusion
+
+`ggplot2` builds graphics by combining meaningful layers. A successful plot
+begins with a clear analytical purpose and ends with an accurate visual
+interpretation.
+
+\[
+\boxed{
+\text{data}
++
+\text{aesthetics}
++
+\text{geometry}
++
+\text{scales}
++
+\text{theme}
+}
+\]

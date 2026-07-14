@@ -1,0 +1,806 @@
+---
+title: "Lesson 21: Factors and Categorical Data"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Categorical variables represent groups, classes, states or ordered levels.
+Examples include:
+
+- programme of study;
+- sex;
+- region;
+- employment status;
+- procurement method;
+- satisfaction category;
+- disease severity;
+- and educational level.
+
+R represents categorical data using factors. A factor stores integer codes
+together with a defined set of labels called levels.
+
+Factors are useful because they:
+
+- distinguish categorical values from ordinary text;
+- control category order;
+- support statistical modelling;
+- define reference groups;
+- preserve unobserved but valid categories;
+- and provide meaningful summaries.
+
+However, careless factor use can produce incorrect numerical conversion,
+unexpected ordering and missing values.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. explain the purpose of factors;
+2. create unordered and ordered factors;
+3. inspect levels, labels and internal codes;
+4. convert character values to factors;
+5. control level order;
+6. define and change reference categories;
+7. relabel and collapse categories;
+8. identify unused levels;
+9. drop unused levels;
+10. distinguish factors from character vectors;
+11. convert factors safely;
+12. handle missing factor values;
+13. create grouped tables;
+14. use factors in statistical modelling; and
+15. validate categorical variables.
+
+# 1. Character categories
+
+```{r character-categories}
+programme <- c(
+  "Statistics",
+  "Procurement",
+  "Hospitality",
+  "Statistics",
+  "Agriculture"
+)
+
+programme
+typeof(programme)
+class(programme)
+```
+
+The values are character strings.
+
+# 2. Creating a factor
+
+```{r create-factor}
+programme_factor <- factor(
+  programme
+)
+
+programme_factor
+class(programme_factor)
+typeof(programme_factor)
+```
+
+A factor is stored internally as integers with a levels attribute.
+
+# 3. Inspecting factor levels
+
+```{r inspect-factor-levels}
+levels(
+  programme_factor
+)
+
+nlevels(
+  programme_factor
+)
+```
+
+# 4. Internal factor codes
+
+```{r factor-internal-codes}
+unclass(
+  programme_factor
+)
+```
+
+The integer codes correspond to the positions of the labels in `levels()`.
+
+# 5. Factor summary
+
+```{r factor-summary}
+summary(
+  programme_factor
+)
+```
+
+Equivalent frequency table:
+
+```{r factor-frequency-table}
+table(
+  programme_factor
+)
+```
+
+# 6. Specifying level order
+
+By default, factor levels are often arranged alphabetically.
+
+```{r explicit-level-order}
+programme_factor <- factor(
+  programme,
+  levels = c(
+    "Statistics",
+    "Procurement",
+    "Hospitality",
+    "Agriculture"
+  )
+)
+
+levels(
+  programme_factor
+)
+```
+
+# 7. Invalid values become missing
+
+```{r invalid-factor-level}
+programme_with_error <- factor(
+  c(
+    "Statistics",
+    "Procurement",
+    "Engineering"
+  ),
+  levels = c(
+    "Statistics",
+    "Procurement",
+    "Hospitality",
+    "Agriculture"
+  )
+)
+
+programme_with_error
+```
+
+Because `"Engineering"` was not among the allowed levels, it becomes `NA`.
+
+# 8. Validating categories before conversion
+
+```{r validate-before-factor}
+raw_programme <- c(
+  "Statistics",
+  "Procurement",
+  "Engineering"
+)
+
+allowed_programmes <- c(
+  "Statistics",
+  "Procurement",
+  "Hospitality",
+  "Agriculture"
+)
+
+invalid_programmes <- setdiff(
+  unique(raw_programme),
+  allowed_programmes
+)
+
+invalid_programmes
+```
+
+Review invalid values before converting.
+
+# 9. Ordered factors
+
+Some categories have a natural order.
+
+```{r ordered-factor}
+satisfaction <- factor(
+  c(
+    "Low",
+    "Moderate",
+    "High",
+    "Moderate",
+    "Very high"
+  ),
+  levels = c(
+    "Low",
+    "Moderate",
+    "High",
+    "Very high"
+  ),
+  ordered = TRUE
+)
+
+satisfaction
+class(satisfaction)
+```
+
+# 10. Comparisons with ordered factors
+
+```{r ordered-factor-comparison}
+satisfaction >= "High"
+```
+
+This is valid because the factor is ordered.
+
+The same comparison is inappropriate for an unordered factor.
+
+# 11. Relabelling factor levels
+
+```{r relabel-factor-levels}
+employment_status <- factor(
+  c(
+    "FT",
+    "PT",
+    "UN",
+    "FT"
+  ),
+  levels = c(
+    "FT",
+    "PT",
+    "UN"
+  )
+)
+
+levels(
+  employment_status
+) <- c(
+  "Full-time",
+  "Part-time",
+  "Unemployed"
+)
+
+employment_status
+```
+
+# 12. Recode before creating a factor
+
+```{r recode-character-before-factor}
+raw_status <- c(
+  "FT",
+  "PT",
+  "UN",
+  "FT"
+)
+
+recode_map <- c(
+  FT = "Full-time",
+  PT = "Part-time",
+  UN = "Unemployed"
+)
+
+clean_status <- unname(
+  recode_map[
+    raw_status
+  ]
+)
+
+clean_status
+```
+
+Then convert:
+
+```{r factor-after-recode}
+employment_factor <- factor(
+  clean_status,
+  levels = c(
+    "Full-time",
+    "Part-time",
+    "Unemployed"
+  )
+)
+
+employment_factor
+```
+
+# 13. Collapsing categories
+
+```{r collapse-factor-categories}
+programme_group <- as.character(
+  programme_factor
+)
+
+programme_group[
+  programme_group %in%
+    c(
+      "Statistics",
+      "Procurement"
+    )
+] <- "Quantitative and Business"
+
+programme_group[
+  programme_group %in%
+    c(
+      "Hospitality",
+      "Agriculture"
+    )
+] <- "Applied and Service"
+
+programme_group <- factor(
+  programme_group
+)
+
+programme_group
+```
+
+# 14. Unused levels
+
+```{r unused-factor-levels}
+all_regions <- factor(
+  c(
+    "Upper East",
+    "Northern",
+    "Upper West"
+  ),
+  levels = c(
+    "Upper East",
+    "Northern",
+    "Upper West",
+    "Savannah"
+  )
+)
+
+all_regions
+levels(all_regions)
+```
+
+Subset:
+
+```{r subset-factor-unused-levels}
+selected_regions <- all_regions[
+  all_regions != "Northern"
+]
+
+selected_regions
+levels(selected_regions)
+```
+
+The unused level remains.
+
+# 15. Dropping unused levels
+
+```{r drop-unused-levels}
+selected_regions <- droplevels(
+  selected_regions
+)
+
+selected_regions
+levels(selected_regions)
+```
+
+# 16. Reordering factor levels
+
+```{r reorder-factor-levels}
+performance <- factor(
+  c(
+    "Good",
+    "Poor",
+    "Excellent",
+    "Good"
+  )
+)
+
+performance <- factor(
+  performance,
+  levels = c(
+    "Poor",
+    "Good",
+    "Excellent"
+  ),
+  ordered = TRUE
+)
+
+performance
+```
+
+# 17. Changing the reference level
+
+```{r relevel-factor}
+programme_model_factor <- factor(
+  programme,
+  levels = c(
+    "Statistics",
+    "Procurement",
+    "Hospitality",
+    "Agriculture"
+  )
+)
+
+programme_reference <- relevel(
+  programme_model_factor,
+  ref = "Statistics"
+)
+
+levels(
+  programme_reference
+)
+```
+
+The first level is typically the reference category in regression models.
+
+# 18. Safe factor-to-character conversion
+
+```{r factor-to-character}
+as.character(
+  programme_factor
+)
+```
+
+# 19. Dangerous factor-to-numeric conversion
+
+```{r unsafe-factor-numeric}
+numeric_factor <- factor(
+  c(
+    "10",
+    "20",
+    "30"
+  )
+)
+
+as.numeric(
+  numeric_factor
+)
+```
+
+This returns internal level codes, not the displayed values.
+
+Correct:
+
+```{r safe-factor-numeric}
+as.numeric(
+  as.character(
+    numeric_factor
+  )
+)
+```
+
+# 20. Missing factor values
+
+```{r missing-factor-values}
+response <- factor(
+  c(
+    "Yes",
+    "No",
+    NA,
+    "Yes"
+  ),
+  levels = c(
+    "No",
+    "Yes"
+  )
+)
+
+response
+is.na(response)
+summary(response)
+```
+
+# 21. Including missing values in tables
+
+```{r factor-table-use-na}
+table(
+  response,
+  useNA = "ifany"
+)
+```
+
+# 22. Adding an explicit missing category
+
+```{r explicit-missing-category}
+response_explicit <- addNA(
+  response,
+  ifany = TRUE
+)
+
+response_explicit
+levels(response_explicit)
+```
+
+Use an explicit missing category only when it is analytically appropriate.
+
+# 23. Two-way tables
+
+```{r two-way-factor-table}
+sex <- factor(
+  c(
+    "Female",
+    "Male",
+    "Female",
+    "Male",
+    "Female"
+  )
+)
+
+table(
+  programme_factor,
+  sex
+)
+```
+
+# 24. Proportions
+
+```{r factor-proportions}
+programme_table <- table(
+  programme_factor
+)
+
+prop.table(
+  programme_table
+)
+
+prop.table(
+  programme_table
+) * 100
+```
+
+# 25. Row and column percentages
+
+```{r row-column-percentages}
+programme_sex_table <- table(
+  programme_factor,
+  sex
+)
+
+prop.table(
+  programme_sex_table,
+  margin = 1
+) * 100
+
+prop.table(
+  programme_sex_table,
+  margin = 2
+) * 100
+```
+
+# 26. Factors in imported data
+
+```{r import-student-factor}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+student_data$programme_factor <- factor(
+  student_data$programme
+)
+
+str(
+  student_data[
+    c(
+      "programme",
+      "programme_factor"
+    )
+  ]
+)
+```
+
+# 27. Factor validation function
+
+```{r factor-validation-function}
+validate_categories <- function(
+  x,
+  allowed_levels
+) {
+  if (!is.character(x) &&
+      !is.factor(x)) {
+    stop(
+      "`x` must be character or factor.",
+      call. = FALSE
+    )
+  }
+
+  raw_values <- as.character(x)
+
+  invalid_values <- setdiff(
+    unique(
+      raw_values[
+        !is.na(raw_values)
+      ]
+    ),
+    allowed_levels
+  )
+
+  list(
+    valid =
+      length(
+        invalid_values
+      ) == 0L,
+    invalid_values =
+      invalid_values,
+    missing_count =
+      sum(
+        is.na(raw_values)
+      )
+  )
+}
+
+validate_categories(
+  student_data$programme,
+  allowed_programmes
+)
+```
+
+# 28. Frequency-summary function
+
+```{r categorical-summary-function}
+summarise_categorical <- function(
+  x,
+  include_missing = TRUE
+) {
+  if (!is.factor(x)) {
+    x <- factor(x)
+  }
+
+  counts <- table(
+    x,
+    useNA = if (
+      include_missing
+    ) {
+      "ifany"
+    } else {
+      "no"
+    }
+  )
+
+  data.frame(
+    category = names(counts),
+    frequency =
+      as.integer(
+        counts
+      ),
+    percentage =
+      as.numeric(
+        counts /
+          sum(counts) *
+          100
+      ),
+    stringsAsFactors = FALSE
+  )
+}
+
+summarise_categorical(
+  student_data$programme
+)
+```
+
+# 29. Model matrix demonstration
+
+```{r model-matrix-factor}
+model.matrix(
+  ~ programme_factor
+)
+```
+
+The factor is represented using indicator variables relative to a reference
+level.
+
+# 30. Common mistakes
+
+- assuming alphabetical order is meaningful;
+- converting invalid categories directly to factors;
+- changing level labels without checking correspondence;
+- using `as.numeric()` directly on a factor;
+- failing to drop unused levels;
+- using ordered factors for nominal categories;
+- ignoring reference-category choice;
+- treating missingness as a substantive category without justification;
+- collapsing categories without documenting the rule;
+- using factors before cleaning character inconsistencies.
+
+# 31. Independent exercises
+
+1. create an unordered factor.
+2. inspect levels and internal codes.
+3. specify a non-alphabetical level order.
+4. validate raw categories before conversion.
+5. create an ordered factor.
+6. relabel factor levels.
+7. collapse several categories.
+8. demonstrate unused levels and `droplevels()`.
+9. change a reference category.
+10. convert a numeric-looking factor safely.
+11. handle missing factor values.
+12. create one-way and two-way tables.
+13. calculate row and column percentages.
+14. create a factor-validation function.
+15. create a categorical-summary function.
+
+# 32. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. explains factor structure;
+2. creates nominal and ordered factors;
+3. controls level order;
+4. validates categories;
+5. relabels and collapses levels;
+6. removes unused levels;
+7. changes a reference category;
+8. demonstrates safe numeric conversion;
+9. handles missing categories;
+10. creates frequency and percentage tables;
+11. demonstrates model-matrix coding; and
+12. applies factors to supplied data.
+
+# 33. Completion checklist
+
+Confirm that you can:
+
+- create factors;
+- inspect levels and codes;
+- define allowed levels;
+- create ordered factors;
+- relabel categories;
+- collapse categories;
+- detect unused levels;
+- drop unused levels;
+- change reference levels;
+- convert factors safely;
+- handle missing factor values;
+- create frequency tables;
+- calculate proportions;
+- validate categorical data; and
+- understand factor coding in models.
+
+# Lesson conclusion
+
+Factors give categorical data an explicit analytical structure. Reliable use
+requires cleaned values, deliberate level ordering and careful conversion.
+
+\[
+\boxed{
+\text{clean text}
+\rightarrow
+\text{validate categories}
+\rightarrow
+\text{define levels}
+\rightarrow
+\text{summarise}
+\rightarrow
+\text{model}
+}
+\]

@@ -1,0 +1,562 @@
+---
+title: "Lesson 6: Vectors and Vectorised Operations"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(digits = 4, scipen = 999, width = 90)
+set.seed(20260713)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Vectors are the foundation of R's data model. A column in a dataset is commonly
+a vector, and most statistical functions operate on vectors. Understanding
+vectors therefore has direct consequences for data cleaning, summaries,
+logical conditions, simulation and modelling.
+
+This lesson covers vector creation, naming, indexing, arithmetic, comparison,
+recycling, missing values, ordering, set operations and common vector
+functions.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. create vectors using several methods;
+2. explain vector length and type;
+3. name vector elements;
+4. perform vectorised arithmetic;
+5. apply comparisons and logical operations;
+6. understand recycling;
+7. generate sequences and repeated patterns;
+8. summarise vectors;
+9. sort and rank values;
+10. use set operations;
+11. handle missing values;
+12. identify duplicates;
+13. combine and append vectors; and
+14. validate vector compatibility.
+
+# 1. Creating vectors with `c()`
+
+```{r create-vector-c}
+scores <- c(68, 74, 81, 59, 90)
+scores
+```
+
+Inspect:
+
+```{r inspect-vector}
+length(scores)
+typeof(scores)
+class(scores)
+str(scores)
+```
+
+# 2. Creating sequences
+
+```{r create-sequence-colon}
+1:10
+```
+
+```{r create-sequence-seq}
+seq(from = 0, to = 100, by = 10)
+```
+
+```{r create-sequence-length}
+seq(from = 0, to = 1, length.out = 6)
+```
+
+# 3. Repeating values
+
+```{r repeat-values-times}
+rep(c("A", "B"), times = 3)
+```
+
+```{r repeat-values-each}
+rep(c("A", "B"), each = 3)
+```
+
+# 4. Named vectors
+
+```{r named-vector}
+programme_counts <- c(
+  Statistics = 35,
+  Procurement = 42,
+  Hospitality = 28,
+  Agriculture = 31
+)
+
+programme_counts
+```
+
+```{r inspect-vector-names}
+names(programme_counts)
+programme_counts["Statistics"]
+```
+
+# 5. Vectorised arithmetic
+
+```{r vectorised-addition}
+coursework <- c(30, 28, 35, 24)
+examination <- c(48, 42, 51, 39)
+
+final_scores <- coursework + examination
+final_scores
+```
+
+```{r vectorised-subtraction}
+remaining_marks <- 100 - final_scores
+remaining_marks
+```
+
+```{r vectorised-multiplication}
+proportions <- c(0.45, 0.72, 0.81)
+percentages <- proportions * 100
+percentages
+```
+
+```{r vectorised-division}
+revenue <- c(1000, 1500, 2100)
+units <- c(20, 25, 30)
+
+revenue_per_unit <- revenue / units
+revenue_per_unit
+```
+
+# 6. Comparison vectors
+
+```{r vector-comparisons}
+final_scores >= 50
+final_scores < 70
+final_scores == 78
+final_scores != 78
+```
+
+Count and proportion:
+
+```{r logical-count-proportion}
+sum(final_scores >= 50)
+mean(final_scores >= 50)
+mean(final_scores >= 50) * 100
+```
+
+# 7. Combined logical conditions
+
+```{r combined-logical-vector}
+scores <- c(45, 58, 72, 84, 91)
+attendance <- c(0.80, 0.92, 0.88, 0.95, 0.70)
+
+eligible <-
+  (scores >= 70) &
+  (attendance >= 0.85)
+
+eligible
+```
+
+```{r logical-or-vector}
+requires_follow_up <-
+  (scores < 50) |
+  (attendance < 0.75)
+
+requires_follow_up
+```
+
+# 8. Membership
+
+```{r membership-vector}
+programmes <- c(
+  "Statistics",
+  "Hospitality",
+  "Agriculture",
+  "Procurement"
+)
+
+programmes %in% c("Statistics", "Procurement")
+```
+
+# 9. Recycling
+
+```{r exact-recycling-vector}
+c(10, 20, 30, 40) + c(1, 2)
+```
+
+```{r recycling-warning-vector, warning=TRUE}
+c(10, 20, 30, 40, 50) + c(1, 2)
+```
+
+Validate lengths:
+
+```{r validate-vector-lengths}
+x <- c(10, 20, 30)
+y <- c(1, 2, 3)
+
+length(x) == length(y)
+```
+
+# 10. Summary functions
+
+```{r vector-summary-functions}
+scores <- c(65, 72, 81, 59, 90)
+
+length(scores)
+sum(scores)
+mean(scores)
+median(scores)
+min(scores)
+max(scores)
+range(scores)
+sd(scores)
+var(scores)
+summary(scores)
+```
+
+# 11. Quantiles
+
+```{r vector-quantiles}
+quantile(scores)
+```
+
+```{r custom-quantiles}
+quantile(
+  scores,
+  probs = c(0.10, 0.25, 0.50, 0.75, 0.90)
+)
+```
+
+# 12. Sorting and ordering
+
+```{r sort-ascending}
+sort(scores)
+```
+
+```{r sort-descending}
+sort(scores, decreasing = TRUE)
+```
+
+```{r order-indices}
+order(scores)
+```
+
+```{r rank-values}
+rank(scores)
+```
+
+# 13. Minimum and maximum positions
+
+```{r which-min-max}
+which.min(scores)
+which.max(scores)
+```
+
+Retrieve the values:
+
+```{r retrieve-min-max}
+scores[which.min(scores)]
+scores[which.max(scores)]
+```
+
+# 14. Duplicates
+
+```{r duplicate-vector}
+student_ids <- c(
+  "S001",
+  "S002",
+  "S003",
+  "S002",
+  "S004"
+)
+
+duplicated(student_ids)
+anyDuplicated(student_ids)
+unique(student_ids)
+```
+
+Count unique values:
+
+```{r count-unique}
+length(unique(student_ids))
+```
+
+# 15. Missing values in vectors
+
+```{r vector-missing-values}
+rainfall <- c(115.2, 98.4, NA, 121.7, 110.5)
+
+is.na(rainfall)
+sum(is.na(rainfall))
+anyNA(rainfall)
+mean(rainfall, na.rm = TRUE)
+```
+
+Complete cases:
+
+```{r complete-cases-vector}
+complete.cases(rainfall)
+rainfall[complete.cases(rainfall)]
+```
+
+# 16. Appending vectors
+
+```{r append-vector-c}
+first_batch <- c(10, 20, 30)
+second_batch <- c(40, 50)
+
+all_values <- c(first_batch, second_batch)
+all_values
+```
+
+```{r append-function}
+append(
+  first_batch,
+  values = 25,
+  after = 2
+)
+```
+
+# 17. Set operations
+
+```{r set-operation-data}
+group_a <- c("Ama", "Kojo", "Esi", "Yaw")
+group_b <- c("Esi", "Yaw", "Akua", "Kofi")
+```
+
+```{r union-operation}
+union(group_a, group_b)
+```
+
+```{r intersection-operation}
+intersect(group_a, group_b)
+```
+
+```{r set-difference}
+setdiff(group_a, group_b)
+setdiff(group_b, group_a)
+```
+
+```{r set-equality}
+setequal(
+  c("A", "B", "C"),
+  c("C", "B", "A")
+)
+```
+
+# 18. Pairwise functions
+
+```{r pairwise-minimum}
+pmin(
+  c(10, 30, 20),
+  c(15, 25, 22)
+)
+```
+
+```{r pairwise-maximum}
+pmax(
+  c(10, 30, 20),
+  c(15, 25, 22)
+)
+```
+
+# 19. Cumulative functions
+
+```{r cumulative-sum}
+monthly_sales <- c(100, 120, 90, 150)
+cumsum(monthly_sales)
+```
+
+```{r cumulative-product}
+cumprod(c(1.05, 1.03, 0.98, 1.04))
+```
+
+```{r cumulative-min-max}
+cummin(c(10, 8, 12, 5, 9))
+cummax(c(10, 8, 12, 5, 9))
+```
+
+# 20. Differences and lags
+
+```{r vector-differences}
+values <- c(100, 120, 115, 140)
+diff(values)
+```
+
+The differences are:
+
+\[
+120-100,\quad115-120,\quad140-115.
+\]
+
+# 21. Sampling vectors
+
+```{r sample-values}
+sample(
+  x = scores,
+  size = 3,
+  replace = FALSE
+)
+```
+
+Sampling with replacement:
+
+```{r sample-with-replacement}
+sample(
+  x = scores,
+  size = 8,
+  replace = TRUE
+)
+```
+
+# 22. Random vectors
+
+```{r random-normal-vector}
+set.seed(20260713)
+
+simulated_scores <- rnorm(
+  n = 10,
+  mean = 70,
+  sd = 8
+)
+
+round(simulated_scores, 1)
+```
+
+# 23. Vector validation
+
+```{r vector-validation}
+validate_scores <- c(65, 72, 81, 59)
+
+is.numeric(validate_scores)
+length(validate_scores) > 0
+!anyNA(validate_scores)
+all(validate_scores >= 0 & validate_scores <= 100)
+```
+
+# 24. Integrated example: rainfall vector
+
+```{r import-rainfall-vector}
+rainfall_data <- read.csv(
+  "data/rainfall_records.csv",
+  stringsAsFactors = FALSE
+)
+
+rainfall_mm <- rainfall_data$rainfall_mm
+```
+
+Inspect:
+
+```{r inspect-rainfall-vector}
+str(rainfall_mm)
+length(rainfall_mm)
+sum(is.na(rainfall_mm))
+```
+
+Summarise:
+
+```{r summarise-rainfall-vector}
+mean(rainfall_mm, na.rm = TRUE)
+median(rainfall_mm, na.rm = TRUE)
+min(rainfall_mm, na.rm = TRUE)
+max(rainfall_mm, na.rm = TRUE)
+quantile(rainfall_mm, na.rm = TRUE)
+```
+
+# 25. Common mistakes
+
+- forgetting that vector operations are element-wise;
+- relying on unintended recycling;
+- confusing `sort()` with `order()`;
+- ignoring duplicates;
+- removing missing values without explanation;
+- comparing with `NA` using `==`;
+- assuming different-length vectors are compatible;
+- overlooking type coercion.
+
+# 26. Independent exercises
+
+1. Create a numeric vector using `c()`.
+2. Create sequences using `:`, `seq()` and `rep()`.
+3. Create a named vector and extract values by name.
+4. Perform element-wise arithmetic on two compatible vectors.
+5. Demonstrate exact and inexact recycling.
+6. Calculate logical counts and percentages.
+7. Sort, order and rank a vector.
+8. Identify duplicates and unique values.
+9. Demonstrate set operations.
+10. Calculate cumulative sums and first differences.
+11. Sample values with and without replacement.
+12. Import rainfall data and summarise the rainfall vector.
+
+# 27. Lesson assessment
+
+Create a standalone R Markdown report that demonstrates:
+
+- vector creation;
+- naming;
+- vectorised arithmetic;
+- comparisons;
+- logical summaries;
+- recycling;
+- missing values;
+- sorting;
+- duplicates;
+- set operations;
+- cumulative functions;
+- sampling; and
+- validation.
+
+# 28. Completion checklist
+
+Confirm that you can:
+
+- create vectors;
+- name vector elements;
+- calculate vector summaries;
+- perform vectorised arithmetic;
+- count logical conditions;
+- explain recycling;
+- sort and order;
+- identify duplicates;
+- use set operations;
+- handle missing values;
+- generate cumulative values;
+- sample values; and
+- validate vector compatibility.
+
+# Lesson conclusion
+
+Vectors are the primary computational structure in R. Their element-wise
+behaviour makes statistical operations concise, but it also requires careful
+attention to type, length, missingness and recycling.

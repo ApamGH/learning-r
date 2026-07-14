@@ -1,0 +1,906 @@
+---
+title: "Lesson 32: Hypothesis Testing and t-Tests"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Hypothesis testing evaluates how compatible observed data are with a specified
+null hypothesis.
+
+A test combines:
+
+- a null hypothesis;
+- an alternative hypothesis;
+- a test statistic;
+- a reference distribution;
+- a p-value;
+- a significance level;
+- and a decision.
+
+This lesson develops one-sample, independent-samples and paired t-tests, while
+emphasising assumptions, effect sizes and interpretation.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. formulate null and alternative hypotheses;
+2. distinguish one-sided and two-sided tests;
+3. explain test statistics and p-values;
+4. distinguish statistical and substantive significance;
+5. conduct one-sample t-tests;
+6. conduct independent-samples t-tests;
+7. distinguish Welch and pooled-variance tests;
+8. conduct paired t-tests;
+9. calculate confidence intervals;
+10. calculate effect sizes;
+11. assess assumptions;
+12. understand Type I and Type II errors;
+13. conduct power calculations conceptually;
+14. create reusable t-test reporting functions; and
+15. report results clearly.
+
+# 1. Hypotheses
+
+Example one-sample hypotheses:
+
+\[
+H_0:\mu=70
+\]
+
+\[
+H_1:\mu\neq70
+\]
+
+The null hypothesis states the reference claim.
+
+The alternative states the departure being investigated.
+
+# 2. Significance level
+
+The significance level, commonly \(\alpha=0.05\), is the tolerated long-run
+Type I error rate under the null hypothesis.
+
+# 3. P-value
+
+A p-value is the probability, assuming the null hypothesis and model conditions
+are true, of obtaining a result at least as incompatible with the null as the
+observed result.
+
+It is not:
+
+- the probability that the null hypothesis is true;
+- the probability that the result occurred by chance;
+- or the size of the effect.
+
+# 4. Importing data
+
+```{r import-t-test-data}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+final_scores <- student_data$final_score
+```
+
+# 5. One-sample t-test
+
+Test whether the mean final score differs from 70.
+
+```{r one-sample-t-test}
+one_sample_test <- t.test(
+  final_scores,
+  mu = 70,
+  alternative = "two.sided",
+  conf.level = 0.95
+)
+
+one_sample_test
+```
+
+# 6. Extracting one-sample results
+
+```{r extract-one-sample-results}
+data.frame(
+  estimate =
+    unname(
+      one_sample_test$estimate
+    ),
+  null_value =
+    unname(
+      one_sample_test$null.value
+    ),
+  statistic =
+    unname(
+      one_sample_test$statistic
+    ),
+  degrees_of_freedom =
+    unname(
+      one_sample_test$parameter
+    ),
+  p_value =
+    one_sample_test$p.value,
+  confidence_lower =
+    one_sample_test$conf.int[1],
+  confidence_upper =
+    one_sample_test$conf.int[2]
+)
+```
+
+# 7. Manual one-sample test statistic
+
+\[
+t
+=
+\frac{
+\bar{x}-\mu_0
+}{
+s/\sqrt{n}
+}.
+\]
+
+```{r manual-one-sample-t}
+observed_scores <- final_scores[
+  !is.na(final_scores)
+]
+
+sample_mean <- mean(
+  observed_scores
+)
+
+sample_sd <- sd(
+  observed_scores
+)
+
+sample_size <- length(
+  observed_scores
+)
+
+null_mean <- 70
+
+manual_t <- (
+  sample_mean -
+    null_mean
+) / (
+  sample_sd /
+    sqrt(sample_size)
+)
+
+manual_t
+```
+
+# 8. One-sided tests
+
+```{r one-sided-t-tests}
+greater_test <- t.test(
+  observed_scores,
+  mu = 70,
+  alternative = "greater"
+)
+
+less_test <- t.test(
+  observed_scores,
+  mu = 70,
+  alternative = "less"
+)
+
+greater_test
+less_test
+```
+
+The direction must be specified before looking at the result.
+
+# 9. Independent-samples t-test
+
+Select two programmes:
+
+```{r select-two-programmes}
+two_programmes <- student_data[
+  student_data$programme %in%
+    c(
+      "Statistics",
+      "Procurement"
+    ),
+]
+
+table(
+  two_programmes$programme
+)
+```
+
+Welch test:
+
+```{r welch-two-sample-test}
+welch_test <- t.test(
+  final_score ~ programme,
+  data =
+    two_programmes,
+  var.equal = FALSE
+)
+
+welch_test
+```
+
+# 10. Pooled-variance t-test
+
+```{r pooled-two-sample-test}
+pooled_test <- t.test(
+  final_score ~ programme,
+  data =
+    two_programmes,
+  var.equal = TRUE
+)
+
+pooled_test
+```
+
+Welch's test is generally preferred unless equal variances are well justified.
+
+# 11. Group summaries
+
+```{r t-test-group-summaries}
+aggregate(
+  final_score ~ programme,
+  data =
+    two_programmes,
+  FUN = function(x) {
+    c(
+      n = length(x),
+      mean = mean(x),
+      sd = sd(x)
+    )
+  }
+)
+```
+
+# 12. Variance comparison
+
+```{r variance-ratio-test}
+var.test(
+  final_score ~ programme,
+  data =
+    two_programmes
+)
+```
+
+This test is sensitive to non-normality and should not be used mechanically to
+choose the t-test version.
+
+# 13. Paired t-test
+
+```{r paired-test-data}
+before_scores <- c(
+  60,
+  65,
+  70,
+  72,
+  68,
+  75,
+  66,
+  71
+)
+
+after_scores <- c(
+  64,
+  67,
+  74,
+  73,
+  72,
+  80,
+  70,
+  74
+)
+
+paired_test <- t.test(
+  after_scores,
+  before_scores,
+  paired = TRUE
+)
+
+paired_test
+```
+
+# 14. Analysing paired differences
+
+```{r paired-differences}
+differences <-
+  after_scores -
+  before_scores
+
+summary(differences)
+mean(differences)
+sd(differences)
+
+t.test(
+  differences,
+  mu = 0
+)
+```
+
+A paired t-test is a one-sample t-test on the within-pair differences.
+
+# 15. Assumption checks
+
+The one-sample and paired t-tests assume the observations or differences are
+approximately normal when sample sizes are small.
+
+The independent t-test also assumes:
+
+- independent groups;
+- numerical outcome;
+- no severe outlier domination;
+- and, for the pooled test, equal population variances.
+
+# 16. Q-Q plot for one-sample test
+
+```{r one-sample-qqplot}
+qqnorm(
+  observed_scores,
+  main = "Q-Q Plot of Final Scores"
+)
+
+qqline(
+  observed_scores
+)
+```
+
+# 17. Q-Q plot of paired differences
+
+```{r paired-difference-qqplot}
+qqnorm(
+  differences,
+  main = "Q-Q Plot of Paired Differences"
+)
+
+qqline(
+  differences
+)
+```
+
+# 18. Shapiro-Wilk checks
+
+```{r t-test-shapiro}
+shapiro.test(
+  observed_scores
+)
+
+shapiro.test(
+  differences
+)
+```
+
+Normality tests should be interpreted with plots and sample size.
+
+# 19. Effect size for one-sample test
+
+Cohen's \(d\):
+
+\[
+d
+=
+\frac{
+\bar{x}-\mu_0
+}{
+s
+}.
+\]
+
+```{r one-sample-cohens-d}
+one_sample_d <- (
+  sample_mean -
+    null_mean
+) / sample_sd
+
+one_sample_d
+```
+
+# 20. Effect size for independent groups
+
+```{r independent-cohens-d}
+group_split <- split(
+  two_programmes$final_score,
+  two_programmes$programme
+)
+
+group_names <- names(
+  group_split
+)
+
+group_1 <- group_split[[
+  group_names[1]
+]]
+
+group_2 <- group_split[[
+  group_names[2]
+]]
+
+n_1 <- length(group_1)
+n_2 <- length(group_2)
+
+pooled_sd <- sqrt(
+  (
+    (
+      n_1 - 1
+    ) *
+    var(group_1) +
+    (
+      n_2 - 1
+    ) *
+    var(group_2)
+  ) /
+  (
+    n_1 +
+    n_2 -
+    2
+  )
+)
+
+independent_d <- (
+  mean(group_1) -
+    mean(group_2)
+) / pooled_sd
+
+independent_d
+```
+
+# 21. Effect size for paired data
+
+```{r paired-cohens-d}
+paired_d <- mean(
+  differences
+) / sd(
+  differences
+)
+
+paired_d
+```
+
+# 22. Type I and Type II errors
+
+**Type I error:** rejecting a true null hypothesis.
+
+**Type II error:** failing to reject a false null hypothesis.
+
+Power is:
+
+\[
+1-\beta.
+\]
+
+It is the probability of rejecting the null when a specified alternative is
+true.
+
+# 23. Power calculation
+
+```{r power-one-sample-example}
+power.t.test(
+  n = 30,
+  delta = 5,
+  sd = 12,
+  sig.level = 0.05,
+  type = "one.sample",
+  alternative = "two.sided"
+)
+```
+
+Required sample size:
+
+```{r power-required-sample-size}
+power.t.test(
+  power = 0.80,
+  delta = 5,
+  sd = 12,
+  sig.level = 0.05,
+  type = "one.sample",
+  alternative = "two.sided"
+)
+```
+
+# 24. Statistical versus practical significance
+
+A small p-value does not guarantee an important effect.
+
+A useful interpretation considers:
+
+- effect size;
+- confidence interval;
+- sample size;
+- measurement scale;
+- and substantive context.
+
+# 25. Decision language
+
+Preferred language:
+
+- reject the null hypothesis;
+- fail to reject the null hypothesis;
+- evidence supports a difference;
+- evidence is insufficient to support a difference.
+
+Avoid saying the null hypothesis has been proved true.
+
+# 26. Reusable one-sample reporting function
+
+```{r one-sample-report-function}
+report_one_sample_t <- function(
+  x,
+  null_mean,
+  confidence_level = 0.95,
+  alternative = c(
+    "two.sided",
+    "less",
+    "greater"
+  )
+) {
+  alternative <- match.arg(
+    alternative
+  )
+
+  observed <- x[
+    !is.na(x)
+  ]
+
+  result <- t.test(
+    observed,
+    mu = null_mean,
+    alternative =
+      alternative,
+    conf.level =
+      confidence_level
+  )
+
+  data.frame(
+    n = length(observed),
+    mean = mean(observed),
+    standard_deviation =
+      sd(observed),
+    null_mean =
+      null_mean,
+    mean_difference =
+      mean(observed) -
+      null_mean,
+    t =
+      unname(
+        result$statistic
+      ),
+    degrees_of_freedom =
+      unname(
+        result$parameter
+      ),
+    p_value =
+      result$p.value,
+    confidence_lower =
+      result$conf.int[1],
+    confidence_upper =
+      result$conf.int[2],
+    cohens_d =
+      (
+        mean(observed) -
+        null_mean
+      ) /
+      sd(observed)
+  )
+}
+
+report_one_sample_t(
+  final_scores,
+  null_mean = 70
+)
+```
+
+# 27. Reusable independent t-test report
+
+```{r independent-t-report-function}
+report_independent_t <- function(
+  data,
+  outcome,
+  group,
+  confidence_level = 0.95
+) {
+  required <- c(
+    outcome,
+    group
+  )
+
+  if (!all(
+    required %in%
+      names(data)
+  )) {
+    stop(
+      "Required variables are missing.",
+      call. = FALSE
+    )
+  }
+
+  group_values <- unique(
+    data[[
+      group
+    ]][
+      !is.na(
+        data[[
+          group
+        ]]
+      )
+    ]
+  )
+
+  if (length(group_values) != 2L) {
+    stop(
+      "Exactly two groups are required.",
+      call. = FALSE
+    )
+  }
+
+  formula_object <- reformulate(
+    group,
+    response =
+      outcome
+  )
+
+  result <- t.test(
+    formula_object,
+    data = data,
+    var.equal = FALSE,
+    conf.level =
+      confidence_level
+  )
+
+  data.frame(
+    group_1 =
+      group_values[1],
+    group_2 =
+      group_values[2],
+    estimate_1 =
+      unname(
+        result$estimate[1]
+      ),
+    estimate_2 =
+      unname(
+        result$estimate[2]
+      ),
+    mean_difference =
+      unname(
+        result$estimate[1] -
+        result$estimate[2]
+      ),
+    t =
+      unname(
+        result$statistic
+      ),
+    degrees_of_freedom =
+      unname(
+        result$parameter
+      ),
+    p_value =
+      result$p.value,
+    confidence_lower =
+      result$conf.int[1],
+    confidence_upper =
+      result$conf.int[2]
+  )
+}
+
+report_independent_t(
+  two_programmes,
+  outcome = "final_score",
+  group = "programme"
+)
+```
+
+# 28. Reusable paired t-test report
+
+```{r paired-t-report-function}
+report_paired_t <- function(
+  before,
+  after,
+  confidence_level = 0.95
+) {
+  complete_status <- complete.cases(
+    before,
+    after
+  )
+
+  before_complete <- before[
+    complete_status
+  ]
+
+  after_complete <- after[
+    complete_status
+  ]
+
+  differences <-
+    after_complete -
+    before_complete
+
+  result <- t.test(
+    after_complete,
+    before_complete,
+    paired = TRUE,
+    conf.level =
+      confidence_level
+  )
+
+  data.frame(
+    n = length(
+      differences
+    ),
+    before_mean =
+      mean(
+        before_complete
+      ),
+    after_mean =
+      mean(
+        after_complete
+      ),
+    mean_difference =
+      mean(
+        differences
+      ),
+    t =
+      unname(
+        result$statistic
+      ),
+    degrees_of_freedom =
+      unname(
+        result$parameter
+      ),
+    p_value =
+      result$p.value,
+    confidence_lower =
+      result$conf.int[1],
+    confidence_upper =
+      result$conf.int[2],
+    cohens_d =
+      mean(
+        differences
+      ) /
+      sd(
+        differences
+      )
+  )
+}
+
+report_paired_t(
+  before_scores,
+  after_scores
+)
+```
+
+# 29. Reporting template
+
+A complete result may be written as:
+
+> The mean score was compared with the reference value using a one-sample
+> t-test. The report includes the sample mean, standard deviation, mean
+> difference, test statistic, degrees of freedom, p-value, confidence interval
+> and effect size.
+
+# 30. Common mistakes
+
+- choosing one-sided hypotheses after seeing the result;
+- interpreting p-values as effect sizes;
+- saying the null hypothesis is accepted or proved;
+- using an independent test for paired data;
+- using a paired test for independent groups;
+- selecting pooled variance mechanically;
+- ignoring outliers and data quality;
+- reporting p-values without confidence intervals;
+- failing to report group means and standard deviations;
+- ignoring practical significance.
+
+# 31. Independent exercises
+
+1. formulate null and alternative hypotheses.
+2. conduct a one-sample t-test.
+3. calculate the test statistic manually.
+4. compare one-sided and two-sided tests.
+5. conduct Welch and pooled independent tests.
+6. create group summaries.
+7. conduct a paired t-test.
+8. analyse paired differences.
+9. inspect assumptions.
+10. calculate Cohen's d.
+11. explain Type I and Type II errors.
+12. conduct a power calculation.
+13. create reusable t-test functions.
+14. write a complete interpretation.
+
+# 32. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. states hypotheses;
+2. conducts a one-sample test;
+3. conducts an independent-samples test;
+4. conducts a paired test;
+5. checks assumptions;
+6. reports confidence intervals;
+7. calculates effect sizes;
+8. explains errors and power;
+9. uses reusable reporting functions; and
+10. distinguishes statistical and practical significance.
+
+# 33. Completion checklist
+
+Confirm that you can:
+
+- formulate hypotheses;
+- explain p-values;
+- conduct one-sample t-tests;
+- conduct Welch tests;
+- conduct pooled tests;
+- conduct paired tests;
+- assess assumptions;
+- calculate confidence intervals;
+- calculate effect sizes;
+- explain Type I and Type II errors;
+- conduct basic power calculations;
+- write reusable test functions; and
+- report results accurately.
+
+# Lesson conclusion
+
+Hypothesis testing evaluates evidence against a specified null model. Good
+reporting combines p-values with estimates, confidence intervals, effect sizes
+and substantive interpretation.
+
+\[
+\boxed{
+\text{question}
+\rightarrow
+\text{hypotheses}
+\rightarrow
+\text{test statistic}
+\rightarrow
+\text{p-value}
+\rightarrow
+\text{effect size and interval}
+\rightarrow
+\text{interpretation}
+}
+\]

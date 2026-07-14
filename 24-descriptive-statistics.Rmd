@@ -1,0 +1,805 @@
+---
+title: "Lesson 24: Descriptive Statistics for Numerical Data"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Descriptive statistics summarise the main features of numerical data before
+formal modelling. They help the analyst understand:
+
+- centre;
+- spread;
+- range;
+- shape;
+- unusual values;
+- missingness;
+- and differences across groups.
+
+A reliable descriptive analysis should not consist of a single mean. It should
+combine several summaries and explain what each contributes.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. distinguish descriptive and inferential statistics;
+2. calculate counts and effective sample sizes;
+3. calculate means, medians and modes;
+4. calculate ranges, quartiles and interquartile ranges;
+5. calculate variance and standard deviation;
+6. calculate coefficients of variation;
+7. calculate quantiles and percentiles;
+8. understand resistant and non-resistant statistics;
+9. summarise missing values;
+10. identify possible outliers;
+11. compare summaries across groups;
+12. write reusable summary functions;
+13. produce publication-ready descriptive tables; and
+14. interpret descriptive statistics in context.
+
+# 1. Importing the working data
+
+```{r import-student-descriptive}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+head(student_data)
+str(student_data)
+```
+
+# 2. The analytical variable
+
+```{r select-final-score}
+final_scores <- student_data$final_score
+
+final_scores
+```
+
+# 3. Sample size and observed count
+
+```{r descriptive-counts}
+total_count <- length(final_scores)
+
+observed_count <- sum(
+  !is.na(final_scores)
+)
+
+missing_count <- sum(
+  is.na(final_scores)
+)
+
+total_count
+observed_count
+missing_count
+```
+
+# 4. Arithmetic mean
+
+```{r arithmetic-mean}
+mean(
+  final_scores,
+  na.rm = TRUE
+)
+```
+
+The arithmetic mean is:
+
+\[
+\bar{x}
+=
+\frac{1}{n}
+\sum_{i=1}^{n}x_i.
+\]
+
+It uses every observed value and is sensitive to extreme observations.
+
+# 5. Median
+
+```{r descriptive-median}
+median(
+  final_scores,
+  na.rm = TRUE
+)
+```
+
+The median is the middle ordered value and is more resistant to extreme values.
+
+# 6. Mode
+
+Base R does not provide a direct statistical mode function.
+
+```{r statistical-mode-function}
+statistical_mode <- function(
+  x,
+  remove_missing = TRUE
+) {
+  if (remove_missing) {
+    x <- x[
+      !is.na(x)
+    ]
+  }
+
+  frequencies <- table(x)
+
+  if (length(frequencies) == 0L) {
+    return(NA)
+  }
+
+  maximum_frequency <- max(frequencies)
+
+  modes <- names(
+    frequencies
+  )[
+    frequencies ==
+      maximum_frequency
+  ]
+
+  list(
+    mode = modes,
+    frequency =
+      as.integer(
+        maximum_frequency
+      )
+  )
+}
+
+statistical_mode(
+  final_scores
+)
+```
+
+A distribution may have more than one mode.
+
+# 7. Minimum and maximum
+
+```{r minimum-maximum}
+minimum_score <- min(
+  final_scores,
+  na.rm = TRUE
+)
+
+maximum_score <- max(
+  final_scores,
+  na.rm = TRUE
+)
+
+minimum_score
+maximum_score
+```
+
+# 8. Range
+
+```{r descriptive-range}
+range(
+  final_scores,
+  na.rm = TRUE
+)
+
+score_range <-
+  maximum_score -
+  minimum_score
+
+score_range
+```
+
+# 9. Quartiles
+
+```{r descriptive-quartiles}
+quantile(
+  final_scores,
+  probs = c(
+    0.25,
+    0.50,
+    0.75
+  ),
+  na.rm = TRUE
+)
+```
+
+# 10. Interquartile range
+
+```{r descriptive-iqr}
+IQR(
+  final_scores,
+  na.rm = TRUE
+)
+```
+
+The interquartile range is:
+
+\[
+IQR = Q_3 - Q_1.
+\]
+
+# 11. Variance
+
+```{r descriptive-variance}
+var(
+  final_scores,
+  na.rm = TRUE
+)
+```
+
+Sample variance is:
+
+\[
+s^2
+=
+\frac{
+\sum_{i=1}^{n}
+(x_i-\bar{x})^2
+}{
+n-1
+}.
+\]
+
+# 12. Standard deviation
+
+```{r descriptive-standard-deviation}
+sd(
+  final_scores,
+  na.rm = TRUE
+)
+```
+
+The standard deviation is the square root of the variance.
+
+# 13. Coefficient of variation
+
+```{r coefficient-of-variation}
+mean_score <- mean(
+  final_scores,
+  na.rm = TRUE
+)
+
+standard_deviation <- sd(
+  final_scores,
+  na.rm = TRUE
+)
+
+coefficient_of_variation <-
+  standard_deviation /
+  mean_score *
+  100
+
+coefficient_of_variation
+```
+
+The coefficient of variation is meaningful mainly for ratio-scale variables
+with a meaningful zero.
+
+# 14. Quantiles and percentiles
+
+```{r descriptive-percentiles}
+quantile(
+  final_scores,
+  probs = c(
+    0.05,
+    0.10,
+    0.25,
+    0.50,
+    0.75,
+    0.90,
+    0.95
+  ),
+  na.rm = TRUE
+)
+```
+
+# 15. Five-number summary
+
+```{r five-number-summary}
+fivenum(
+  final_scores,
+  na.rm = TRUE
+)
+```
+
+# 16. General summary
+
+```{r general-summary}
+summary(
+  final_scores
+)
+```
+
+# 17. Mean versus median under an extreme value
+
+```{r extreme-value-example}
+ordinary_values <- c(
+  10,
+  12,
+  13,
+  14,
+  15
+)
+
+values_with_extreme <- c(
+  ordinary_values,
+  100
+)
+
+data.frame(
+  dataset = c(
+    "Ordinary",
+    "With extreme value"
+  ),
+  mean = c(
+    mean(ordinary_values),
+    mean(values_with_extreme)
+  ),
+  median = c(
+    median(ordinary_values),
+    median(values_with_extreme)
+  ),
+  stringsAsFactors = FALSE
+)
+```
+
+# 18. Resistant statistics
+
+More resistant:
+
+- median;
+- quartiles;
+- interquartile range.
+
+Less resistant:
+
+- mean;
+- variance;
+- standard deviation;
+- range.
+
+# 19. Z-scores
+
+```{r descriptive-z-scores}
+score_z <- as.numeric(
+  scale(
+    final_scores
+  )
+)
+
+head(score_z)
+mean(
+  score_z,
+  na.rm = TRUE
+)
+sd(
+  score_z,
+  na.rm = TRUE
+)
+```
+
+# 20. IQR outlier screening
+
+```{r descriptive-outlier-screen}
+q1 <- quantile(
+  final_scores,
+  0.25,
+  na.rm = TRUE
+)
+
+q3 <- quantile(
+  final_scores,
+  0.75,
+  na.rm = TRUE
+)
+
+iqr_value <- q3 - q1
+
+lower_fence <- q1 - 1.5 * iqr_value
+upper_fence <- q3 + 1.5 * iqr_value
+
+outlier_status <-
+  final_scores < lower_fence |
+  final_scores > upper_fence
+
+student_data[
+  outlier_status,
+]
+```
+
+An outlier flag is not proof of error.
+
+# 21. Skewness by moment calculation
+
+```{r descriptive-skewness-function}
+calculate_skewness <- function(
+  x
+) {
+  x <- x[
+    !is.na(x)
+  ]
+
+  n <- length(x)
+  centre <- mean(x)
+  spread <- sd(x)
+
+  if (n < 3L ||
+      spread == 0) {
+    return(NA_real_)
+  }
+
+  mean(
+    (
+      (x - centre) /
+        spread
+    ) ^ 3
+  )
+}
+
+calculate_skewness(
+  final_scores
+)
+```
+
+# 22. Grouped descriptive statistics with `tapply()`
+
+```{r grouped-means}
+tapply(
+  student_data$final_score,
+  student_data$programme,
+  mean,
+  na.rm = TRUE
+)
+```
+
+Grouped standard deviations:
+
+```{r grouped-standard-deviations}
+tapply(
+  student_data$final_score,
+  student_data$programme,
+  sd,
+  na.rm = TRUE
+)
+```
+
+# 23. Grouped summaries with `aggregate()`
+
+```{r aggregate-grouped-summary}
+aggregate(
+  final_score ~ programme,
+  data = student_data,
+  FUN = mean
+)
+```
+
+# 24. A complete numerical summary function
+
+```{r complete-numerical-summary}
+summarise_numeric <- function(
+  x,
+  variable_name = "x"
+) {
+  if (!is.numeric(x)) {
+    stop(
+      "`x` must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  observed <- x[
+    !is.na(x)
+  ]
+
+  if (length(observed) == 0L) {
+    stop(
+      "No observed values are available.",
+      call. = FALSE
+    )
+  }
+
+  q <- quantile(
+    observed,
+    probs = c(
+      0.25,
+      0.50,
+      0.75
+    )
+  )
+
+  data.frame(
+    variable = variable_name,
+    total = length(x),
+    observed = length(observed),
+    missing = sum(
+      is.na(x)
+    ),
+    mean = mean(observed),
+    median = median(observed),
+    standard_deviation = sd(observed),
+    variance = var(observed),
+    minimum = min(observed),
+    first_quartile = q[1],
+    third_quartile = q[3],
+    maximum = max(observed),
+    interquartile_range = IQR(observed),
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+}
+
+summarise_numeric(
+  final_scores,
+  "final_score"
+)
+```
+
+# 25. Summarising several numerical variables
+
+```{r summarise-several-numeric}
+numeric_variables <- names(
+  student_data
+)[
+  vapply(
+    student_data,
+    is.numeric,
+    FUN.VALUE = logical(1)
+  )
+]
+
+numeric_summaries <- lapply(
+  numeric_variables,
+  function(variable_name) {
+    summarise_numeric(
+      student_data[[
+        variable_name
+      ]],
+      variable_name
+    )
+  }
+)
+
+numeric_summary_table <- do.call(
+  rbind,
+  numeric_summaries
+)
+
+numeric_summary_table
+```
+
+# 26. Grouped summary function
+
+```{r grouped-summary-function}
+summarise_by_group <- function(
+  data,
+  numerical_variable,
+  group_variable
+) {
+  if (!all(
+    c(
+      numerical_variable,
+      group_variable
+    ) %in%
+      names(data)
+  )) {
+    stop(
+      "Required variables are missing.",
+      call. = FALSE
+    )
+  }
+
+  groups <- unique(
+    data[[
+      group_variable
+    ]]
+  )
+
+  results <- lapply(
+    groups,
+    function(group_value) {
+      selected <- data[
+        data[[
+          group_variable
+        ]] == group_value &
+          !is.na(
+            data[[
+              group_variable
+            ]]
+          ),
+        numerical_variable
+      ]
+
+      summary_row <- summarise_numeric(
+        selected,
+        numerical_variable
+      )
+
+      summary_row[
+        group_variable
+      ] <- group_value
+
+      summary_row
+    }
+  )
+
+  result <- do.call(
+    rbind,
+    results
+  )
+
+  result[
+    c(
+      group_variable,
+      setdiff(
+        names(result),
+        group_variable
+      )
+    )
+  ]
+}
+
+summarise_by_group(
+  student_data,
+  "final_score",
+  "programme"
+)
+```
+
+# 27. Reporting precision
+
+```{r reporting-precision}
+summary_table <- summarise_numeric(
+  final_scores,
+  "final_score"
+)
+
+numeric_columns <- vapply(
+  summary_table,
+  is.numeric,
+  FUN.VALUE = logical(1)
+)
+
+summary_table[
+  numeric_columns
+] <- lapply(
+  summary_table[
+    numeric_columns
+  ],
+  round,
+  digits = 2
+)
+
+summary_table
+```
+
+# 28. Interpreting descriptive statistics
+
+A good interpretation should state:
+
+- the number of observed values;
+- the main measure of centre;
+- the spread;
+- the range or quartiles;
+- missingness;
+- and any important asymmetry or unusual values.
+
+# 29. Common mistakes
+
+- reporting the mean without the sample size;
+- using `na.rm = TRUE` without reporting missingness;
+- presenting standard deviation without the mean;
+- interpreting an outlier flag as an error;
+- using coefficient of variation for unsuitable scales;
+- comparing group means without group sizes;
+- rounding too early;
+- confusing variance and standard deviation;
+- using mode for continuous variables without purpose;
+- relying on one statistic only.
+
+# 30. Independent exercises
+
+1. calculate observed and missing counts.
+2. calculate mean, median and mode.
+3. calculate minimum, maximum and range.
+4. calculate quartiles and IQR.
+5. calculate variance and standard deviation.
+6. calculate coefficient of variation.
+7. calculate selected percentiles.
+8. compare mean and median under an extreme value.
+9. identify possible outliers.
+10. calculate grouped means and standard deviations.
+11. create a complete numerical summary function.
+12. summarise every numerical variable.
+13. create grouped descriptive tables.
+14. write a contextual interpretation.
+
+# 31. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. imports supplied data;
+2. describes sample size and missingness;
+3. reports measures of centre;
+4. reports measures of spread;
+5. reports quartiles and percentiles;
+6. screens for possible outliers;
+7. compares programme groups;
+8. creates reusable summary functions;
+9. produces a rounded final table; and
+10. interprets the results in complete sentences.
+
+# 32. Completion checklist
+
+Confirm that you can:
+
+- calculate observed sample size;
+- calculate mean, median and mode;
+- calculate range and quartiles;
+- calculate variance and standard deviation;
+- calculate coefficient of variation;
+- calculate percentiles;
+- identify resistant statistics;
+- calculate z-scores;
+- screen possible outliers;
+- compare groups;
+- create reusable summary functions; and
+- interpret descriptive statistics.
+
+# Lesson conclusion
+
+Descriptive analysis should combine sample size, centre, spread, distribution
+shape and missingness. The purpose is to understand the data before making
+formal statistical claims.
+
+\[
+\boxed{
+\text{inspect}
+\rightarrow
+\text{count}
+\rightarrow
+\text{summarise centre}
+\rightarrow
+\text{summarise spread}
+\rightarrow
+\text{interpret}
+}
+\]

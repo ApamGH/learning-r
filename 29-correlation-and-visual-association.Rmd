@@ -1,0 +1,808 @@
+---
+title: "Lesson 29: Correlation, Covariance and Visual Association"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Correlation and covariance describe how numerical variables vary together.
+They are useful for exploring association, screening predictors and checking
+redundancy.
+
+Correlation does not establish causation. A strong association may arise from:
+
+- direct influence;
+- reverse influence;
+- a common cause;
+- selection;
+- measurement structure;
+- or coincidence.
+
+This lesson develops Pearson, Spearman and Kendall correlations, covariance,
+correlation matrices, significance tests and visual assessment.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. explain covariance and correlation;
+2. calculate covariance;
+3. calculate Pearson correlation;
+4. calculate Spearman correlation;
+5. calculate Kendall correlation;
+6. distinguish linear and monotonic relationships;
+7. handle missing values appropriately;
+8. create correlation matrices;
+9. test individual correlations;
+10. calculate confidence intervals;
+11. inspect scatter plots;
+12. detect non-linear relationships and outliers;
+13. create grouped correlations;
+14. avoid causal interpretation; and
+15. produce a correlation report.
+
+# 1. Importing data
+
+```{r import-correlation-data}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+clinic_data <- read.csv(
+  "data/clinic_visits.csv",
+  stringsAsFactors = FALSE
+)
+```
+
+# 2. Covariance
+
+```{r covariance-example}
+cov(
+  student_data$coursework_score,
+  student_data$examination_score,
+  use = "complete.obs"
+)
+```
+
+Sample covariance is:
+
+\[
+s_{xy}
+=
+\frac{
+\sum_{i=1}^{n}
+(x_i-\bar{x})
+(y_i-\bar{y})
+}{
+n-1
+}.
+\]
+
+# 3. Interpreting covariance
+
+- positive covariance: variables tend to increase together;
+- negative covariance: one tends to increase as the other decreases;
+- near-zero covariance: little linear co-movement.
+
+Magnitude depends on measurement units.
+
+# 4. Pearson correlation
+
+```{r pearson-correlation}
+cor(
+  student_data$coursework_score,
+  student_data$examination_score,
+  method = "pearson",
+  use = "complete.obs"
+)
+```
+
+Pearson correlation standardises covariance:
+
+\[
+r
+=
+\frac{s_{xy}}{s_xs_y}.
+\]
+
+# 5. Range of correlation
+
+Correlation lies between -1 and 1.
+
+- `1`: perfect positive linear association;
+- `-1`: perfect negative linear association;
+- `0`: no linear association.
+
+# 6. Scatter plot
+
+```{r correlation-scatterplot}
+plot(
+  student_data$coursework_score,
+  student_data$examination_score,
+  main = "Coursework and Examination Scores",
+  xlab = "Coursework score",
+  ylab = "Examination score",
+  pch = 19
+)
+```
+
+# 7. Fitted line
+
+```{r correlation-fitted-line}
+plot(
+  student_data$coursework_score,
+  student_data$examination_score,
+  main = "Coursework and Examination Scores",
+  xlab = "Coursework score",
+  ylab = "Examination score",
+  pch = 19
+)
+
+abline(
+  lm(
+    examination_score ~ coursework_score,
+    data = student_data
+  ),
+  lwd = 2
+)
+```
+
+# 8. Spearman correlation
+
+```{r spearman-correlation}
+cor(
+  student_data$coursework_score,
+  student_data$examination_score,
+  method = "spearman",
+  use = "complete.obs"
+)
+```
+
+Spearman correlation is based on ranks and assesses monotonic association.
+
+# 9. Kendall correlation
+
+```{r kendall-correlation}
+cor(
+  student_data$coursework_score,
+  student_data$examination_score,
+  method = "kendall",
+  use = "complete.obs"
+)
+```
+
+Kendall's tau is based on concordant and discordant pairs.
+
+# 10. Comparing methods
+
+```{r compare-correlation-methods}
+correlation_comparison <- data.frame(
+  method = c(
+    "Pearson",
+    "Spearman",
+    "Kendall"
+  ),
+  coefficient = c(
+    cor(
+      student_data$coursework_score,
+      student_data$examination_score,
+      method = "pearson"
+    ),
+    cor(
+      student_data$coursework_score,
+      student_data$examination_score,
+      method = "spearman"
+    ),
+    cor(
+      student_data$coursework_score,
+      student_data$examination_score,
+      method = "kendall"
+    )
+  ),
+  stringsAsFactors = FALSE
+)
+
+correlation_comparison
+```
+
+# 11. Linear versus monotonic association
+
+```{r monotonic-example}
+x <- 1:20
+y <- x ^ 2
+
+cor(
+  x,
+  y,
+  method = "pearson"
+)
+
+cor(
+  x,
+  y,
+  method = "spearman"
+)
+```
+
+The relationship is perfectly monotonic but not perfectly linear.
+
+# 12. Zero correlation can hide structure
+
+```{r nonlinear-zero-example}
+x_curve <- seq(
+  -3,
+  3,
+  length.out = 100
+)
+
+y_curve <- x_curve ^ 2
+
+cor(
+  x_curve,
+  y_curve
+)
+
+plot(
+  x_curve,
+  y_curve,
+  main = "Non-linear Association",
+  xlab = "x",
+  ylab = "x squared",
+  pch = 19
+)
+```
+
+# 13. Outlier influence
+
+```{r correlation-outlier-influence}
+x_regular <- 1:10
+y_regular <- 2 * x_regular
+
+pearson_regular <- cor(
+  x_regular,
+  y_regular
+)
+
+x_with_outlier <- c(
+  x_regular,
+  20
+)
+
+y_with_outlier <- c(
+  y_regular,
+  -20
+)
+
+pearson_with_outlier <- cor(
+  x_with_outlier,
+  y_with_outlier
+)
+
+spearman_with_outlier <- cor(
+  x_with_outlier,
+  y_with_outlier,
+  method = "spearman"
+)
+
+data.frame(
+  statistic = c(
+    "Pearson without outlier",
+    "Pearson with outlier",
+    "Spearman with outlier"
+  ),
+  value = c(
+    pearson_regular,
+    pearson_with_outlier,
+    spearman_with_outlier
+  ),
+  stringsAsFactors = FALSE
+)
+```
+
+# 14. Correlation matrix
+
+```{r correlation-matrix}
+numeric_student_data <- student_data[
+  vapply(
+    student_data,
+    is.numeric,
+    FUN.VALUE = logical(1)
+  )
+]
+
+student_correlation_matrix <- cor(
+  numeric_student_data,
+  use = "pairwise.complete.obs",
+  method = "pearson"
+)
+
+student_correlation_matrix
+```
+
+# 15. Covariance matrix
+
+```{r covariance-matrix}
+cov(
+  numeric_student_data,
+  use = "pairwise.complete.obs"
+)
+```
+
+# 16. Rounding a matrix
+
+```{r round-correlation-matrix}
+round(
+  student_correlation_matrix,
+  digits = 3
+)
+```
+
+# 17. Missing-value options
+
+Common `use` choices:
+
+- `"everything"`;
+- `"all.obs"`;
+- `"complete.obs"`;
+- `"pairwise.complete.obs"`.
+
+Pairwise deletion can produce matrices based on different sample sizes.
+
+# 18. Correlation test
+
+```{r pearson-correlation-test}
+pearson_test <- cor.test(
+  student_data$coursework_score,
+  student_data$examination_score,
+  method = "pearson"
+)
+
+pearson_test
+```
+
+# 19. Extracting test results
+
+```{r extract-correlation-test}
+data.frame(
+  estimate =
+    unname(
+      pearson_test$estimate
+    ),
+  statistic =
+    unname(
+      pearson_test$statistic
+    ),
+  degrees_of_freedom =
+    unname(
+      pearson_test$parameter
+    ),
+  p_value =
+    pearson_test$p.value,
+  confidence_lower =
+    pearson_test$conf.int[1],
+  confidence_upper =
+    pearson_test$conf.int[2]
+)
+```
+
+# 20. Spearman test
+
+```{r spearman-test}
+cor.test(
+  student_data$coursework_score,
+  student_data$examination_score,
+  method = "spearman",
+  exact = FALSE
+)
+```
+
+# 21. Kendall test
+
+```{r kendall-test}
+cor.test(
+  student_data$coursework_score,
+  student_data$examination_score,
+  method = "kendall",
+  exact = FALSE
+)
+```
+
+# 22. Grouped correlations
+
+```{r grouped-correlations}
+programme_groups <- split(
+  student_data,
+  student_data$programme
+)
+
+grouped_correlation <- lapply(
+  programme_groups,
+  function(group_data) {
+    cor(
+      group_data$coursework_score,
+      group_data$examination_score,
+      use = "complete.obs"
+    )
+  }
+)
+
+grouped_correlation
+```
+
+Small group sizes make grouped correlations unstable.
+
+# 23. Correlation by group function
+
+```{r grouped-correlation-function}
+calculate_grouped_correlation <- function(
+  data,
+  x_variable,
+  y_variable,
+  group_variable,
+  method = "pearson"
+) {
+  required <- c(
+    x_variable,
+    y_variable,
+    group_variable
+  )
+
+  if (!all(
+    required %in%
+      names(data)
+  )) {
+    stop(
+      "Required variables are missing.",
+      call. = FALSE
+    )
+  }
+
+  groups <- split(
+    data,
+    data[[
+      group_variable
+    ]]
+  )
+
+  results <- lapply(
+    names(groups),
+    function(group_name) {
+      group_data <- groups[[
+        group_name
+      ]]
+
+      complete_status <- complete.cases(
+        group_data[
+          c(
+            x_variable,
+            y_variable
+          )
+        ]
+      )
+
+      n_complete <- sum(
+        complete_status
+      )
+
+      estimate <- if (
+        n_complete >= 3L
+      ) {
+        cor(
+          group_data[[
+            x_variable
+          ]][
+            complete_status
+          ],
+          group_data[[
+            y_variable
+          ]][
+            complete_status
+          ],
+          method = method
+        )
+      } else {
+        NA_real_
+      }
+
+      data.frame(
+        group = group_name,
+        n = n_complete,
+        correlation = estimate,
+        stringsAsFactors = FALSE
+      )
+    }
+  )
+
+  result <- do.call(
+    rbind,
+    results
+  )
+
+  names(result)[1] <-
+    group_variable
+
+  result
+}
+
+calculate_grouped_correlation(
+  student_data,
+  "coursework_score",
+  "examination_score",
+  "programme"
+)
+```
+
+# 24. Pairwise correlation report function
+
+```{r correlation-report-function}
+create_correlation_report <- function(
+  x,
+  y,
+  x_name = "x",
+  y_name = "y",
+  method = c(
+    "pearson",
+    "spearman",
+    "kendall"
+  )
+) {
+  method <- match.arg(
+    method
+  )
+
+  complete_status <- complete.cases(
+    x,
+    y
+  )
+
+  x_complete <- x[
+    complete_status
+  ]
+
+  y_complete <- y[
+    complete_status
+  ]
+
+  test_result <- cor.test(
+    x_complete,
+    y_complete,
+    method = method,
+    exact = FALSE
+  )
+
+  data.frame(
+    variable_x = x_name,
+    variable_y = y_name,
+    method = method,
+    n = length(
+      x_complete
+    ),
+    estimate =
+      unname(
+        test_result$estimate
+      ),
+    p_value =
+      test_result$p.value,
+    stringsAsFactors = FALSE
+  )
+}
+
+create_correlation_report(
+  student_data$coursework_score,
+  student_data$examination_score,
+  "coursework_score",
+  "examination_score",
+  method = "pearson"
+)
+```
+
+# 25. Correlation matrix function
+
+```{r safe-correlation-matrix-function}
+create_correlation_matrix <- function(
+  data,
+  method = c(
+    "pearson",
+    "spearman",
+    "kendall"
+  ),
+  digits = 3
+) {
+  method <- match.arg(
+    method
+  )
+
+  numeric_data <- data[
+    vapply(
+      data,
+      is.numeric,
+      FUN.VALUE = logical(1)
+    )
+  ]
+
+  if (ncol(
+    numeric_data
+  ) < 2L) {
+    stop(
+      "At least two numeric variables are required.",
+      call. = FALSE
+    )
+  }
+
+  round(
+    cor(
+      numeric_data,
+      use =
+        "pairwise.complete.obs",
+      method = method
+    ),
+    digits = digits
+  )
+}
+
+create_correlation_matrix(
+  student_data
+)
+```
+
+# 26. Visual matrix with `pairs()`
+
+```{r pairs-plot}
+pairs(
+  numeric_student_data,
+  main = "Scatter-Plot Matrix"
+)
+```
+
+# 27. Correlation is not causation
+
+A correlation does not identify:
+
+- temporal order;
+- causal direction;
+- confounding variables;
+- selection effects;
+- measurement bias;
+- or intervention effects.
+
+# 28. Practical interpretation
+
+A complete report should state:
+
+- variables;
+- method;
+- sample size;
+- coefficient;
+- direction;
+- magnitude;
+- uncertainty or p-value;
+- visual pattern;
+- and limitations.
+
+# 29. Common mistakes
+
+- interpreting correlation causally;
+- using Pearson correlation for a strongly non-linear relationship;
+- ignoring outliers;
+- reporting coefficients without sample size;
+- using pairwise deletion without noting varying sample sizes;
+- treating p-values as effect sizes;
+- correlating categorical codes as if continuous;
+- reporting a large matrix without purpose;
+- ignoring group structure;
+- using arbitrary labels such as weak or strong without context.
+
+# 30. Independent exercises
+
+1. calculate covariance.
+2. calculate Pearson correlation.
+3. calculate Spearman correlation.
+4. calculate Kendall correlation.
+5. compare methods.
+6. demonstrate monotonic versus linear association.
+7. demonstrate non-linear zero correlation.
+8. assess outlier influence.
+9. create correlation and covariance matrices.
+10. perform correlation tests.
+11. extract confidence intervals.
+12. calculate grouped correlations.
+13. create reusable report functions.
+14. write a non-causal interpretation.
+
+# 31. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. explains covariance and correlation;
+2. calculates three correlation methods;
+3. includes scatter plots;
+4. demonstrates a non-linear relationship;
+5. demonstrates outlier influence;
+6. creates a correlation matrix;
+7. performs significance tests;
+8. calculates grouped correlations;
+9. uses reusable functions; and
+10. provides cautious interpretations.
+
+# 32. Completion checklist
+
+Confirm that you can:
+
+- calculate covariance;
+- calculate Pearson correlation;
+- calculate Spearman correlation;
+- calculate Kendall correlation;
+- distinguish linear and monotonic association;
+- inspect scatter plots;
+- detect non-linear patterns;
+- assess outlier influence;
+- create correlation matrices;
+- test correlations;
+- extract confidence intervals;
+- calculate grouped correlations;
+- create report functions; and
+- avoid causal claims.
+
+# Lesson conclusion
+
+Correlation summarises association, not causation. Reliable interpretation
+requires a suitable method, visual inspection, adequate sample size and clear
+acknowledgement of limitations.
+
+\[
+\boxed{
+\text{visualise}
+\rightarrow
+\text{choose method}
+\rightarrow
+\text{calculate}
+\rightarrow
+\text{test}
+\rightarrow
+\text{interpret cautiously}
+}
+\]

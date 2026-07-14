@@ -1,0 +1,1023 @@
+---
+title: "Lesson 17: Data Inspection, Validation and Quality Assurance"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Data quality assurance begins before statistical analysis. A dataset may load
+successfully and still contain serious problems:
+
+- duplicated identifiers;
+- impossible values;
+- inconsistent categories;
+- missing records;
+- contradictory variables;
+- unexpected data types;
+- invalid dates;
+- arithmetic inconsistencies;
+- extreme values caused by entry errors;
+- and undocumented coding.
+
+This lesson develops a systematic inspection and validation workflow. The aim
+is not to repair every problem immediately. The first objective is to identify,
+document and classify issues before making changes.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. distinguish inspection, validation and cleaning;
+2. create a structural data profile;
+3. inspect dimensions, names, classes and missingness;
+4. validate identifiers;
+5. detect duplicates;
+6. validate ranges and categories;
+7. check cross-variable consistency;
+8. detect impossible and suspicious values;
+9. create validation flags;
+10. summarise data-quality issues;
+11. write reusable validation functions;
+12. preserve an audit trail;
+13. distinguish errors from plausible outliers;
+14. create a data-quality report; and
+15. decide whether analysis should proceed.
+
+# 1. Inspection, validation and cleaning
+
+**Inspection** asks:
+
+> What does the dataset contain?
+
+**Validation** asks:
+
+> Does the dataset satisfy expected rules?
+
+**Cleaning** asks:
+
+> How should identified problems be corrected or represented?
+
+These are related but distinct stages.
+
+# 2. Import and preserve raw data
+
+```{r import-raw-student-data}
+raw_student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+analysis_student_data <-
+  raw_student_data
+```
+
+The raw object remains unchanged.
+
+# 3. Structural inspection
+
+```{r structural-inspection}
+dim(
+  raw_student_data
+)
+
+names(
+  raw_student_data
+)
+
+str(
+  raw_student_data
+)
+
+head(
+  raw_student_data
+)
+
+tail(
+  raw_student_data
+)
+```
+
+# 4. Column profile
+
+```{r column-profile}
+column_profile <- data.frame(
+  variable = names(
+    raw_student_data
+  ),
+  class = vapply(
+    raw_student_data,
+    function(x) {
+      paste(
+        class(x),
+        collapse = ", "
+      )
+    },
+    FUN.VALUE = character(1)
+  ),
+  type = vapply(
+    raw_student_data,
+    typeof,
+    FUN.VALUE = character(1)
+  ),
+  length = vapply(
+    raw_student_data,
+    length,
+    FUN.VALUE = integer(1)
+  ),
+  missing = vapply(
+    raw_student_data,
+    function(x) {
+      sum(
+        is.na(x)
+      )
+    },
+    FUN.VALUE = integer(1)
+  ),
+  unique = vapply(
+    raw_student_data,
+    function(x) {
+      length(
+        unique(x)
+      )
+    },
+    FUN.VALUE = integer(1)
+  ),
+  stringsAsFactors = FALSE
+)
+
+column_profile
+```
+
+# 5. Missingness profile
+
+```{r missingness-profile}
+missing_count <- colSums(
+  is.na(
+    raw_student_data
+  )
+)
+
+missing_percentage <-
+  missing_count /
+  nrow(
+    raw_student_data
+  ) *
+  100
+
+missing_profile <- data.frame(
+  variable = names(
+    raw_student_data
+  ),
+  missing_count =
+    as.integer(
+      missing_count
+    ),
+  missing_percentage =
+    as.numeric(
+      missing_percentage
+    ),
+  stringsAsFactors = FALSE
+)
+
+missing_profile
+```
+
+# 6. Identifier validation
+
+Check required identifier:
+
+```{r identifier-existence}
+"student_id" %in%
+  names(
+    raw_student_data
+  )
+```
+
+Check missing identifiers:
+
+```{r missing-identifiers}
+sum(
+  is.na(
+    raw_student_data$student_id
+  ) |
+    raw_student_data$student_id == ""
+)
+```
+
+Check duplicates:
+
+```{r duplicate-identifiers}
+duplicated_identifier_status <-
+  duplicated(
+    raw_student_data$student_id
+  )
+
+sum(
+  duplicated_identifier_status
+)
+
+raw_student_data[
+  duplicated_identifier_status,
+]
+```
+
+# 7. All duplicate members
+
+```{r all-duplicate-identifier-members}
+all_duplicate_identifier_status <-
+  duplicated(
+    raw_student_data$student_id
+  ) |
+  duplicated(
+    raw_student_data$student_id,
+    fromLast = TRUE
+  )
+
+raw_student_data[
+  all_duplicate_identifier_status,
+]
+```
+
+# 8. Range validation
+
+```{r score-range-validation}
+coursework_is_valid <- (
+  raw_student_data$coursework_score >= 0 &
+    raw_student_data$coursework_score <= 40
+)
+
+examination_is_valid <- (
+  raw_student_data$examination_score >= 0 &
+    raw_student_data$examination_score <= 60
+)
+
+final_score_is_valid <- (
+  raw_student_data$final_score >= 0 &
+    raw_student_data$final_score <= 100
+)
+
+all(
+  coursework_is_valid
+)
+
+all(
+  examination_is_valid
+)
+
+all(
+  final_score_is_valid
+)
+```
+
+# 9. Extract invalid records
+
+```{r extract-invalid-scores}
+invalid_score_records <- raw_student_data[
+  !coursework_is_valid |
+    !examination_is_valid |
+    !final_score_is_valid,
+]
+
+invalid_score_records
+```
+
+# 10. Cross-variable arithmetic validation
+
+```{r arithmetic-consistency}
+score_arithmetic_is_valid <-
+  raw_student_data$final_score ==
+  raw_student_data$coursework_score +
+  raw_student_data$examination_score
+
+all(
+  score_arithmetic_is_valid
+)
+
+raw_student_data[
+  !score_arithmetic_is_valid,
+]
+```
+
+# 11. Category validation
+
+```{r inspect-programme-categories}
+sort(
+  unique(
+    raw_student_data$programme
+  )
+)
+```
+
+Define allowed categories:
+
+```{r allowed-programmes}
+allowed_programmes <- c(
+  "Statistics",
+  "Procurement",
+  "Hospitality",
+  "Agriculture"
+)
+
+programme_is_valid <-
+  raw_student_data$programme %in%
+  allowed_programmes
+
+all(
+  programme_is_valid
+)
+```
+
+Extract invalid categories:
+
+```{r invalid-programme-records}
+raw_student_data[
+  !programme_is_valid,
+]
+```
+
+# 12. Whitespace and case inconsistencies
+
+```{r category-standardisation-example}
+messy_programmes <- c(
+  "Statistics",
+  " statistics ",
+  "STATISTICS",
+  "Procurement"
+)
+
+trimmed_programmes <- trimws(
+  messy_programmes
+)
+
+standardised_programmes <- tools::toTitleCase(
+  tolower(
+    trimmed_programmes
+  )
+)
+
+data.frame(
+  raw = messy_programmes,
+  trimmed = trimmed_programmes,
+  standardised = standardised_programmes,
+  stringsAsFactors = FALSE
+)
+```
+
+# 13. Logical consistency
+
+Suppose a pass-status variable is present:
+
+```{r create-pass-status-for-validation}
+analysis_student_data$pass_status <-
+  analysis_student_data$final_score >= 50
+```
+
+Validate:
+
+```{r validate-pass-status}
+calculated_pass_status <-
+  analysis_student_data$final_score >= 50
+
+pass_status_is_consistent <-
+  analysis_student_data$pass_status ==
+  calculated_pass_status
+
+all(
+  pass_status_is_consistent
+)
+```
+
+# 14. Date validation template
+
+```{r date-validation-template}
+visit_dates <- as.Date(
+  c(
+    "2026-01-10",
+    "2026-02-15",
+    "2027-01-01",
+    NA
+  )
+)
+
+future_date_status <-
+  visit_dates >
+  Sys.Date()
+
+future_date_status
+```
+
+A future date may be invalid depending on the study context.
+
+# 15. Plausibility versus validity
+
+A value can be valid but unusual.
+
+For example, age 95 may be:
+
+- plausible in a general population study;
+- impossible in a study limited to adolescents;
+- suspicious in a university undergraduate dataset.
+
+Validation rules must reflect the study design.
+
+# 16. Outlier screening with the IQR rule
+
+```{r iqr-outlier-screening}
+scores <- raw_student_data$final_score
+
+first_quartile <- quantile(
+  scores,
+  probs = 0.25,
+  na.rm = TRUE
+)
+
+third_quartile <- quantile(
+  scores,
+  probs = 0.75,
+  na.rm = TRUE
+)
+
+interquartile_range <-
+  third_quartile -
+  first_quartile
+
+lower_fence <-
+  first_quartile -
+  1.5 *
+  interquartile_range
+
+upper_fence <-
+  third_quartile +
+  1.5 *
+  interquartile_range
+
+outlier_status <-
+  scores <
+  lower_fence |
+  scores >
+  upper_fence
+
+raw_student_data[
+  outlier_status,
+]
+```
+
+An outlier flag does not prove that a value is erroneous.
+
+# 17. Z-score screening
+
+```{r z-score-screening}
+score_z <- as.numeric(
+  scale(
+    scores
+  )
+)
+
+extreme_z_status <-
+  abs(
+    score_z
+  ) > 3
+
+raw_student_data[
+  extreme_z_status,
+]
+```
+
+# 18. Row-level validation flags
+
+```{r row-validation-flags}
+validation_data <- raw_student_data
+
+validation_data$invalid_coursework <-
+  !coursework_is_valid
+
+validation_data$invalid_examination <-
+  !examination_is_valid
+
+validation_data$invalid_final_score <-
+  !final_score_is_valid
+
+validation_data$invalid_arithmetic <-
+  !score_arithmetic_is_valid
+
+validation_data$invalid_programme <-
+  !programme_is_valid
+
+validation_data$duplicate_identifier <-
+  all_duplicate_identifier_status
+
+head(
+  validation_data
+)
+```
+
+# 19. Overall issue flag
+
+```{r overall-issue-flag}
+issue_columns <- c(
+  "invalid_coursework",
+  "invalid_examination",
+  "invalid_final_score",
+  "invalid_arithmetic",
+  "invalid_programme",
+  "duplicate_identifier"
+)
+
+validation_data$has_any_issue <-
+  rowSums(
+    validation_data[
+      issue_columns
+    ]
+  ) > 0
+
+table(
+  validation_data$has_any_issue
+)
+```
+
+# 20. Issue count per record
+
+```{r issue-count-per-record}
+validation_data$number_of_issues <-
+  rowSums(
+    validation_data[
+      issue_columns
+    ]
+  )
+
+validation_data[
+  validation_data$number_of_issues > 0,
+]
+```
+
+# 21. Issue summary table
+
+```{r issue-summary-table}
+issue_summary <- data.frame(
+  issue = issue_columns,
+  count = vapply(
+    validation_data[
+      issue_columns
+    ],
+    sum,
+    na.rm = TRUE,
+    FUN.VALUE = numeric(1)
+  ),
+  stringsAsFactors = FALSE
+)
+
+issue_summary$percentage <-
+  issue_summary$count /
+  nrow(
+    validation_data
+  ) *
+  100
+
+issue_summary
+```
+
+# 22. Reusable validation function
+
+```{r validate-score-data-function}
+validate_score_data <- function(
+  data,
+  id_variable = "student_id",
+  coursework_variable =
+    "coursework_score",
+  examination_variable =
+    "examination_score",
+  final_variable =
+    "final_score"
+) {
+  required_variables <- c(
+    id_variable,
+    coursework_variable,
+    examination_variable,
+    final_variable
+  )
+
+  missing_variables <- setdiff(
+    required_variables,
+    names(data)
+  )
+
+  if (length(
+    missing_variables
+  ) > 0L) {
+    stop(
+      paste(
+        "Missing variables:",
+        paste(
+          missing_variables,
+          collapse = ", "
+        )
+      ),
+      call. = FALSE
+    )
+  }
+
+  id_values <-
+    data[[
+      id_variable
+    ]]
+
+  coursework_values <-
+    data[[
+      coursework_variable
+    ]]
+
+  examination_values <-
+    data[[
+      examination_variable
+    ]]
+
+  final_values <-
+    data[[
+      final_variable
+    ]]
+
+  data.frame(
+    missing_identifier =
+      is.na(
+        id_values
+      ) |
+      id_values == "",
+    duplicate_identifier =
+      duplicated(
+        id_values
+      ) |
+      duplicated(
+        id_values,
+        fromLast = TRUE
+      ),
+    invalid_coursework =
+      coursework_values < 0 |
+      coursework_values > 40,
+    invalid_examination =
+      examination_values < 0 |
+      examination_values > 60,
+    invalid_final =
+      final_values < 0 |
+      final_values > 100,
+    invalid_arithmetic =
+      final_values !=
+      coursework_values +
+      examination_values
+  )
+}
+```
+
+Use:
+
+```{r use-validation-function}
+score_validation <- validate_score_data(
+  raw_student_data
+)
+
+head(
+  score_validation
+)
+
+colSums(
+  score_validation
+)
+```
+
+# 23. Assertions
+
+```{r assertion-example}
+stopifnot(
+  is.data.frame(
+    raw_student_data
+  ),
+  nrow(
+    raw_student_data
+  ) > 0L,
+  "student_id" %in%
+    names(
+      raw_student_data
+    )
+)
+```
+
+For user-facing scripts, customised error messages are often clearer.
+
+# 24. Quality gates
+
+A quality gate decides whether analysis should continue.
+
+```{r quality-gate}
+critical_issue_count <- sum(
+  validation_data$invalid_arithmetic |
+    validation_data$invalid_final_score,
+  na.rm = TRUE
+)
+
+if (critical_issue_count > 0L) {
+  warning(
+    paste(
+      critical_issue_count,
+      "critical score issue(s) detected."
+    ),
+    call. = FALSE
+  )
+}
+```
+
+A strict workflow may use `stop()` instead of `warning()`.
+
+# 25. Audit trail
+
+Create a correction log:
+
+```{r correction-log}
+correction_log <- data.frame(
+  record_id = character(0),
+  variable = character(0),
+  old_value = character(0),
+  new_value = character(0),
+  reason = character(0),
+  corrected_by = character(0),
+  correction_date = as.Date(
+    character(0)
+  ),
+  stringsAsFactors = FALSE
+)
+
+correction_log
+```
+
+Every manual correction should be documented.
+
+# 26. Raw, flagged and cleaned objects
+
+Recommended object sequence:
+
+```text
+raw_data
+validation_flags
+flagged_data
+clean_data
+analysis_data
+```
+
+Do not overwrite the only copy of the raw imported data.
+
+# 27. Integrated clinic quality assessment
+
+```{r import-clinic-validation}
+clinic_data <- read.csv(
+  "data/clinic_visits.csv",
+  stringsAsFactors = FALSE
+)
+
+str(
+  clinic_data
+)
+```
+
+Check identifiers:
+
+```{r clinic-id-validation}
+sum(
+  is.na(
+    clinic_data$patient_id
+  ) |
+    clinic_data$patient_id == ""
+)
+
+anyDuplicated(
+  clinic_data$patient_id
+)
+```
+
+Check ranges:
+
+```{r clinic-range-validation}
+age_is_valid <-
+  clinic_data$age >= 0 &
+  clinic_data$age <= 120
+
+waiting_is_valid <-
+  clinic_data$waiting_time >= 0
+
+consultation_is_valid <-
+  clinic_data$consultation_duration >= 0
+
+all(
+  age_is_valid,
+  na.rm = TRUE
+)
+
+all(
+  waiting_is_valid,
+  na.rm = TRUE
+)
+
+all(
+  consultation_is_valid,
+  na.rm = TRUE
+)
+```
+
+Check categories:
+
+```{r clinic-category-validation}
+sort(
+  unique(
+    clinic_data$sex
+  )
+)
+
+sort(
+  unique(
+    clinic_data$visit_type
+  )
+)
+```
+
+# 28. Data-quality report function
+
+```{r quality-report-function}
+create_quality_report <- function(
+  data
+) {
+  data.frame(
+    variable = names(data),
+    class = vapply(
+      data,
+      function(x) {
+        paste(
+          class(x),
+          collapse = ", "
+        )
+      },
+      FUN.VALUE = character(1)
+    ),
+    missing = vapply(
+      data,
+      function(x) {
+        sum(
+          is.na(x)
+        )
+      },
+      FUN.VALUE = integer(1)
+    ),
+    missing_percentage = vapply(
+      data,
+      function(x) {
+        mean(
+          is.na(x)
+        ) * 100
+      },
+      FUN.VALUE = numeric(1)
+    ),
+    unique_values = vapply(
+      data,
+      function(x) {
+        length(
+          unique(x)
+        )
+      },
+      FUN.VALUE = integer(1)
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
+create_quality_report(
+  clinic_data
+)
+```
+
+# 29. Common mistakes
+
+- cleaning before documenting the original problem;
+- treating all outliers as errors;
+- validating without a codebook;
+- using universal ranges without study context;
+- checking only missing values;
+- ignoring identifier duplication;
+- failing to check cross-variable consistency;
+- overwriting raw data;
+- applying silent corrections;
+- proceeding with critical errors unresolved.
+
+# 30. Independent exercises
+
+1. create a structural profile for a supplied dataset.
+2. create a missingness report.
+3. validate identifiers.
+4. detect all duplicate members.
+5. define and test range rules.
+6. validate categories.
+7. test arithmetic consistency.
+8. create row-level issue flags.
+9. create issue counts per record.
+10. create an issue summary table.
+11. write a reusable validation function.
+12. create a quality gate.
+13. design a correction log.
+14. create a complete data-quality report for clinic data.
+
+# 31. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. preserves raw and analysis copies;
+2. profiles structure and missingness;
+3. validates identifiers;
+4. checks duplicates;
+5. checks ranges and categories;
+6. checks cross-variable consistency;
+7. screens for suspicious outliers;
+8. creates row-level flags;
+9. summarises issue counts;
+10. implements a quality gate;
+11. creates a correction log; and
+12. states whether analysis should proceed.
+
+# 32. Completion checklist
+
+Confirm that you can:
+
+- distinguish inspection, validation and cleaning;
+- profile data structure;
+- report missingness;
+- validate identifiers;
+- detect duplicates;
+- validate ranges;
+- validate categories;
+- check cross-variable consistency;
+- screen suspicious values;
+- create validation flags;
+- summarise issues;
+- write reusable validators;
+- preserve an audit trail;
+- create quality gates; and
+- decide whether analysis should proceed.
+
+# Lesson conclusion
+
+Data quality assurance is a structured analytical activity. It requires explicit
+rules, transparent flags, documented corrections and a clear decision about
+whether the data are fit for analysis.
+
+\[
+\boxed{
+\text{inspect}
+\rightarrow
+\text{define rules}
+\rightarrow
+\text{flag issues}
+\rightarrow
+\text{summarise}
+\rightarrow
+\text{document}
+\rightarrow
+\text{decide}
+}
+\]

@@ -1,0 +1,171 @@
+---
+title: "Before You Start Learning R"
+author: "Benjamin Apam (PhD)"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE
+)
+```
+
+# Purpose of this document
+
+This document prepares the learner's computer and working habits before the first R lesson. Completing these checks prevents the most common beginner problems, including missing packages, incorrect working directories, missing datasets and unsaved code.
+
+# Required software
+
+The course requires R and RStudio Desktop. R performs the calculations. RStudio provides the interface in which scripts and R Markdown documents are written and executed.
+
+The minimum R packages are `rmarkdown` and `knitr`. Install them once by running:
+
+```{r install-packages, eval=FALSE}
+install.packages(c("rmarkdown", "knitr"))
+```
+
+Installation is different from loading. Installation places a package on the computer. Loading makes an installed package available in the current R session.
+
+# Open the project correctly
+
+Always open the course by double-clicking:
+
+```text
+learning-r.Rproj
+```
+
+This establishes the repository folder as the project root. The lesson files can then use stable relative paths such as:
+
+```r
+read.csv("data/student_scores.csv")
+```
+
+Avoid absolute paths such as:
+
+```r
+read.csv("C:/Users/Name/Desktop/learning-r/data/student_scores.csv")
+```
+
+Absolute paths normally work only on the computer on which they were written.
+
+# Check the working directory
+
+```{r working-directory}
+getwd()
+```
+
+The result should end with the folder name `learning-r` or `learning-r-lesson1`, depending on where the repository was extracted.
+
+Confirm that the first lesson is visible:
+
+```{r check-main-files}
+file.exists("01-understanding-r.Rmd")
+file.exists("data/student_scores.csv")
+```
+
+Both results should be `TRUE`.
+
+# Run the automated setup check
+
+Open `00-setup-check.R` and click **Source**, or run:
+
+```{r run-check, eval=FALSE}
+source("00-setup-check.R")
+```
+
+The script checks the required packages, project files and the first teaching dataset.
+
+# Understand the lesson format
+
+Each lesson is a standalone `.Rmd` file. It contains explanatory text, equations, R code, generated output, practical work and assessment questions.
+
+A code chunk has the following form:
+
+````text
+```{r example-name}
+x <- 10
+x * 2
+```
+````
+
+The label after `r` identifies the chunk. Every label within a document must be unique.
+
+# How to run code
+
+You can run code in four main ways:
+
+1. Place the cursor on a line and press `Ctrl + Enter`.
+2. Select several lines and press `Ctrl + Enter`.
+3. Click the green triangle on a code chunk.
+4. Click **Knit** to execute the complete lesson and create a report.
+
+During learning, run small sections first. After completing a lesson, restart R and knit the entire document to verify that the work is reproducible.
+
+# Recommended file discipline
+
+Do not rename or move the datasets before completing the lessons that use them. Do not manually modify the CSV files. When a task requires a change, create a new R object and perform the change in code.
+
+# First diagnostic calculation
+
+```{r first-diagnostic}
+values <- c(4, 8, 12, 16)
+mean(values)
+```
+
+The expected result is 10. If it appears, R is performing calculations correctly.
+
+# First dataset import
+
+```{r first-import}
+student_scores <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+head(student_scores)
+```
+
+The output should display the first six student records.
+
+# Session information
+
+```{r session-information}
+sessionInfo()
+```
+
+This information is useful when diagnosing package or version-related problems.
+
+# Readiness checklist
+
+Before beginning Lesson 1, confirm that:
+
+- R is installed;
+- RStudio Desktop is installed;
+- `rmarkdown` and `knitr` are installed;
+- the project was opened through `learning-r.Rproj`;
+- `00-setup-check.R` completes successfully;
+- `student_scores.csv` imports successfully; and
+- this document knits to HTML without an error.

@@ -1,0 +1,898 @@
+---
+title: "Lesson 15: Importing CSV, Text and Delimited Files"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Most real analyses begin with data stored outside R. Comma-separated values
+files, tab-delimited files and other text-based formats are common because they
+are portable, transparent and supported by many systems.
+
+Importing data is not simply a matter of running `read.csv()`. A reliable
+workflow must consider:
+
+- file location;
+- delimiter;
+- header structure;
+- decimal marks;
+- quotation marks;
+- missing-value codes;
+- character encoding;
+- variable names;
+- column types;
+- row counts;
+- duplicated records;
+- and post-import validation.
+
+This lesson introduces base R import functions and the `readr` package where
+available. It emphasises inspection and verification after import.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. explain common delimited-text formats;
+2. distinguish CSV, TSV and custom-delimited files;
+3. use `read.csv()`, `read.table()` and `read.delim()`;
+4. specify headers, separators and missing-value codes;
+5. import character data without unintended conversion;
+6. inspect imported column types;
+7. handle quotation marks and comments;
+8. work with decimal commas and custom delimiters;
+9. use relative paths safely;
+10. check file existence before import;
+11. use `readr` functions when installed;
+12. compare base R and `readr` behaviour;
+13. diagnose common import failures;
+14. validate imported records; and
+15. export cleaned delimited files reproducibly.
+
+# 1. Delimited text files
+
+A delimited file stores one record per row and separates fields using a
+specific character.
+
+Common delimiters include:
+
+| Format | Typical delimiter |
+|---|---|
+| CSV | comma |
+| TSV | tab |
+| Semicolon-delimited | semicolon |
+| Pipe-delimited | vertical bar |
+| Space-delimited | one or more spaces |
+
+A CSV example:
+
+```text
+student_id,programme,final_score
+S001,Statistics,72
+S002,Procurement,68
+S003,Hospitality,81
+```
+
+# 2. Confirming the file path
+
+```{r confirm-student-file}
+student_path <- "data/student_scores.csv"
+
+file.exists(
+  student_path
+)
+```
+
+Stop if the file is missing:
+
+```{r stop-if-file-missing}
+if (!file.exists(student_path)) {
+  stop(
+    paste(
+      "Required file not found:",
+      student_path
+    ),
+    call. = FALSE
+  )
+}
+```
+
+# 3. Importing CSV with `read.csv()`
+
+```{r import-csv-basic}
+student_data <- read.csv(
+  student_path,
+  stringsAsFactors = FALSE
+)
+
+head(student_data)
+```
+
+Inspect:
+
+```{r inspect-imported-csv}
+str(student_data)
+dim(student_data)
+names(student_data)
+summary(student_data)
+```
+
+# 4. `read.csv()` and `read.table()`
+
+`read.csv()` is a convenience wrapper around `read.table()`.
+
+Equivalent form:
+
+```{r read-table-equivalent}
+student_data_table <- read.table(
+  file = student_path,
+  header = TRUE,
+  sep = ",",
+  stringsAsFactors = FALSE
+)
+
+head(student_data_table)
+```
+
+Compare:
+
+```{r compare-import-methods}
+identical(
+  student_data,
+  student_data_table
+)
+```
+
+# 5. Importing tab-delimited files
+
+Use `read.delim()`:
+
+```{r read-delim-example, eval=FALSE}
+tab_data <- read.delim(
+  "data/example_data.tsv",
+  stringsAsFactors = FALSE
+)
+```
+
+Equivalent:
+
+```{r read-table-tab-example, eval=FALSE}
+tab_data <- read.table(
+  "data/example_data.tsv",
+  header = TRUE,
+  sep = "\t",
+  stringsAsFactors = FALSE
+)
+```
+
+# 6. Custom delimiters
+
+Semicolon-delimited:
+
+```{r semicolon-import-example, eval=FALSE}
+semicolon_data <- read.table(
+  "data/example_semicolon.txt",
+  header = TRUE,
+  sep = ";",
+  stringsAsFactors = FALSE
+)
+```
+
+Pipe-delimited:
+
+```{r pipe-import-example, eval=FALSE}
+pipe_data <- read.table(
+  "data/example_pipe.txt",
+  header = TRUE,
+  sep = "|",
+  stringsAsFactors = FALSE
+)
+```
+
+# 7. Header control
+
+When the first row contains variable names:
+
+```r
+header = TRUE
+```
+
+When no header is present:
+
+```{r no-header-example, eval=FALSE}
+raw_data <- read.table(
+  "data/no_header.txt",
+  header = FALSE,
+  sep = ",",
+  stringsAsFactors = FALSE
+)
+
+names(raw_data) <- c(
+  "student_id",
+  "programme",
+  "final_score"
+)
+```
+
+# 8. Missing-value codes
+
+Real files may use:
+
+```text
+NA
+N/A
+.
+-
+999
+Missing
+```
+
+Specify recognised missing codes:
+
+```{r missing-codes-example, eval=FALSE}
+survey_data <- read.csv(
+  "data/survey.csv",
+  na.strings = c(
+    "",
+    "NA",
+    "N/A",
+    ".",
+    "Missing"
+  ),
+  stringsAsFactors = FALSE
+)
+```
+
+Do not treat legitimate numeric values such as 999 as missing unless the
+codebook explicitly says so.
+
+# 9. Character columns and factors
+
+Historically, older R versions converted character columns to factors by
+default. Use:
+
+```r
+stringsAsFactors = FALSE
+```
+
+for predictable character import.
+
+```{r inspect-character-columns}
+vapply(
+  student_data,
+  class,
+  FUN.VALUE = character(1)
+)
+```
+
+# 10. Quotation marks
+
+CSV files may use quotation marks to protect values containing delimiters.
+
+Example:
+
+```text
+institution,location
+"Bolgatanga Technical University","Bolgatanga, Ghana"
+```
+
+Base R handles standard quotes automatically.
+
+Control quotation characters with:
+
+```{r quote-argument-example, eval=FALSE}
+quoted_data <- read.table(
+  "data/quoted_data.csv",
+  header = TRUE,
+  sep = ",",
+  quote = "\"",
+  stringsAsFactors = FALSE
+)
+```
+
+# 11. Comments
+
+`read.table()` may treat `#` as a comment character.
+
+Disable comment interpretation:
+
+```{r comment-character-example, eval=FALSE}
+data_with_hash <- read.table(
+  "data/hash_values.txt",
+  header = TRUE,
+  sep = ",",
+  comment.char = "",
+  stringsAsFactors = FALSE
+)
+```
+
+# 12. White space
+
+Use:
+
+```r
+strip.white = TRUE
+```
+
+to remove leading and trailing white space in unquoted character fields when
+using `read.table()`.
+
+```{r strip-white-example, eval=FALSE}
+trimmed_data <- read.table(
+  "data/spaced_data.csv",
+  header = TRUE,
+  sep = ",",
+  strip.white = TRUE,
+  stringsAsFactors = FALSE
+)
+```
+
+# 13. Decimal marks
+
+Some files use commas as decimal marks and semicolons as field separators.
+
+```{r decimal-comma-example, eval=FALSE}
+decimal_comma_data <- read.table(
+  "data/decimal_comma.csv",
+  header = TRUE,
+  sep = ";",
+  dec = ",",
+  stringsAsFactors = FALSE
+)
+```
+
+# 14. Skipping lines
+
+```{r skip-lines-example, eval=FALSE}
+data_after_notes <- read.table(
+  "data/file_with_notes.txt",
+  header = TRUE,
+  sep = ",",
+  skip = 3,
+  stringsAsFactors = FALSE
+)
+```
+
+This skips the first three lines.
+
+# 15. Reading a limited number of rows
+
+```{r limited-row-import}
+student_preview <- read.csv(
+  student_path,
+  nrows = 5,
+  stringsAsFactors = FALSE
+)
+
+student_preview
+```
+
+This is useful for inspecting large files.
+
+# 16. Selecting columns during import
+
+Base R can control classes:
+
+```{r col-classes-example, eval=FALSE}
+selected_data <- read.csv(
+  "data/large_file.csv",
+  colClasses = c(
+    "character",
+    "NULL",
+    "numeric",
+    "numeric"
+  ),
+  stringsAsFactors = FALSE
+)
+```
+
+`"NULL"` skips a column.
+
+# 17. Encoding
+
+Text encoding determines how characters are represented.
+
+```{r encoding-example, eval=FALSE}
+encoded_data <- read.csv(
+  "data/encoded_file.csv",
+  fileEncoding = "UTF-8",
+  stringsAsFactors = FALSE
+)
+```
+
+Common encodings include:
+
+- UTF-8;
+- Latin-1;
+- Windows-1252.
+
+Incorrect encoding may produce corrupted characters.
+
+# 18. File connections
+
+```{r file-connection-example}
+connection <- file(
+  student_path,
+  open = "r"
+)
+
+close(
+  connection
+)
+```
+
+Connections are useful for advanced streaming and compressed-file workflows.
+
+# 19. Reading compressed CSV files
+
+Base R can read gzip-compressed files:
+
+```{r gzip-import-example, eval=FALSE}
+compressed_data <- read.csv(
+  gzfile(
+    "data/large_data.csv.gz"
+  ),
+  stringsAsFactors = FALSE
+)
+```
+
+# 20. `readr` package
+
+Check availability:
+
+```{r check-readr}
+requireNamespace(
+  "readr",
+  quietly = TRUE
+)
+```
+
+Import CSV:
+
+```{r readr-csv-example, eval=FALSE}
+student_readr <- readr::read_csv(
+  student_path,
+  show_col_types = FALSE
+)
+```
+
+Import TSV:
+
+```{r readr-tsv-example, eval=FALSE}
+tab_data <- readr::read_tsv(
+  "data/example_data.tsv",
+  show_col_types = FALSE
+)
+```
+
+Custom delimiter:
+
+```{r readr-delim-example, eval=FALSE}
+custom_data <- readr::read_delim(
+  "data/example_pipe.txt",
+  delim = "|",
+  show_col_types = FALSE
+)
+```
+
+# 21. Base R versus `readr`
+
+Base R:
+
+- returns a data frame;
+- is always available;
+- uses arguments such as `sep`, `dec` and `na.strings`.
+
+`readr`:
+
+- returns a tibble;
+- reports column specifications;
+- often imports large files faster;
+- provides `problems()` for parsing diagnostics.
+
+# 22. Parsing problems in `readr`
+
+```{r readr-problems-example, eval=FALSE}
+imported_data <- readr::read_csv(
+  "data/example.csv",
+  show_col_types = FALSE
+)
+
+readr::problems(
+  imported_data
+)
+```
+
+Parsing problems should be inspected rather than ignored.
+
+# 23. Explicit `readr` column types
+
+```{r readr-col-types-example, eval=FALSE}
+typed_data <- readr::read_csv(
+  "data/example.csv",
+  col_types = readr::cols(
+    student_id = readr::col_character(),
+    programme = readr::col_character(),
+    final_score = readr::col_double()
+  )
+)
+```
+
+Explicit types reduce ambiguity.
+
+# 24. Post-import validation
+
+Immediately after import, inspect:
+
+```{r post-import-validation}
+nrow(student_data)
+ncol(student_data)
+names(student_data)
+str(student_data)
+colSums(is.na(student_data))
+```
+
+Check required variables:
+
+```{r validate-imported-columns}
+required_columns <- c(
+  "student_id",
+  "programme",
+  "coursework_score",
+  "examination_score",
+  "final_score"
+)
+
+all(
+  required_columns %in%
+    names(student_data)
+)
+```
+
+Check unique identifiers:
+
+```{r validate-imported-identifiers}
+!anyDuplicated(
+  student_data$student_id
+)
+```
+
+# 25. Type correction after import
+
+Suppose numeric values were imported as character:
+
+```{r character-number-example}
+raw_score <- c(
+  "65",
+  "72",
+  "Missing",
+  "81"
+)
+```
+
+Convert carefully:
+
+```{r character-number-conversion}
+converted_score <- suppressWarnings(
+  as.numeric(
+    raw_score
+  )
+)
+
+conversion_report <- data.frame(
+  raw = raw_score,
+  converted = converted_score,
+  failed =
+    is.na(converted_score) &
+    !is.na(raw_score),
+  stringsAsFactors = FALSE
+)
+
+conversion_report
+```
+
+# 26. Cleaning imported names
+
+Base R may alter non-syntactic names.
+
+```{r check-names-example}
+raw_names <- c(
+  "Student ID",
+  "Final Score",
+  "Programme Name"
+)
+
+make.names(
+  raw_names
+)
+```
+
+A simple custom cleaning approach:
+
+```{r clean-names-function}
+clean_names_base <- function(
+  names_vector
+) {
+  cleaned <- tolower(
+    names_vector
+  )
+
+  cleaned <- gsub(
+    "[^a-z0-9]+",
+    "_",
+    cleaned
+  )
+
+  cleaned <- gsub(
+    "^_|_$",
+    "",
+    cleaned
+  )
+
+  make.unique(
+    cleaned
+  )
+}
+
+clean_names_base(
+  raw_names
+)
+```
+
+# 27. Exporting CSV
+
+```{r export-csv-example}
+output_directory <- "lesson_15_output"
+
+if (!dir.exists(
+  output_directory
+)) {
+  dir.create(
+    output_directory
+  )
+}
+
+output_path <- file.path(
+  output_directory,
+  "student_scores_copy.csv"
+)
+
+write.csv(
+  student_data,
+  output_path,
+  row.names = FALSE
+)
+
+file.exists(
+  output_path
+)
+```
+
+Verify:
+
+```{r verify-exported-csv}
+verified_export <- read.csv(
+  output_path,
+  stringsAsFactors = FALSE
+)
+
+identical(
+  student_data,
+  verified_export
+)
+```
+
+Cleanup:
+
+```{r cleanup-exported-csv}
+unlink(
+  output_directory,
+  recursive = TRUE,
+  force = TRUE
+)
+```
+
+# 28. Exporting tab-delimited files
+
+```{r export-tab-example, eval=FALSE}
+write.table(
+  student_data,
+  "student_scores.tsv",
+  sep = "\t",
+  row.names = FALSE,
+  quote = FALSE
+)
+```
+
+# 29. Integrated example: rainfall import
+
+```{r import-rainfall-delimited}
+rainfall_data <- read.csv(
+  "data/rainfall_records.csv",
+  na.strings = c(
+    "",
+    "NA",
+    "N/A",
+    "."
+  ),
+  stringsAsFactors = FALSE
+)
+
+head(rainfall_data)
+str(rainfall_data)
+```
+
+Validate:
+
+```{r validate-rainfall-import}
+nrow(rainfall_data)
+names(rainfall_data)
+colSums(is.na(rainfall_data))
+is.numeric(rainfall_data$rainfall_mm)
+all(
+  rainfall_data$rainfall_mm >= 0,
+  na.rm = TRUE
+)
+```
+
+# 30. Common import failures
+
+## 30.1 Wrong working directory
+
+```text
+cannot open file: No such file or directory
+```
+
+Check:
+
+```r
+getwd()
+file.exists("data/file.csv")
+```
+
+## 30.2 Wrong delimiter
+
+All values may appear in one column.
+
+Inspect the first lines and specify the correct `sep`.
+
+## 30.3 Wrong header setting
+
+The first record may become variable names or generic names may be created.
+
+## 30.4 Unexpected types
+
+Numeric columns may become character because of text codes or symbols.
+
+## 30.5 Encoding problems
+
+Accented characters or symbols may display incorrectly.
+
+## 30.6 Row-name column
+
+Some exported files contain an unwanted first column of row numbers.
+
+Prevent this with:
+
+```r
+row.names = FALSE
+```
+
+during export.
+
+# 31. Independent exercises
+
+1. Import `student_scores.csv` using `read.csv()`.
+2. Re-import it using `read.table()`.
+3. Confirm whether the objects are identical.
+4. Import only the first five rows.
+5. inspect column classes and missing values.
+6. validate required variables and unique identifiers.
+7. demonstrate custom missing-value codes.
+8. demonstrate import code for tab, semicolon and pipe delimiters.
+9. create a safe character-to-numeric conversion report.
+10. clean a set of non-standard variable names.
+11. export and verify a CSV copy.
+12. import and validate rainfall data.
+13. compare base R and `readr` import code.
+14. explain five common import failures.
+
+# 32. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. explains delimited-file formats;
+2. imports supplied CSV data;
+3. validates file existence;
+4. inspects dimensions, names and types;
+5. checks missing values and duplicates;
+6. demonstrates custom separators and missing codes;
+7. demonstrates safe type conversion;
+8. cleans variable names;
+9. exports and verifies a file; and
+10. compares base R with `readr`.
+
+# 33. Completion checklist
+
+Confirm that you can:
+
+- identify common delimiters;
+- check file paths;
+- use `read.csv()`;
+- use `read.table()`;
+- use `read.delim()`;
+- specify headers and separators;
+- define missing-value codes;
+- control character import;
+- handle encoding;
+- import limited rows;
+- use `readr`;
+- inspect parsing problems;
+- validate imported data;
+- correct types safely;
+- clean names; and
+- export reproducible delimited files.
+
+# Lesson conclusion
+
+Import is the first analytical quality-control stage. A successful file read is
+not enough. The imported object must be inspected, validated and compared with
+the expected data structure.
+
+\[
+\boxed{
+\text{locate file}
+\rightarrow
+\text{specify format}
+\rightarrow
+\text{import}
+\rightarrow
+\text{inspect}
+\rightarrow
+\text{validate}
+\rightarrow
+\text{document}
+}
+\]

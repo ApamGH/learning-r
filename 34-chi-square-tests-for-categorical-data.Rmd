@@ -1,0 +1,738 @@
+---
+title: "Lesson 34: Chi-Square Tests for Categorical Data"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Chi-square methods analyse categorical frequencies. They compare observed
+counts with counts expected under a null hypothesis.
+
+Common applications include:
+
+- goodness-of-fit tests;
+- tests of independence;
+- tests of homogeneity;
+- and analysis of contingency tables.
+
+This lesson also introduces expected counts, residuals, Fisher's exact test and
+Cramer's V.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. distinguish goodness-of-fit and independence tests;
+2. construct contingency tables;
+3. calculate expected frequencies;
+4. conduct chi-square goodness-of-fit tests;
+5. conduct chi-square tests of independence;
+6. inspect assumptions;
+7. use Fisher's exact test;
+8. calculate standardised residuals;
+9. identify influential cells;
+10. calculate Cramer's V;
+11. interpret row and column percentages;
+12. create reusable chi-square reporting functions; and
+13. report categorical associations accurately.
+
+# 1. Importing data
+
+```{r import-chi-square-data}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+student_data$performance_group <- ifelse(
+  student_data$final_score >= 75,
+  "75 or above",
+  "Below 75"
+)
+
+student_data$performance_group <- factor(
+  student_data$performance_group,
+  levels = c(
+    "Below 75",
+    "75 or above"
+  )
+)
+```
+
+The cut-off of 75 is used only to create two observed performance categories
+for this teaching example. It is not presented as an institutional pass mark.
+A chi-square test of independence requires variation in both categorical
+variables.
+
+# 2. Goodness-of-fit question
+
+Suppose the null hypothesis states that students are equally distributed across
+programmes.
+
+```{r programme-frequency-goodness}
+programme_counts <- table(
+  student_data$programme
+)
+
+programme_counts
+```
+
+# 3. Goodness-of-fit test
+
+```{r goodness-of-fit-test}
+goodness_test <- chisq.test(
+  programme_counts,
+  p = rep(
+    1 /
+      length(
+        programme_counts
+      ),
+    length(
+      programme_counts
+    )
+  )
+)
+
+goodness_test
+```
+
+# 4. Unequal expected proportions
+
+```{r unequal-goodness-proportions}
+number_of_programmes <- length(
+  programme_counts
+)
+
+expected_proportions <- seq_len(
+  number_of_programmes
+)
+
+expected_proportions <- expected_proportions /
+  sum(
+    expected_proportions
+  )
+
+names(
+  expected_proportions
+) <- names(
+  programme_counts
+)
+
+sum(
+  expected_proportions
+)
+
+chisq.test(
+  programme_counts,
+  p = expected_proportions
+)
+```
+
+# 5. Contingency table
+
+```{r contingency-table}
+programme_result_table <- table(
+  student_data$programme,
+  student_data$performance_group
+)
+
+if (
+  nrow(
+    programme_result_table
+  ) < 2L ||
+  ncol(
+    programme_result_table
+  ) < 2L
+) {
+  stop(
+    paste(
+      "The contingency table must contain at least two observed rows and",
+      "two observed columns."
+    ),
+    call. = FALSE
+  )
+}
+
+programme_result_table
+```
+
+# 6. Chi-square test of independence
+
+```{r chi-square-independence}
+independence_test <- chisq.test(
+  programme_result_table,
+  correct = FALSE
+)
+
+independence_test
+```
+
+# 7. Expected counts
+
+```{r expected-counts}
+independence_test$expected
+```
+
+Expected frequency in cell \(ij\):
+
+\[
+E_{ij}
+=
+\frac{
+(\text{row total}_i)
+(\text{column total}_j)
+}{
+\text{grand total}
+}.
+\]
+
+# 8. Manual expected counts
+
+```{r manual-expected-counts}
+row_totals <- rowSums(
+  programme_result_table
+)
+
+column_totals <- colSums(
+  programme_result_table
+)
+
+grand_total <- sum(
+  programme_result_table
+)
+
+manual_expected <- outer(
+  row_totals,
+  column_totals
+) / grand_total
+
+manual_expected
+```
+
+# 9. Manual chi-square statistic
+
+\[
+\chi^2
+=
+\sum
+\frac{
+(O-E)^2
+}{
+E
+}.
+\]
+
+```{r manual-chi-square}
+manual_chi_square <- sum(
+  (
+    programme_result_table -
+      manual_expected
+  ) ^ 2 /
+    manual_expected
+)
+
+manual_chi_square
+```
+
+# 10. Assumption checks
+
+```{r chi-square-assumptions}
+expected_values <- as.vector(
+  independence_test$expected
+)
+
+data.frame(
+  minimum_expected =
+    min(
+      expected_values
+    ),
+  cells_below_five =
+    sum(
+      expected_values < 5
+    ),
+  percentage_below_five =
+    mean(
+      expected_values < 5
+    ) * 100
+)
+```
+
+A common guideline is:
+
+- no expected count below 1;
+- no more than about 20 per cent below 5.
+
+# 11. Fisher's exact test
+
+```{r fisher-exact-test}
+if (
+  nrow(
+    programme_result_table
+  ) >= 2L &&
+  ncol(
+    programme_result_table
+  ) >= 2L
+) {
+  fisher_result <- fisher.test(
+    programme_result_table
+  )
+
+  fisher_result
+} else {
+  message(
+    paste(
+      "Fisher's exact test was not conducted because the table has fewer",
+      "than two observed rows or columns."
+    )
+  )
+}
+```
+
+Fisher's test is especially useful for small contingency tables.
+
+# 12. Simulated p-values
+
+```{r simulated-chi-square-p}
+chisq.test(
+  programme_result_table,
+  simulate.p.value = TRUE,
+  B = 5000
+)
+```
+
+# 13. Pearson residuals
+
+```{r pearson-residuals}
+independence_test$residuals
+```
+
+Positive residuals indicate more observations than expected.
+
+Negative residuals indicate fewer observations than expected.
+
+# 14. Standardised residuals
+
+```{r standardised-residuals}
+independence_test$stdres
+```
+
+Cells with large absolute residuals contribute strongly to the association.
+
+# 15. Residual contribution table
+
+```{r chi-square-contributions}
+cell_contributions <- (
+  programme_result_table -
+    independence_test$expected
+) ^ 2 /
+  independence_test$expected
+
+cell_contributions
+```
+
+# 16. Row percentages
+
+```{r chi-square-row-percentages}
+row_percentages <- prop.table(
+  programme_result_table,
+  margin = 1
+) * 100
+
+row_percentages
+```
+
+# 17. Column percentages
+
+```{r chi-square-column-percentages}
+column_percentages <- prop.table(
+  programme_result_table,
+  margin = 2
+) * 100
+
+column_percentages
+```
+
+# 18. Cramer's V
+
+\[
+V
+=
+\sqrt{
+\frac{
+\chi^2
+}{
+n
+\min(r-1,c-1)
+}
+}.
+\]
+
+```{r cramers-v}
+chi_square_value <- unname(
+  independence_test$statistic
+)
+
+n_total <- sum(
+  programme_result_table
+)
+
+number_rows <- nrow(
+  programme_result_table
+)
+
+number_columns <- ncol(
+  programme_result_table
+)
+
+cramers_v <- sqrt(
+  chi_square_value /
+    (
+      n_total *
+      min(
+        number_rows - 1,
+        number_columns - 1
+      )
+    )
+)
+
+cramers_v
+```
+
+# 19. Phi coefficient for 2 by 2 tables
+
+```{r phi-example}
+small_table <- matrix(
+  c(
+    30,
+    20,
+    15,
+    35
+  ),
+  nrow = 2,
+  byrow = TRUE
+)
+
+small_test <- chisq.test(
+  small_table,
+  correct = FALSE
+)
+
+phi <- sqrt(
+  unname(
+    small_test$statistic
+  ) /
+    sum(
+      small_table
+    )
+)
+
+phi
+```
+
+# 20. Yates continuity correction
+
+```{r yates-correction}
+chisq.test(
+  small_table,
+  correct = TRUE
+)
+
+chisq.test(
+  small_table,
+  correct = FALSE
+)
+```
+
+Yates correction applies to 2 by 2 tables and is conservative.
+
+# 21. Visualising a contingency table
+
+```{r contingency-mosaic}
+mosaicplot(
+  programme_result_table,
+  main = "Programme and Result",
+  xlab = "Programme",
+  ylab = "Result"
+)
+```
+
+# 22. Goodness-of-fit reporting function
+
+```{r goodness-report-function}
+report_goodness_of_fit <- function(
+  observed_counts,
+  expected_proportions = NULL
+) {
+  if (is.null(
+    expected_proportions
+  )) {
+    expected_proportions <- rep(
+      1 /
+        length(
+          observed_counts
+        ),
+      length(
+        observed_counts
+      )
+    )
+  }
+
+  if (abs(
+    sum(
+      expected_proportions
+    ) - 1
+  ) > 1e-8) {
+    stop(
+      "Expected proportions must sum to one.",
+      call. = FALSE
+    )
+  }
+
+  result <- chisq.test(
+    observed_counts,
+    p = expected_proportions
+  )
+
+  data.frame(
+    chi_square =
+      unname(
+        result$statistic
+      ),
+    degrees_of_freedom =
+      unname(
+        result$parameter
+      ),
+    p_value =
+      result$p.value,
+    minimum_expected =
+      min(
+        result$expected
+      ),
+    stringsAsFactors = FALSE
+  )
+}
+
+report_goodness_of_fit(
+  programme_counts
+)
+```
+
+# 23. Independence reporting function
+
+```{r independence-report-function}
+report_chi_square_independence <- function(
+  table_object
+) {
+  if (!is.matrix(
+    table_object
+  ) &&
+      !inherits(
+        table_object,
+        "table"
+      )) {
+    stop(
+      "`table_object` must be a table or matrix.",
+      call. = FALSE
+    )
+  }
+
+  result <- chisq.test(
+    table_object,
+    correct = FALSE
+  )
+
+  total_n <- sum(
+    table_object
+  )
+
+  r <- nrow(
+    table_object
+  )
+
+  c <- ncol(
+    table_object
+  )
+
+  v <- sqrt(
+    unname(
+      result$statistic
+    ) /
+      (
+        total_n *
+        min(
+          r - 1,
+          c - 1
+        )
+      )
+  )
+
+  data.frame(
+    chi_square =
+      unname(
+        result$statistic
+      ),
+    degrees_of_freedom =
+      unname(
+        result$parameter
+      ),
+    p_value =
+      result$p.value,
+    cramers_v =
+      v,
+    minimum_expected =
+      min(
+        result$expected
+      ),
+    cells_below_five =
+      sum(
+        result$expected < 5
+      ),
+    stringsAsFactors = FALSE
+  )
+}
+
+report_chi_square_independence(
+  programme_result_table
+)
+```
+
+# 24. Reporting template
+
+A complete report states:
+
+- variables;
+- observed counts;
+- percentage basis;
+- chi-square statistic;
+- degrees of freedom;
+- p-value;
+- expected-count assessment;
+- effect size;
+- and influential cells.
+
+# 25. Common mistakes
+
+- applying chi-square tests to percentages rather than counts;
+- ignoring expected-frequency assumptions;
+- treating association as causation;
+- failing to report row or column percentages;
+- using goodness-of-fit when independence is required;
+- ignoring influential cells;
+- reporting significance without Cramer's V;
+- combining sparse categories without justification;
+- using Fisher's exact test without explaining why;
+- analysing non-independent repeated records.
+
+# 26. Independent exercises
+
+1. create a goodness-of-fit table.
+2. test equal expected proportions.
+3. test unequal expected proportions.
+4. create a contingency table.
+5. conduct a chi-square independence test.
+6. calculate expected counts manually.
+7. calculate the chi-square statistic manually.
+8. inspect assumptions.
+9. conduct Fisher's exact test.
+10. inspect residuals and cell contributions.
+11. calculate row and column percentages.
+12. calculate Cramer's V.
+13. create reusable reporting functions.
+14. write a complete interpretation.
+
+# 27. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. conducts a goodness-of-fit test;
+2. conducts an independence test;
+3. presents observed and expected counts;
+4. checks expected-frequency assumptions;
+5. compares chi-square and Fisher methods;
+6. identifies influential cells;
+7. reports row or column percentages;
+8. calculates Cramer's V;
+9. uses reusable functions; and
+10. interprets the association without causal claims.
+
+# 28. Completion checklist
+
+Confirm that you can:
+
+- distinguish chi-square test types;
+- create contingency tables;
+- calculate expected counts;
+- conduct goodness-of-fit tests;
+- conduct independence tests;
+- inspect assumptions;
+- use Fisher's exact test;
+- inspect residuals;
+- calculate cell contributions;
+- calculate Cramer's V;
+- create mosaic plots; and
+- report categorical associations.
+
+# Lesson conclusion
+
+Chi-square methods compare observed and expected categorical frequencies.
+Reliable analysis requires counts, adequate expected frequencies, effect-size
+reporting and careful interpretation.
+
+\[
+\boxed{
+\text{observed counts}
+\rightarrow
+\text{expected counts}
+\rightarrow
+\chi^2
+\rightarrow
+\text{residuals}
+\rightarrow
+\text{effect size}
+\rightarrow
+\text{interpretation}
+}
+\]

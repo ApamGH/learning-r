@@ -1,0 +1,778 @@
+---
+title: "Lesson 35: Non-Parametric Tests and Rank-Based Methods"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Non-parametric and rank-based methods provide alternatives when parametric
+assumptions are unsuitable or when the data are ordinal.
+
+These procedures usually test distributional or location differences using
+ranks rather than raw values.
+
+This lesson covers:
+
+- sign and Wilcoxon signed-rank tests;
+- Mann-Whitney-Wilcoxon rank-sum tests;
+- Kruskal-Wallis tests;
+- post hoc rank comparisons;
+- and Spearman correlation.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. explain when rank-based methods are appropriate;
+2. distinguish independent and paired rank tests;
+3. conduct one-sample Wilcoxon signed-rank tests;
+4. conduct paired Wilcoxon tests;
+5. conduct rank-sum tests;
+6. conduct Kruskal-Wallis tests;
+7. conduct adjusted post hoc comparisons;
+8. calculate effect sizes;
+9. interpret medians and distributions cautiously;
+10. compare parametric and non-parametric results;
+11. use exact and approximate p-values appropriately;
+12. create reusable rank-test reporting functions; and
+13. report results accurately.
+
+# 1. When to consider rank-based methods
+
+Rank-based methods may be useful when:
+
+- the outcome is ordinal;
+- distributions are strongly skewed;
+- extreme values dominate parametric procedures;
+- sample sizes are small;
+- normality assumptions are implausible;
+- or the research question concerns ordering rather than means.
+
+They do not automatically solve:
+
+- dependence;
+- poor sampling design;
+- measurement error;
+- or confounding.
+
+# 2. One-sample Wilcoxon signed-rank test
+
+```{r one-sample-wilcoxon-data}
+scores <- c(
+  62,
+  68,
+  70,
+  74,
+  75,
+  80,
+  82,
+  66,
+  71,
+  77
+)
+
+wilcox.test(
+  scores,
+  mu = 70,
+  alternative = "two.sided",
+  exact = FALSE
+)
+```
+
+# 3. Sign test concept
+
+The signed-rank test uses both:
+
+- direction of differences; and
+- ranks of absolute differences.
+
+A simple sign test uses only direction.
+
+```{r simple-sign-test}
+differences <- scores - 70
+
+positive_count <- sum(
+  differences > 0
+)
+
+nonzero_count <- sum(
+  differences != 0
+)
+
+binom.test(
+  positive_count,
+  nonzero_count,
+  p = 0.5
+)
+```
+
+# 4. Paired Wilcoxon signed-rank test
+
+```{r paired-wilcoxon-data}
+before_scores <- c(
+  60,
+  65,
+  70,
+  72,
+  68,
+  75,
+  66,
+  71
+)
+
+after_scores <- c(
+  64,
+  67,
+  74,
+  73,
+  72,
+  80,
+  70,
+  74
+)
+
+paired_wilcoxon <- wilcox.test(
+  after_scores,
+  before_scores,
+  paired = TRUE,
+  exact = FALSE
+)
+
+paired_wilcoxon
+```
+
+# 5. Inspecting paired differences
+
+```{r inspect-paired-rank-differences}
+paired_differences <-
+  after_scores -
+  before_scores
+
+paired_differences
+median(paired_differences)
+```
+
+# 6. Independent rank-sum test
+
+```{r import-rank-data}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+two_programmes <- student_data[
+  student_data$programme %in%
+    c(
+      "Statistics",
+      "Procurement"
+    ),
+]
+```
+
+```{r rank-sum-test}
+rank_sum_test <- wilcox.test(
+  final_score ~ programme,
+  data = two_programmes,
+  exact = FALSE,
+  conf.int = TRUE
+)
+
+rank_sum_test
+```
+
+# 7. Group medians and ranks
+
+```{r rank-group-summaries}
+aggregate(
+  final_score ~ programme,
+  data = two_programmes,
+  FUN = function(x) {
+    c(
+      n = length(x),
+      median = median(x),
+      iqr = IQR(x)
+    )
+  }
+)
+```
+
+# 8. Kruskal-Wallis test
+
+```{r kruskal-wallis-test}
+kruskal_result <- kruskal.test(
+  final_score ~ programme,
+  data = student_data
+)
+
+kruskal_result
+```
+
+The null hypothesis concerns equality of group distributions. Under similarly
+shaped distributions, it is often interpreted as a location comparison.
+
+# 9. Post hoc pairwise Wilcoxon tests
+
+```{r pairwise-wilcoxon}
+pairwise.wilcox.test(
+  student_data$final_score,
+  student_data$programme,
+  p.adjust.method = "holm",
+  exact = FALSE
+)
+```
+
+# 10. Comparing ANOVA and Kruskal-Wallis
+
+```{r compare-anova-kruskal}
+anova_result <- summary(
+  aov(
+    final_score ~ programme,
+    data = student_data
+  )
+)[[1]]
+
+comparison_table <- data.frame(
+  method = c(
+    "One-way ANOVA",
+    "Kruskal-Wallis"
+  ),
+  statistic = c(
+    anova_result[
+      1,
+      "F value"
+    ],
+    unname(
+      kruskal_result$statistic
+    )
+  ),
+  p_value = c(
+    anova_result[
+      1,
+      "Pr(>F)"
+    ],
+    kruskal_result$p.value
+  ),
+  stringsAsFactors = FALSE
+)
+
+comparison_table
+```
+
+The tests address related but not identical hypotheses.
+
+# 11. Effect size for rank-sum test
+
+One common effect size is:
+
+\[
+r
+=
+\frac{
+Z
+}{
+\sqrt{N}
+}.
+\]
+
+Base R does not directly return \(Z\), so an approximate value can be derived
+from the p-value and direction.
+
+```{r rank-sum-effect-size}
+group_levels <- unique(
+  two_programmes$programme
+)
+
+group_one <- two_programmes$final_score[
+  two_programmes$programme ==
+    group_levels[1]
+]
+
+group_two <- two_programmes$final_score[
+  two_programmes$programme ==
+    group_levels[2]
+]
+
+direction <- sign(
+  median(
+    group_one
+  ) -
+  median(
+    group_two
+  )
+)
+
+approximate_z <- qnorm(
+  rank_sum_test$p.value / 2,
+  lower.tail = FALSE
+) * direction
+
+rank_effect_r <-
+  approximate_z /
+  sqrt(
+    length(group_one) +
+      length(group_two)
+  )
+
+rank_effect_r
+```
+
+# 12. Epsilon squared for Kruskal-Wallis
+
+\[
+\epsilon^2
+=
+\frac{
+H-k+1
+}{
+n-k
+}.
+\]
+
+```{r kruskal-effect-size}
+h_value <- unname(
+  kruskal_result$statistic
+)
+
+number_groups <- length(
+  unique(
+    student_data$programme
+  )
+)
+
+total_n <- sum(
+  complete.cases(
+    student_data[
+      c(
+        "final_score",
+        "programme"
+      )
+    ]
+  )
+)
+
+epsilon_squared <- (
+  h_value -
+    number_groups +
+    1
+) / (
+  total_n -
+    number_groups
+)
+
+epsilon_squared
+```
+
+# 13. Spearman rank correlation
+
+```{r rank-spearman}
+cor.test(
+  student_data$coursework_score,
+  student_data$examination_score,
+  method = "spearman",
+  exact = FALSE
+)
+```
+
+# 14. Kendall rank correlation
+
+```{r rank-kendall}
+cor.test(
+  student_data$coursework_score,
+  student_data$examination_score,
+  method = "kendall",
+  exact = FALSE
+)
+```
+
+# 15. Ties
+
+Ties occur when several observations share the same value.
+
+Rank methods adjust for ties, but many ties can affect exact p-value
+calculations.
+
+```{r inspect-rank-ties}
+table(
+  student_data$final_score
+)[
+  table(
+    student_data$final_score
+  ) > 1
+]
+```
+
+# 16. Exact versus approximate p-values
+
+Exact calculations may be unavailable when:
+
+- sample sizes are large;
+- ties occur;
+- or zero differences occur.
+
+Use `exact = FALSE` when an asymptotic approximation is needed.
+
+# 17. Visualisation before rank tests
+
+```{r rank-boxplot}
+boxplot(
+  final_score ~ programme,
+  data = student_data,
+  main = "Final Scores by Programme",
+  xlab = "Programme",
+  ylab = "Final score",
+  las = 2
+)
+```
+
+# 18. One-sample Wilcoxon reporting function
+
+```{r wilcoxon-one-sample-report}
+report_one_sample_wilcoxon <- function(
+  x,
+  null_location = 0,
+  alternative = c(
+    "two.sided",
+    "less",
+    "greater"
+  )
+) {
+  alternative <- match.arg(
+    alternative
+  )
+
+  observed <- x[
+    !is.na(x)
+  ]
+
+  result <- wilcox.test(
+    observed,
+    mu = null_location,
+    alternative =
+      alternative,
+    exact = FALSE
+  )
+
+  data.frame(
+    n = length(observed),
+    median = median(observed),
+    null_location =
+      null_location,
+    statistic =
+      unname(
+        result$statistic
+      ),
+    p_value =
+      result$p.value,
+    stringsAsFactors = FALSE
+  )
+}
+
+report_one_sample_wilcoxon(
+  scores,
+  null_location = 70
+)
+```
+
+# 19. Independent rank-sum reporting function
+
+```{r rank-sum-report-function}
+report_rank_sum <- function(
+  data,
+  outcome,
+  group
+) {
+  required <- c(
+    outcome,
+    group
+  )
+
+  if (!all(
+    required %in%
+      names(data)
+  )) {
+    stop(
+      "Required variables are missing.",
+      call. = FALSE
+    )
+  }
+
+  groups <- unique(
+    data[[
+      group
+    ]][
+      !is.na(
+        data[[
+          group
+        ]]
+      )
+    ]
+  )
+
+  if (length(groups) != 2L) {
+    stop(
+      "Exactly two groups are required.",
+      call. = FALSE
+    )
+  }
+
+  formula_object <- reformulate(
+    group,
+    response = outcome
+  )
+
+  result <- wilcox.test(
+    formula_object,
+    data = data,
+    exact = FALSE
+  )
+
+  data.frame(
+    group_1 = groups[1],
+    group_2 = groups[2],
+    median_1 = median(
+      data[[
+        outcome
+      ]][
+        data[[
+          group
+        ]] == groups[1]
+      ],
+      na.rm = TRUE
+    ),
+    median_2 = median(
+      data[[
+        outcome
+      ]][
+        data[[
+          group
+        ]] == groups[2]
+      ],
+      na.rm = TRUE
+    ),
+    statistic =
+      unname(
+        result$statistic
+      ),
+    p_value =
+      result$p.value,
+    stringsAsFactors = FALSE
+  )
+}
+
+report_rank_sum(
+  two_programmes,
+  "final_score",
+  "programme"
+)
+```
+
+# 20. Kruskal-Wallis reporting function
+
+```{r kruskal-report-function}
+report_kruskal_wallis <- function(
+  data,
+  outcome,
+  group
+) {
+  formula_object <- reformulate(
+    group,
+    response = outcome
+  )
+
+  result <- kruskal.test(
+    formula_object,
+    data = data
+  )
+
+  complete_data <- data[
+    complete.cases(
+      data[
+        c(
+          outcome,
+          group
+        )
+      ]
+    ),
+  ]
+
+  k <- length(
+    unique(
+      complete_data[[
+        group
+      ]]
+    )
+  )
+
+  n <- nrow(
+    complete_data
+  )
+
+  h <- unname(
+    result$statistic
+  )
+
+  data.frame(
+    h = h,
+    degrees_of_freedom =
+      unname(
+        result$parameter
+      ),
+    p_value =
+      result$p.value,
+    epsilon_squared =
+      (
+        h -
+        k +
+        1
+      ) /
+      (
+        n -
+        k
+      ),
+    stringsAsFactors = FALSE
+  )
+}
+
+report_kruskal_wallis(
+  student_data,
+  "final_score",
+  "programme"
+)
+```
+
+# 21. Reporting principles
+
+A complete rank-test report includes:
+
+- study design;
+- group sample sizes;
+- medians and IQRs;
+- test statistic;
+- p-value;
+- effect size where appropriate;
+- adjustment method for multiple comparisons;
+- and cautious interpretation of the tested hypothesis.
+
+# 22. Common mistakes
+
+- choosing a rank test solely because a normality test is significant;
+- interpreting rank tests automatically as median tests;
+- using an independent rank test for paired data;
+- ignoring ties and zero differences;
+- conducting unadjusted post hoc tests;
+- omitting medians and IQRs;
+- comparing parametric and non-parametric p-values as if they test the same hypothesis;
+- treating non-significance as equality;
+- ignoring group shape differences;
+- failing to report effect sizes.
+
+# 23. Independent exercises
+
+1. explain when rank methods are appropriate.
+2. conduct a one-sample signed-rank test.
+3. conduct a simple sign test.
+4. conduct a paired Wilcoxon test.
+5. conduct an independent rank-sum test.
+6. create median and IQR summaries.
+7. conduct a Kruskal-Wallis test.
+8. conduct adjusted pairwise Wilcoxon tests.
+9. compare ANOVA and Kruskal-Wallis.
+10. calculate rank-based effect sizes.
+11. inspect ties.
+12. conduct Spearman and Kendall correlations.
+13. create reusable rank-test functions.
+14. write a complete interpretation.
+
+# 24. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. explains the choice of rank-based methods;
+2. conducts one-sample and paired signed-rank tests;
+3. conducts an independent rank-sum test;
+4. conducts a Kruskal-Wallis test;
+5. performs adjusted post hoc comparisons;
+6. reports medians and IQRs;
+7. calculates effect sizes;
+8. discusses ties and exact p-values;
+9. uses reusable functions; and
+10. compares results cautiously with parametric alternatives.
+
+# 25. Completion checklist
+
+Confirm that you can:
+
+- choose rank-based methods appropriately;
+- conduct one-sample signed-rank tests;
+- conduct paired Wilcoxon tests;
+- conduct rank-sum tests;
+- conduct Kruskal-Wallis tests;
+- conduct adjusted post hoc tests;
+- report medians and IQRs;
+- calculate rank effect sizes;
+- handle ties;
+- use Spearman and Kendall correlations;
+- create reusable reporting functions; and
+- interpret rank tests cautiously.
+
+# Lesson conclusion
+
+Rank-based methods provide robust and ordinal-friendly alternatives, but they
+still require correct design, appropriate hypotheses and careful reporting.
+
+\[
+\boxed{
+\text{design}
+\rightarrow
+\text{rank-based test}
+\rightarrow
+\text{adjusted comparisons}
+\rightarrow
+\text{effect size}
+\rightarrow
+\text{careful interpretation}
+}
+\]

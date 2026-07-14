@@ -1,0 +1,1711 @@
+---
+title: "Lesson 4: Objects, Assignment and Naming Conventions"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260713)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+# Lesson overview
+
+Objects are central to R. Data, results, models, functions and graphs are all
+represented as objects. A learner who understands only commands but not objects
+will struggle to build reliable analytical workflows.
+
+An object has at least three important features:
+
+1. a name through which it can be referenced;
+2. a value or structure stored in memory; and
+3. properties such as type, class, length or attributes.
+
+Assignment connects a name to a value. Naming conventions make code readable.
+Inspection functions reveal what an object contains. Updating and deletion
+change the state of the R session.
+
+This lesson develops object management carefully because later lessons depend
+on it. The aim is not merely to create `x <- 10`. The aim is to understand what
+has been created, how it behaves, how it can be verified and how naming choices
+affect the reliability of a complete analysis.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. explain what an R object is;
+2. use the preferred assignment operator;
+3. distinguish assignment from comparison and named arguments;
+4. create objects containing numeric, character and logical values;
+5. choose valid and meaningful object names;
+6. explain case sensitivity;
+7. inspect type, class, length and structure;
+8. copy and update objects;
+9. understand object independence after ordinary assignment;
+10. use names and attributes;
+11. list, search for and remove objects;
+12. avoid accidental overwriting;
+13. recognise reserved words and invalid names;
+14. use backticks only when unavoidable;
+15. understand basic coercion caused by mixed values;
+16. validate objects before analysis;
+17. organise related objects consistently; and
+18. develop a safe object-management workflow.
+
+# 1. What is an object?
+
+An object is a named structure stored in R's memory.
+
+Objects may contain:
+
+- one number;
+- several numbers;
+- text;
+- logical values;
+- dates;
+- tables;
+- functions;
+- statistical models;
+- plots; or
+- other objects.
+
+Create a simple object:
+
+```{r first-object}
+student_count <- 120
+```
+
+This instruction has three components:
+
+- `student_count` is the object name;
+- `<-` is the assignment operator;
+- `120` is the value assigned.
+
+The instruction can be read as:
+
+> Store the value 120 under the name `student_count`.
+
+Display the object:
+
+```{r display-first-object}
+student_count
+```
+
+# 2. Assignment
+
+## 2.1 Preferred assignment operator
+
+```{r preferred-assignment}
+coursework_score <- 34
+```
+
+The operator `<-` is widely preferred for ordinary R assignment because it
+visually separates assignment from other uses of `=`.
+
+## 2.2 Equals assignment
+
+R also permits:
+
+```{r equals-assignment}
+examination_score = 52
+```
+
+This creates the object. However, the course will use `<-` for ordinary
+assignment.
+
+## 2.3 Named arguments use `=`
+
+```{r named-argument-equals}
+round(
+  x = 3.14159,
+  digits = 2
+)
+```
+
+Here, `=` supplies values to named function arguments. It does not create
+objects named `x` or `digits` in the global environment.
+
+## 2.4 Right assignment
+
+R also supports:
+
+```{r right-assignment}
+75 -> final_score
+final_score
+```
+
+This is valid but less common. Left assignment is generally easier to read in
+long analytical workflows.
+
+## 2.5 Assignment does not print automatically
+
+```{r assignment-invisible-result}
+total_score <- coursework_score + examination_score
+```
+
+The value has been stored but is not automatically displayed.
+
+```{r inspect-total-score}
+total_score
+```
+
+## 2.6 Parenthesised assignment
+
+```{r parenthesised-assignment}
+(adjusted_score <- total_score + 2)
+```
+
+The object is created and the value is printed.
+
+# 3. Assignment versus equality
+
+In mathematics:
+
+\[
+x=10
+\]
+
+may express equality.
+
+In R:
+
+```r
+x <- 10
+```
+
+assigns a value.
+
+To test whether `x` equals 10, use:
+
+```{r equality-test}
+x <- 10
+
+x == 10
+```
+
+The distinction is:
+
+| Purpose | Operator |
+|---|---|
+| assign a value | `<-` |
+| compare for equality | `==` |
+| supply a named argument | `=` |
+
+# 4. Creating objects of different basic kinds
+
+## 4.1 Numeric object
+
+```{r numeric-object}
+student_age <- 23
+```
+
+## 4.2 Character object
+
+```{r character-object}
+student_programme <- "Applied Statistics"
+```
+
+Text must be enclosed in quotation marks.
+
+## 4.3 Logical object
+
+```{r logical-object}
+fees_paid <- TRUE
+```
+
+`TRUE` and `FALSE` are logical constants and are not enclosed in quotation
+marks.
+
+## 4.4 Missing object value
+
+```{r missing-object}
+middle_name <- NA
+```
+
+`NA` represents a missing value.
+
+## 4.5 Several values
+
+```{r vector-object}
+assessment_scores <- c(72, 68, 81, 75)
+```
+
+The object contains a numeric vector of length four.
+
+# 5. Valid object names
+
+## 5.1 Recommended names
+
+```{r recommended-object-names}
+number_of_students <- 120
+mean_final_score <- 67.5
+programme_name <- "Statistics"
+```
+
+These names communicate meaning.
+
+## 5.2 `snake_case`
+
+The course recommends `snake_case`, in which words are separated by
+underscores.
+
+Examples:
+
+```text
+monthly_revenue
+student_identifier
+mean_waiting_time
+number_of_records
+```
+
+## 5.3 Names may contain numbers
+
+```{r names-containing-numbers}
+score_1 <- 68
+score_2 <- 74
+```
+
+However, a name should not begin with a number.
+
+Invalid:
+
+```r
+1st_score <- 68
+```
+
+Valid:
+
+```{r valid-first-score}
+first_score <- 68
+```
+
+## 5.4 Dots in names
+
+```{r dot-object-name}
+student.score <- 70
+```
+
+This is valid, but mixing dots and underscores inconsistently can reduce
+readability. The course uses underscores.
+
+## 5.5 Avoid spaces
+
+Invalid:
+
+```r
+student score <- 70
+```
+
+R interprets the space as a separation between tokens.
+
+Use:
+
+```r
+student_score <- 70
+```
+
+# 6. Case sensitivity
+
+R distinguishes upper-case and lower-case letters.
+
+```{r case-sensitive-objects}
+score <- 60
+Score <- 75
+SCORE <- 90
+
+score
+Score
+SCORE
+```
+
+These are three separate objects.
+
+A consistent lower-case naming style reduces mistakes.
+
+## 6.1 Common case error
+
+```{r common-case-error, error=TRUE}
+mean(Assessment_Scores)
+```
+
+The existing object is named `assessment_scores`, not
+`Assessment_Scores`.
+
+Correct:
+
+```{r correct-case-reference}
+mean(assessment_scores)
+```
+
+# 7. Reserved words
+
+Some words have special meanings in R and cannot be used as ordinary syntactic
+object names.
+
+Examples include:
+
+```text
+if
+else
+repeat
+while
+function
+for
+in
+next
+break
+TRUE
+FALSE
+NULL
+Inf
+NaN
+NA
+```
+
+Attempting to use a reserved word may produce a syntax error.
+
+Poor naming choice:
+
+```r
+function <- 10
+```
+
+Use a descriptive alternative:
+
+```{r reserved-word-alternative}
+function_count <- 10
+```
+
+# 8. Non-standard names and backticks
+
+R can sometimes work with non-standard names by enclosing them in backticks.
+
+```{r backtick-object-name}
+`student score` <- 78
+`student score`
+```
+
+Although valid, this style is inconvenient.
+
+Prefer:
+
+```{r standard-object-name}
+student_score <- 78
+```
+
+Backticks are more commonly encountered when importing datasets containing
+spaces or punctuation in variable names.
+
+# 9. Inspecting objects
+
+Object inspection should become automatic.
+
+## 9.1 Display value
+
+```{r inspect-value}
+student_programme
+```
+
+## 9.2 Internal type
+
+```{r inspect-object-type}
+typeof(student_age)
+typeof(student_programme)
+typeof(fees_paid)
+```
+
+## 9.3 Class
+
+```{r inspect-object-class}
+class(student_age)
+class(student_programme)
+class(fees_paid)
+```
+
+## 9.4 Length
+
+```{r inspect-object-length}
+length(student_age)
+length(assessment_scores)
+```
+
+A scalar-like value in R is ordinarily a vector of length one.
+
+## 9.5 Structure
+
+```{r inspect-object-structure}
+str(student_age)
+str(student_programme)
+str(assessment_scores)
+```
+
+## 9.6 Attributes
+
+```{r inspect-object-attributes}
+attributes(assessment_scores)
+```
+
+An unnamed numeric vector may have no attributes.
+
+## 9.7 Combined inspection
+
+```{r combined-object-inspection}
+object_report <- c(
+  type = typeof(assessment_scores),
+  class = class(assessment_scores),
+  length = length(assessment_scores)
+)
+
+object_report
+```
+
+# 10. Copying objects
+
+```{r copy-object}
+original_scores <- c(65, 72, 80)
+copied_scores <- original_scores
+
+original_scores
+copied_scores
+```
+
+At the level required in this course, the two objects can be treated as
+independent values after assignment.
+
+Change the copy:
+
+```{r change-copied-object}
+copied_scores[1] <- 90
+
+original_scores
+copied_scores
+```
+
+The original remains unchanged.
+
+# 11. Updating objects
+
+## 11.1 Replace a value completely
+
+```{r replace-object-value}
+registration_count <- 100
+registration_count <- 112
+
+registration_count
+```
+
+## 11.2 Update using the current value
+
+```{r update-using-current-value}
+account_balance <- 1500
+account_balance <- account_balance + 350
+
+account_balance
+```
+
+R evaluates the right-hand side using the old value and then assigns the new
+result.
+
+## 11.3 Percentage increase
+
+```{r percentage-increase-object}
+initial_salary <- 3200
+increase_rate <- 0.10
+
+new_salary <-
+  initial_salary *
+  (1 + increase_rate)
+
+new_salary
+```
+
+## 11.4 Accumulation
+
+```{r accumulated-total}
+running_total <- 0
+
+running_total <- running_total + 125
+running_total <- running_total + 210
+running_total <- running_total + 95
+
+running_total
+```
+
+This pattern later appears in loops.
+
+# 12. Accidental overwriting
+
+An existing object is replaced without a warning when the same name is assigned
+again.
+
+```{r accidental-overwriting}
+survey_data <- c(1, 2, 3)
+
+survey_data <- "This replaced the data"
+
+survey_data
+```
+
+R assumes that the replacement was intentional.
+
+## 12.1 Prevention strategies
+
+- use descriptive names;
+- inspect the Environment pane;
+- avoid generic names such as `data`, `test` and `temp`;
+- review code before running blocks;
+- keep raw and cleaned data under different names;
+- rerun scripts from the beginning; and
+- use version control for important projects.
+
+## 12.2 Better naming
+
+```{r better-data-names}
+raw_student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+clean_student_data <- raw_student_data
+```
+
+The names communicate the workflow stage.
+
+# 13. Object existence
+
+## 13.1 Check one object
+
+```{r check-object-existence}
+exists("raw_student_data")
+exists("unknown_data")
+```
+
+## 13.2 Conditional creation
+
+```{r conditional-object-creation}
+if (!exists("analysis_title")) {
+  analysis_title <-
+    "Student Performance Analysis"
+}
+
+analysis_title
+```
+
+## 13.3 Avoid relying on existence checks to hide incomplete scripts
+
+A script should normally create the objects it requires. Excessive conditional
+creation can make the workflow harder to understand.
+
+# 14. Listing objects
+
+## 14.1 `ls()`
+
+```{r list-objects-ls}
+ls()
+```
+
+## 14.2 `objects()`
+
+```{r list-objects-objects}
+objects()
+```
+
+`objects()` is an alias for `ls()`.
+
+## 14.3 Filter names by pattern
+
+```{r filter-object-names}
+ls(
+  pattern = "score"
+)
+```
+
+## 14.4 Include hidden names
+
+```{r include-hidden-object-names}
+ls(
+  all.names = TRUE
+)
+```
+
+# 15. Removing objects
+
+## 15.1 Remove one object
+
+```{r remove-one-object}
+temporary_score <- 99
+rm(temporary_score)
+```
+
+Confirm:
+
+```{r confirm-one-object-removal}
+exists("temporary_score")
+```
+
+## 15.2 Remove several objects
+
+```{r create-removal-objects}
+temp_a <- 1
+temp_b <- 2
+temp_c <- 3
+```
+
+```{r remove-several-objects}
+rm(
+  temp_a,
+  temp_b,
+  temp_c
+)
+```
+
+## 15.3 Remove by character name
+
+```{r remove-by-character-name}
+temporary_name <- "temporary_result"
+temporary_result <- 500
+
+rm(
+  list = temporary_name
+)
+```
+
+## 15.4 Clearing the whole environment
+
+```r
+rm(list = ls())
+```
+
+This command removes all ordinary objects in the global environment.
+
+It should not be placed casually in teaching notes or run without considering
+unsaved work. Restarting R is usually a clearer way to obtain a clean session.
+
+# 16. Naming objects by analytical role
+
+Names should distinguish inputs, intermediate values and outputs.
+
+## 16.1 Input objects
+
+```{r role-input-objects}
+coursework_marks <- c(30, 28, 35, 24)
+examination_marks <- c(48, 42, 51, 39)
+```
+
+## 16.2 Derived object
+
+```{r role-derived-object}
+final_marks <-
+  coursework_marks +
+  examination_marks
+```
+
+## 16.3 Summary objects
+
+```{r role-summary-objects}
+mean_final_mark <- mean(final_marks)
+pass_rate <- mean(final_marks >= 50)
+```
+
+## 16.4 Reporting object
+
+```{r role-reporting-object}
+pass_percentage <- pass_rate * 100
+```
+
+The names communicate the sequence.
+
+# 17. Names attached to vector elements
+
+A vector may have element names.
+
+```{r named-vector}
+programme_counts <- c(
+  Statistics = 35,
+  Procurement = 42,
+  Hospitality = 28,
+  Agriculture = 31
+)
+
+programme_counts
+```
+
+## 17.1 Inspect names
+
+```{r inspect-vector-names}
+names(programme_counts)
+```
+
+## 17.2 Extract by name
+
+```{r extract-named-element}
+programme_counts["Statistics"]
+```
+
+## 17.3 Assign names after creation
+
+```{r assign-vector-names}
+department_budget <- c(
+  5000,
+  7200,
+  6100
+)
+
+names(department_budget) <- c(
+  "Teaching",
+  "Research",
+  "Outreach"
+)
+
+department_budget
+```
+
+# 18. Attributes
+
+Attributes provide additional information about an object.
+
+```{r inspect-named-vector-attributes}
+attributes(programme_counts)
+```
+
+The `names` attribute stores the element names.
+
+## 18.1 Add a custom attribute
+
+```{r custom-attribute}
+temperature <- c(29.5, 31.2, 30.1)
+
+attr(
+  temperature,
+  "unit"
+) <- "degrees Celsius"
+
+temperature
+attributes(temperature)
+```
+
+## 18.2 Retrieve a custom attribute
+
+```{r retrieve-custom-attribute}
+attr(
+  temperature,
+  "unit"
+)
+```
+
+Custom attributes can be lost through some operations. They should not be used
+as a substitute for a well-designed data structure.
+
+# 19. Object classes and behaviour
+
+Class influences how generic functions behave.
+
+```{r numeric-class-example}
+class(assessment_scores)
+```
+
+Later, classes such as:
+
+- `factor`;
+- `Date`;
+- `data.frame`;
+- `lm`; and
+- `ggplot`
+
+will determine how functions such as `print()`, `summary()` and `plot()` behave.
+
+The important principle is:
+
+\[
+\text{the same generic function may behave differently for different classes}.
+\]
+
+# 20. Basic coercion
+
+A simple vector ordinarily contains one atomic type. When different types are
+combined, R may coerce them to a common type.
+
+## 20.1 Numeric and character
+
+```{r coercion-numeric-character}
+mixed_values <- c(
+  10,
+  20,
+  "Thirty"
+)
+
+mixed_values
+typeof(mixed_values)
+```
+
+All values become character because text cannot be represented as numeric.
+
+## 20.2 Logical and numeric
+
+```{r coercion-logical-numeric}
+logical_numeric <- c(
+  TRUE,
+  FALSE,
+  5
+)
+
+logical_numeric
+typeof(logical_numeric)
+```
+
+Logical values are converted to numeric:
+
+\[
+TRUE=1,\qquad FALSE=0.
+\]
+
+## 20.3 Why coercion matters
+
+Unexpected coercion can cause later functions to fail.
+
+```{r coercion-mean-warning, warning=TRUE}
+mean(mixed_values)
+```
+
+Always inspect imported or constructed objects.
+
+# 21. Explicit conversion
+
+R provides functions for explicit conversion.
+
+## 21.1 Character to numeric
+
+```{r explicit-character-to-numeric}
+character_numbers <- c(
+  "10",
+  "20",
+  "30"
+)
+
+numeric_numbers <-
+  as.numeric(character_numbers)
+
+numeric_numbers
+```
+
+## 21.2 Invalid conversion
+
+```{r invalid-explicit-conversion, warning=TRUE}
+as.numeric(
+  c("10", "Twenty", "30")
+)
+```
+
+The unconvertible value becomes `NA`, and R issues a warning.
+
+## 21.3 Numeric to character
+
+```{r explicit-numeric-to-character}
+as.character(
+  c(10, 20, 30)
+)
+```
+
+## 21.4 Numeric to logical
+
+```{r explicit-numeric-to-logical}
+as.logical(
+  c(0, 1, 2, -1)
+)
+```
+
+Zero becomes `FALSE`; non-zero finite values become `TRUE`.
+
+# 22. Validating objects
+
+Before using an object, verify that it meets expected conditions.
+
+## 22.1 Numeric check
+
+```{r validate-numeric-object}
+is.numeric(assessment_scores)
+```
+
+## 22.2 Character check
+
+```{r validate-character-object}
+is.character(student_programme)
+```
+
+## 22.3 Logical check
+
+```{r validate-logical-object}
+is.logical(fees_paid)
+```
+
+## 22.4 Length check
+
+```{r validate-object-length}
+length(assessment_scores) == 4
+```
+
+## 22.5 Range check
+
+```{r validate-score-range}
+all(
+  assessment_scores >= 0 &
+    assessment_scores <= 100
+)
+```
+
+## 22.6 Missing-value check
+
+```{r validate-missing-values}
+anyNA(assessment_scores)
+```
+
+`anyNA()` is an efficient way to ask whether any missing value is present.
+
+# 23. Stop when an object is invalid
+
+```{r stop-invalid-object}
+if (!is.numeric(assessment_scores)) {
+  stop(
+    "`assessment_scores` must be numeric.",
+    call. = FALSE
+  )
+}
+```
+
+## 23.1 Several validation conditions
+
+```{r several-validation-conditions}
+if (anyNA(assessment_scores)) {
+  stop(
+    "`assessment_scores` contains missing values.",
+    call. = FALSE
+  )
+}
+
+if (!all(
+  assessment_scores >= 0 &
+    assessment_scores <= 100
+)) {
+  stop(
+    "Scores must lie between 0 and 100.",
+    call. = FALSE
+  )
+}
+```
+
+# 24. Objects created from data
+
+Import the student dataset:
+
+```{r import-student-object}
+students <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+```
+
+Inspect:
+
+```{r inspect-student-object}
+class(students)
+typeof(students)
+dim(students)
+str(students)
+```
+
+`students` is a data-frame object. It contains several column objects.
+
+## 24.1 Extract a column object
+
+```{r extract-column-object}
+final_scores <- students$final_score
+
+class(final_scores)
+typeof(final_scores)
+length(final_scores)
+```
+
+## 24.2 Create analytical objects
+
+```{r create-analytical-objects}
+pass_mark <- 50
+
+pass_status <-
+  final_scores >= pass_mark
+
+number_passed <-
+  sum(pass_status)
+
+pass_percentage <-
+  mean(pass_status) * 100
+
+number_passed
+pass_percentage
+```
+
+# 25. Avoid generic object names
+
+Names such as the following are weak:
+
+```text
+data
+x
+temp
+test
+new
+final
+result
+```
+
+They may be acceptable for a very small mathematical demonstration, but they
+become ambiguous in applied analysis.
+
+Compare:
+
+```r
+result <- mean(x)
+```
+
+with:
+
+```r
+mean_final_score <- mean(student_final_scores)
+```
+
+The second expression is easier to understand without additional context.
+
+# 26. Avoid misleading names
+
+An object name should match its content.
+
+Poor:
+
+```r
+mean_score <- c(60, 70, 80)
+```
+
+The object contains three scores, not a mean.
+
+Better:
+
+```{r truthful-object-name}
+student_scores <- c(60, 70, 80)
+mean_score <- mean(student_scores)
+```
+
+# 27. Units in object names
+
+Including units can prevent mistakes.
+
+```{r units-in-object-names}
+waiting_time_minutes <- c(15, 22, 31)
+distance_kilometres <- 12.5
+weight_kilograms <- 68
+```
+
+Compare with ambiguous names:
+
+```text
+time
+distance
+weight
+```
+
+The unit-aware names improve interpretation.
+
+# 28. Boolean naming conventions
+
+Logical objects are often clearer when named as questions or states.
+
+```{r boolean-naming}
+is_registered <- TRUE
+has_paid_fees <- FALSE
+scores_are_valid <- TRUE
+file_exists <- file.exists(
+  "data/student_scores.csv"
+)
+```
+
+These names read naturally inside conditions:
+
+```{r boolean-condition-reading}
+if (file_exists) {
+  message(
+    "The student dataset is available."
+  )
+}
+```
+
+# 29. Organising objects by stage
+
+A data-analysis workflow may use:
+
+```{r stage-object-names}
+raw_clinic_data <- read.csv(
+  "data/clinic_visits.csv",
+  stringsAsFactors = FALSE
+)
+
+analysis_clinic_data <-
+  raw_clinic_data
+
+clinic_waiting_time <-
+  analysis_clinic_data$waiting_time
+
+mean_clinic_waiting_time <-
+  mean(
+    clinic_waiting_time,
+    na.rm = TRUE
+  )
+```
+
+The names indicate the transition from raw input to analytical result.
+
+# 30. Object dependencies
+
+An object may depend on earlier objects.
+
+```{r object-dependencies}
+unit_price <- 12.5
+quantity <- 40
+
+total_cost <-
+  unit_price * quantity
+```
+
+If `unit_price` changes, `total_cost` does not update automatically.
+
+```{r object-dependency-update}
+unit_price <- 15
+
+total_cost
+```
+
+The stored result remains based on the earlier value.
+
+Recalculate:
+
+```{r recalculate-dependent-object}
+total_cost <-
+  unit_price * quantity
+
+total_cost
+```
+
+R objects are not spreadsheet formulas that recalculate automatically.
+
+# 31. Object order in scripts
+
+Dependencies determine execution order.
+
+Incorrect order:
+
+```r
+total_cost <- unit_price * quantity
+
+unit_price <- 15
+quantity <- 40
+```
+
+Correct order:
+
+```{r correct-object-order}
+unit_price <- 15
+quantity <- 40
+
+total_cost <-
+  unit_price * quantity
+
+total_cost
+```
+
+A script should create inputs before derived objects.
+
+# 32. A small object registry
+
+For a large project, a simple summary can clarify important objects.
+
+```{r object-registry}
+object_registry <- data.frame(
+  object_name = c(
+    "students",
+    "final_scores",
+    "pass_status",
+    "pass_percentage"
+  ),
+  purpose = c(
+    "Imported student data",
+    "Final-score vector",
+    "Logical pass indicator",
+    "Percentage of students who passed"
+  ),
+  stringsAsFactors = FALSE
+)
+
+object_registry
+```
+
+This is especially useful in teaching, documentation and collaborative work.
+
+# 33. Integrated worked example: monthly sales objects
+
+## 33.1 Import the data
+
+```{r integrated-sales-import}
+raw_sales_data <- read.csv(
+  "data/monthly_sales.csv",
+  stringsAsFactors = FALSE
+)
+```
+
+## 33.2 Inspect the object
+
+```{r integrated-sales-inspect}
+class(raw_sales_data)
+typeof(raw_sales_data)
+dim(raw_sales_data)
+str(raw_sales_data)
+```
+
+## 33.3 Create meaningful column objects
+
+```{r integrated-sales-columns}
+units_sold <- raw_sales_data$units_sold
+sales_revenue <- raw_sales_data$revenue
+```
+
+## 33.4 Validate objects
+
+```{r integrated-sales-validation}
+units_are_numeric <-
+  is.numeric(units_sold)
+
+revenue_is_numeric <-
+  is.numeric(sales_revenue)
+
+units_are_nonnegative <-
+  all(units_sold >= 0)
+
+revenue_is_positive <-
+  all(sales_revenue > 0)
+
+units_are_numeric
+revenue_is_numeric
+units_are_nonnegative
+revenue_is_positive
+```
+
+## 33.5 Create summary objects
+
+```{r integrated-sales-summaries}
+number_of_sales_records <-
+  length(sales_revenue)
+
+total_sales_revenue <-
+  sum(sales_revenue)
+
+mean_sales_revenue <-
+  mean(sales_revenue)
+
+maximum_sales_revenue <-
+  max(sales_revenue)
+
+number_of_sales_records
+total_sales_revenue
+mean_sales_revenue
+maximum_sales_revenue
+```
+
+## 33.6 Create logical performance object
+
+```{r integrated-sales-logical}
+above_average_revenue <-
+  sales_revenue >
+  mean_sales_revenue
+
+above_average_revenue
+```
+
+## 33.7 Summarise the logical object
+
+```{r integrated-sales-logical-summary}
+number_above_average <-
+  sum(above_average_revenue)
+
+percentage_above_average <-
+  mean(above_average_revenue) * 100
+
+number_above_average
+percentage_above_average
+```
+
+# 34. Guided practice
+
+## 34.1 Education
+
+```{r guided-education-objects}
+assignment_marks <- c(18, 16, 20, 14)
+exam_marks <- c(60, 55, 68, 47)
+
+final_marks <-
+  assignment_marks +
+  exam_marks
+
+mean_final_mark <-
+  mean(final_marks)
+
+pass_status <-
+  final_marks >= 50
+
+mean_final_mark
+pass_status
+```
+
+Explain the role of every object.
+
+## 34.2 Health
+
+```{r guided-health-objects}
+waiting_time_minutes <- c(
+  15,
+  24,
+  31,
+  18,
+  42
+)
+
+target_minutes <- 30
+
+target_met <-
+  waiting_time_minutes <=
+  target_minutes
+
+target_percentage <-
+  mean(target_met) * 100
+
+target_percentage
+```
+
+## 34.3 Agriculture
+
+```{r guided-agriculture-objects}
+plot_yield_tonnes <- c(
+  2.4,
+  2.9,
+  3.2,
+  2.7
+)
+
+mean_yield_tonnes <-
+  mean(plot_yield_tonnes)
+
+yield_above_mean <-
+  plot_yield_tonnes >
+  mean_yield_tonnes
+
+mean_yield_tonnes
+yield_above_mean
+```
+
+# 35. Common mistakes
+
+## 35.1 Using spaces in names
+
+Incorrect:
+
+```r
+mean score <- 70
+```
+
+Correct:
+
+```r
+mean_score <- 70
+```
+
+## 35.2 Beginning with a number
+
+Incorrect:
+
+```r
+2026_sales <- 5000
+```
+
+Better:
+
+```r
+sales_2026 <- 5000
+```
+
+## 35.3 Inconsistent case
+
+```r
+student_score <- 70
+Student_Score
+```
+
+The second name does not refer to the first object.
+
+## 35.4 Misleading names
+
+```r
+total <- mean(scores)
+```
+
+The object contains a mean, not a total.
+
+## 35.5 Accidental overwrite
+
+```r
+student_data <- read.csv("data/student_scores.csv")
+student_data <- 50
+```
+
+The imported table is replaced.
+
+## 35.6 Using `=` when comparison is intended
+
+Incorrect:
+
+```r
+score = 50
+```
+
+when the intention is to ask whether the score equals 50.
+
+Correct:
+
+```r
+score == 50
+```
+
+# 36. Independent exercises
+
+## Exercise 1
+
+Create objects representing a student's name, age, programme, final score and
+registration status. Use appropriate types and meaningful names.
+
+## Exercise 2
+
+Demonstrate the difference among `<-`, `==` and `=` in a named function
+argument.
+
+## Exercise 3
+
+Create three objects whose names differ only by case. Explain why this is poor
+practice even though R allows it.
+
+## Exercise 4
+
+Create a numeric vector of six scores. Inspect its value, type, class, length,
+structure and attributes.
+
+## Exercise 5
+
+Copy the vector, change the first element of the copy and confirm that the
+original remains unchanged.
+
+## Exercise 6
+
+Create a named vector of budgets for four departments. Extract one budget by
+name.
+
+## Exercise 7
+
+Combine logical, numeric and character values in separate demonstrations.
+Explain the coercion that occurs.
+
+## Exercise 8
+
+Convert a character vector of numeric text to numeric. Include one invalid text
+value and explain the warning.
+
+## Exercise 9
+
+Import `clinic_visits.csv`. Create meaningful objects for waiting time and
+consultation duration. Validate that the variables are numeric and nonnegative.
+
+## Exercise 10
+
+Create a sequence of dependent objects for a procurement calculation:
+unit price, quantity, subtotal, tax rate, tax amount and total cost. Change the
+unit price and demonstrate that dependent objects do not update automatically.
+
+## Exercise 11
+
+Create an object registry describing at least six objects from Exercise 10.
+
+## Exercise 12
+
+Write a script that imports `student_scores.csv`, creates pass-status and
+distinction-status objects, validates them and reports percentages.
+
+# 37. Lesson assessment
+
+## Part A: Conceptual questions
+
+1. What is an R object?
+2. What does assignment do?
+3. Why is `<-` preferred in this course?
+4. What is the difference between assignment and comparison?
+5. What is `snake_case`?
+6. Why is case sensitivity important?
+7. What are reserved words?
+8. Why should backtick names usually be avoided?
+9. What is the difference between `typeof()` and `class()`?
+10. What does `str()` provide?
+11. What happens when an existing object name is assigned again?
+12. What is coercion?
+13. Why can coercion create analytical problems?
+14. What does `anyNA()` test?
+15. Why should objects be validated before analysis?
+16. Why are generic names risky?
+17. Why should units sometimes be included in object names?
+18. What is an object dependency?
+19. Why do dependent objects not update automatically?
+20. Why should script order reflect object dependencies?
+
+## Part B: Practical assessment
+
+Create a standalone R Markdown report that:
+
+1. imports `monthly_sales.csv`;
+2. assigns the imported table to a meaningful object;
+3. creates separate objects for units and revenue;
+4. inspects their types, classes and lengths;
+5. validates that units are nonnegative and revenue is positive;
+6. calculates total, mean, minimum and maximum revenue;
+7. creates a logical above-average object;
+8. reports the number and percentage above average;
+9. creates a named summary vector;
+10. demonstrates copying and updating an object;
+11. demonstrates one coercion example;
+12. explains one warning caused by invalid conversion;
+13. includes an object registry; and
+14. knits successfully from a clean session.
+
+# 38. Key terms
+
+**Assignment:** Binding a name to a value or structure.
+
+**Attribute:** Additional metadata attached to an object.
+
+**Case-sensitive:** Treating upper-case and lower-case letters as distinct.
+
+**Class:** A property influencing how functions behave for an object.
+
+**Coercion:** Conversion of values to a common or requested type.
+
+**Dependency:** A relationship in which one object is calculated from another.
+
+**Global environment:** The ordinary workspace in which interactive objects are
+stored.
+
+**Object:** A named structure stored in R's memory.
+
+**Reserved word:** A word with a special grammatical meaning in R.
+
+**Syntactic name:** A name that can be used directly without backticks.
+
+**Type:** The internal storage type of an object.
+
+**Validation:** Checking whether an object satisfies expected rules.
+
+# 39. Completion checklist
+
+Before proceeding, confirm that you can:
+
+- define an R object;
+- assign values with `<-`;
+- distinguish assignment from equality testing;
+- create numeric, character and logical objects;
+- select meaningful `snake_case` names;
+- identify invalid names;
+- explain case sensitivity;
+- avoid reserved words;
+- inspect type, class, length and structure;
+- copy an object;
+- update an object;
+- recognise accidental overwriting;
+- list objects;
+- check object existence;
+- remove objects safely;
+- create and use named vectors;
+- inspect attributes;
+- explain basic class behaviour;
+- recognise implicit coercion;
+- perform explicit conversion;
+- interpret a coercion warning;
+- validate object type, length, range and missingness;
+- stop execution when an object is invalid;
+- name objects by analytical role;
+- include units where appropriate;
+- explain object dependencies; and
+- organise object creation in a logical script order.
+
+# Lesson conclusion
+
+Objects provide the structure through which R stores and manipulates
+information. Assignment creates the relationship between a name and a value.
+Good naming communicates purpose. Inspection reveals what has been created.
+Validation protects the analysis from inappropriate inputs.
+
+The safe object workflow is:
+
+\[
+\boxed{
+\text{name clearly}
+\rightarrow
+\text{assign}
+\rightarrow
+\text{inspect}
+\rightarrow
+\text{validate}
+\rightarrow
+\text{transform}
+\rightarrow
+\text{preserve}
+}
+\]
+
+The next lesson will examine atomic data types and special values in greater
+depth, including doubles, integers, characters, logical values, complex
+numbers, raw values, missing values, infinities and undefined numeric results.

@@ -1,0 +1,796 @@
+---
+title: "Lesson 36: Simple Linear Regression"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Simple linear regression models the mean of a numerical outcome as a linear
+function of one explanatory variable.
+
+The basic model is:
+
+\[
+Y_i
+=
+\beta_0
++
+\beta_1X_i
++
+\varepsilon_i.
+\]
+
+The method can be used for:
+
+- description;
+- prediction;
+- adjustment;
+- and formal inference about a linear association.
+
+Regression does not automatically establish causation.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. explain the simple linear regression model;
+2. identify outcome and explanatory variables;
+3. create and interpret scatter plots;
+4. fit a model with `lm()`;
+5. interpret intercept and slope coefficients;
+6. calculate fitted values and residuals;
+7. explain least squares;
+8. conduct inference for the slope;
+9. interpret confidence intervals;
+10. calculate and interpret \(R^2\);
+11. distinguish confidence and prediction intervals;
+12. generate predictions;
+13. inspect basic model assumptions;
+14. create reusable regression-reporting functions; and
+15. report results without causal overstatement.
+
+# 1. Importing the data
+
+```{r import-simple-regression-data}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+head(student_data)
+str(student_data)
+```
+
+# 2. Research question
+
+Does coursework score linearly predict examination score?
+
+```{r select-regression-variables}
+regression_data <- student_data[
+  c(
+    "student_id",
+    "coursework_score",
+    "examination_score"
+  )
+]
+
+summary(regression_data)
+```
+
+# 3. Scatter plot
+
+```{r simple-regression-scatter}
+plot(
+  regression_data$coursework_score,
+  regression_data$examination_score,
+  main = "Coursework and Examination Scores",
+  xlab = "Coursework score",
+  ylab = "Examination score",
+  pch = 19
+)
+```
+
+A scatter plot should be inspected before fitting the model.
+
+# 4. Correlation as preliminary evidence
+
+```{r simple-regression-correlation}
+cor(
+  regression_data$coursework_score,
+  regression_data$examination_score,
+  use = "complete.obs"
+)
+```
+
+Correlation measures linear association but does not provide a prediction
+equation.
+
+# 5. Fitting the model
+
+```{r fit-simple-regression}
+simple_model <- lm(
+  examination_score ~ coursework_score,
+  data = regression_data
+)
+
+simple_model
+```
+
+# 6. Model summary
+
+```{r simple-regression-summary}
+summary(
+  simple_model
+)
+```
+
+The summary includes:
+
+- coefficients;
+- standard errors;
+- t statistics;
+- p-values;
+- residual standard error;
+- \(R^2\);
+- adjusted \(R^2\);
+- and the model F test.
+
+# 7. Regression equation
+
+```{r simple-regression-coefficients}
+model_coefficients <- coef(
+  simple_model
+)
+
+intercept <- model_coefficients[1]
+slope <- model_coefficients[2]
+
+intercept
+slope
+```
+
+The fitted equation is:
+
+\[
+\widehat{Y}
+=
+\widehat{\beta}_0
++
+\widehat{\beta}_1X.
+\]
+
+# 8. Interpreting the intercept
+
+The intercept is the predicted examination score when coursework score equals
+zero.
+
+It should be interpreted only when zero is meaningful and within a relevant
+range.
+
+# 9. Interpreting the slope
+
+The slope is the expected change in examination score associated with a
+one-unit increase in coursework score.
+
+```{r slope-interpretation-text}
+slope_interpretation <- paste(
+  "For each additional coursework mark, the predicted examination score",
+  "changes by",
+  round(
+    slope,
+    3
+  ),
+  "marks on average."
+)
+
+slope_interpretation
+```
+
+# 10. Adding the fitted line
+
+```{r add-simple-regression-line}
+plot(
+  regression_data$coursework_score,
+  regression_data$examination_score,
+  main = "Coursework and Examination Scores",
+  xlab = "Coursework score",
+  ylab = "Examination score",
+  pch = 19
+)
+
+abline(
+  simple_model,
+  lwd = 2
+)
+```
+
+# 11. Fitted values
+
+```{r simple-fitted-values}
+fitted_values <- fitted(
+  simple_model
+)
+
+head(fitted_values)
+```
+
+# 12. Residuals
+
+```{r simple-residuals}
+model_residuals <- residuals(
+  simple_model
+)
+
+head(model_residuals)
+```
+
+A residual is:
+
+\[
+e_i
+=
+Y_i
+-
+\widehat{Y}_i.
+\]
+
+# 13. Observation-level output
+
+```{r simple-observation-output}
+observation_output <- data.frame(
+  student_id =
+    regression_data$student_id,
+  observed =
+    regression_data$examination_score,
+  fitted =
+    fitted_values,
+  residual =
+    model_residuals,
+  stringsAsFactors = FALSE
+)
+
+head(observation_output)
+```
+
+# 14. Least-squares principle
+
+Least squares chooses coefficients that minimise:
+
+\[
+\sum_{i=1}^{n}
+e_i^2.
+\]
+
+```{r residual-sum-of-squares}
+residual_sum_of_squares <- sum(
+  model_residuals ^ 2
+)
+
+residual_sum_of_squares
+```
+
+# 15. Manual slope and intercept
+
+```{r manual-regression-coefficients}
+x <- regression_data$coursework_score
+y <- regression_data$examination_score
+
+manual_slope <- cov(
+  x,
+  y
+) / var(
+  x
+)
+
+manual_intercept <- mean(y) -
+  manual_slope *
+  mean(x)
+
+data.frame(
+  coefficient = c(
+    "Intercept",
+    "Slope"
+  ),
+  manual = c(
+    manual_intercept,
+    manual_slope
+  ),
+  lm = unname(
+    coef(simple_model)
+  ),
+  stringsAsFactors = FALSE
+)
+```
+
+# 16. Inference for the slope
+
+The hypotheses are:
+
+\[
+H_0:\beta_1=0
+\]
+
+\[
+H_1:\beta_1\neq0.
+\]
+
+```{r slope-inference}
+coefficient_table <- summary(
+  simple_model
+)$coefficients
+
+coefficient_table
+```
+
+# 17. Confidence intervals for coefficients
+
+```{r simple-coefficient-confidence}
+confint(
+  simple_model,
+  level = 0.95
+)
+```
+
+# 18. Model F test
+
+```{r simple-model-anova}
+anova(
+  simple_model
+)
+```
+
+With one predictor, the model F test and slope t test test the same null
+hypothesis.
+
+# 19. Coefficient of determination
+
+```{r simple-r-squared}
+model_summary <- summary(
+  simple_model
+)
+
+r_squared <- model_summary$r.squared
+adjusted_r_squared <-
+  model_summary$adj.r.squared
+
+r_squared
+adjusted_r_squared
+```
+
+\(R^2\) is the proportion of observed outcome variation explained by the fitted
+linear model.
+
+# 20. Relationship between correlation and R-squared
+
+```{r correlation-r-squared}
+correlation_value <- cor(
+  x,
+  y
+)
+
+data.frame(
+  correlation_squared =
+    correlation_value ^ 2,
+  regression_r_squared =
+    r_squared
+)
+```
+
+For simple linear regression with an intercept, \(R^2=r^2\).
+
+# 21. Residual standard error
+
+```{r simple-residual-standard-error}
+residual_standard_error <-
+  model_summary$sigma
+
+residual_standard_error
+```
+
+This estimates the typical vertical size of residual variation in outcome
+units.
+
+# 22. Predicting at selected values
+
+```{r simple-point-predictions}
+new_coursework <- data.frame(
+  coursework_score = c(
+    20,
+    25,
+    30,
+    35
+  )
+)
+
+point_predictions <- predict(
+  simple_model,
+  newdata = new_coursework
+)
+
+data.frame(
+  new_coursework,
+  predicted_examination =
+    point_predictions
+)
+```
+
+# 23. Confidence interval for the mean response
+
+```{r simple-mean-confidence-prediction}
+mean_response_interval <- predict(
+  simple_model,
+  newdata = new_coursework,
+  interval = "confidence",
+  level = 0.95
+)
+
+cbind(
+  new_coursework,
+  mean_response_interval
+)
+```
+
+# 24. Prediction interval for an individual response
+
+```{r simple-individual-prediction}
+individual_prediction_interval <- predict(
+  simple_model,
+  newdata = new_coursework,
+  interval = "prediction",
+  level = 0.95
+)
+
+cbind(
+  new_coursework,
+  individual_prediction_interval
+)
+```
+
+Prediction intervals are wider because they include individual outcome
+variation.
+
+# 25. Avoiding extrapolation
+
+```{r simple-predictor-range}
+range(
+  regression_data$coursework_score
+)
+```
+
+Predictions far outside this range may be unreliable.
+
+# 26. Residuals versus fitted values
+
+```{r simple-residual-fitted-plot}
+plot(
+  fitted_values,
+  model_residuals,
+  main = "Residuals versus Fitted Values",
+  xlab = "Fitted examination score",
+  ylab = "Residual",
+  pch = 19
+)
+
+abline(
+  h = 0,
+  lty = 2
+)
+```
+
+A random horizontal band is broadly consistent with linearity and constant
+variance.
+
+# 27. Normal Q-Q plot
+
+```{r simple-residual-qqplot}
+qqnorm(
+  model_residuals,
+  main = "Normal Q-Q Plot of Residuals"
+)
+
+qqline(
+  model_residuals
+)
+```
+
+# 28. Standard diagnostic plots
+
+```{r simple-standard-diagnostics}
+old_parameters <- par(
+  mfrow = c(
+    2,
+    2
+  )
+)
+
+plot(
+  simple_model
+)
+
+par(
+  old_parameters
+)
+```
+
+# 29. Shapiro-Wilk test of residuals
+
+```{r simple-shapiro-residuals}
+shapiro.test(
+  model_residuals
+)
+```
+
+This should not replace graphical assessment.
+
+# 30. Observation influence
+
+```{r simple-cooks-distance}
+cooks_values <- cooks.distance(
+  simple_model
+)
+
+head(cooks_values)
+
+which(
+  cooks_values >
+    4 /
+    nrow(regression_data)
+)
+```
+
+A large Cook's distance identifies observations requiring investigation, not
+automatic deletion.
+
+# 31. Standardised residuals
+
+```{r simple-standardised-residuals}
+standardised_residuals <- rstandard(
+  simple_model
+)
+
+which(
+  abs(
+    standardised_residuals
+  ) > 2
+)
+```
+
+# 32. Reusable model-reporting function
+
+```{r simple-model-report-function}
+report_simple_regression <- function(
+  data,
+  outcome,
+  predictor
+) {
+  required <- c(
+    outcome,
+    predictor
+  )
+
+  if (!all(
+    required %in%
+      names(data)
+  )) {
+    stop(
+      "Required variables are missing.",
+      call. = FALSE
+    )
+  }
+
+  formula_object <- reformulate(
+    predictor,
+    response = outcome
+  )
+
+  model <- lm(
+    formula_object,
+    data = data
+  )
+
+  model_summary <- summary(
+    model
+  )
+
+  coefficient_table <-
+    model_summary$coefficients
+
+  slope_row <- coefficient_table[
+    predictor,
+  ]
+
+  slope_interval <- confint(
+    model,
+    predictor
+  )
+
+  data.frame(
+    outcome = outcome,
+    predictor = predictor,
+    n = nobs(model),
+    intercept =
+      unname(
+        coef(model)[1]
+      ),
+    slope =
+      unname(
+        coef(model)[2]
+      ),
+    slope_standard_error =
+      slope_row[
+        "Std. Error"
+      ],
+    t =
+      slope_row[
+        "t value"
+      ],
+    p_value =
+      slope_row[
+        "Pr(>|t|)"
+      ],
+    confidence_lower =
+      slope_interval[1],
+    confidence_upper =
+      slope_interval[2],
+    r_squared =
+      model_summary$r.squared,
+    adjusted_r_squared =
+      model_summary$adj.r.squared,
+    residual_standard_error =
+      model_summary$sigma,
+    stringsAsFactors = FALSE
+  )
+}
+
+report_simple_regression(
+  regression_data,
+  "examination_score",
+  "coursework_score"
+)
+```
+
+# 33. Reporting language
+
+A complete report includes:
+
+- the sample size;
+- coefficient estimate;
+- standard error;
+- t statistic;
+- degrees of freedom;
+- p-value;
+- confidence interval;
+- \(R^2\);
+- and a contextual, non-causal interpretation.
+
+# 34. Common mistakes
+
+- fitting a model without inspecting a scatter plot;
+- interpreting association as causation;
+- interpreting the intercept outside the observed range;
+- reporting \(R^2\) as a percentage of individuals correctly predicted;
+- using confidence and prediction intervals interchangeably;
+- extrapolating beyond the observed predictor range;
+- deleting influential observations automatically;
+- ignoring non-linearity;
+- reporting only p-values;
+- failing to retain the model object.
+
+# 35. Independent exercises
+
+1. import and inspect the data.
+2. create a scatter plot.
+3. fit a simple linear regression.
+4. interpret intercept and slope.
+5. extract fitted values and residuals.
+6. verify coefficients manually.
+7. conduct slope inference.
+8. calculate confidence intervals.
+9. interpret \(R^2\).
+10. create point predictions.
+11. create confidence and prediction intervals.
+12. inspect diagnostic plots.
+13. identify potentially influential records.
+14. create a reusable reporting function.
+15. write a non-causal interpretation.
+
+# 36. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. defines a regression question;
+2. creates an appropriate scatter plot;
+3. fits a simple regression model;
+4. reports the regression equation;
+5. explains least squares;
+6. conducts coefficient inference;
+7. reports model fit;
+8. creates predictions and both interval types;
+9. assesses diagnostics;
+10. identifies influential records;
+11. uses a reusable reporting function; and
+12. provides a complete interpretation.
+
+# 37. Completion checklist
+
+Confirm that you can:
+
+- specify a simple regression model;
+- create a scatter plot;
+- fit a model with `lm()`;
+- interpret coefficients;
+- calculate fitted values;
+- calculate residuals;
+- explain least squares;
+- conduct slope inference;
+- interpret \(R^2\);
+- generate predictions;
+- distinguish interval types;
+- inspect diagnostics;
+- identify influence; and
+- report regression results.
+
+# Lesson conclusion
+
+Simple linear regression describes and predicts a numerical outcome using one
+explanatory variable. Sound analysis combines model estimation, uncertainty,
+diagnostics and cautious interpretation.
+
+\[
+\boxed{
+\text{question}
+\rightarrow
+\text{scatter plot}
+\rightarrow
+\text{fit model}
+\rightarrow
+\text{interpret coefficients}
+\rightarrow
+\text{diagnose}
+\rightarrow
+\text{predict}
+}
+\]

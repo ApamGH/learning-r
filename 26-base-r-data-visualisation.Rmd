@@ -1,0 +1,836 @@
+---
+title: "Lesson 26: Data Visualisation with Base R"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Data visualisation helps the analyst inspect distributions, compare groups,
+identify unusual values and communicate findings.
+
+A graph should be chosen according to the variable type and analytical purpose.
+The goal is not decoration. The goal is accurate and efficient communication.
+
+This lesson introduces base R graphics for:
+
+- bar charts;
+- pie charts;
+- histograms;
+- box plots;
+- scatter plots;
+- line graphs;
+- dot charts;
+- grouped displays;
+- and multi-panel layouts.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. choose a graph for a variable type;
+2. create bar charts;
+3. create histograms;
+4. create box plots;
+5. create scatter plots;
+6. create line graphs;
+7. create dot charts;
+8. add titles, labels and legends;
+9. control axes and plotting symbols;
+10. compare groups visually;
+11. create multi-panel displays;
+12. save graphs to files;
+13. avoid misleading graphics; and
+14. interpret graphs in context.
+
+# 1. Importing data
+
+```{r import-visualisation-data}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+clinic_data <- read.csv(
+  "data/clinic_visits.csv",
+  stringsAsFactors = FALSE
+)
+```
+
+# 2. Choosing a graph
+
+| Purpose | Common graph |
+|---|---|
+| category frequencies | bar chart |
+| numerical distribution | histogram |
+| numerical distribution and outliers | box plot |
+| relationship between two numerical variables | scatter plot |
+| trend over ordered time | line graph |
+| compact category comparison | dot chart |
+
+# 3. Bar chart
+
+```{r basic-bar-chart}
+programme_counts <- table(
+  student_data$programme
+)
+
+barplot(
+  programme_counts,
+  main = "Students by Programme",
+  xlab = "Programme",
+  ylab = "Number of students",
+  las = 2
+)
+```
+
+# 4. Horizontal bar chart
+
+```{r horizontal-bar-chart}
+barplot(
+  programme_counts,
+  horiz = TRUE,
+  main = "Students by Programme",
+  xlab = "Number of students",
+  ylab = "Programme",
+  las = 1
+)
+```
+
+# 5. Ordered bar chart
+
+```{r ordered-bar-chart}
+ordered_programme_counts <- sort(
+  programme_counts,
+  decreasing = TRUE
+)
+
+barplot(
+  ordered_programme_counts,
+  main = "Students by Programme",
+  xlab = "Programme",
+  ylab = "Number of students",
+  las = 2
+)
+```
+
+# 6. Grouped bar chart
+
+```{r grouped-bar-chart}
+student_data$result <- ifelse(
+  student_data$final_score >= 50,
+  "Pass",
+  "Fail"
+)
+
+programme_result_table <- table(
+  student_data$result,
+  student_data$programme
+)
+
+barplot(
+  programme_result_table,
+  beside = TRUE,
+  main = "Results by Programme",
+  xlab = "Programme",
+  ylab = "Number of students",
+  legend.text = rownames(
+    programme_result_table
+  ),
+  args.legend = list(
+    x = "topright"
+  ),
+  las = 2
+)
+```
+
+# 7. Stacked bar chart
+
+```{r stacked-bar-chart}
+barplot(
+  programme_result_table,
+  beside = FALSE,
+  main = "Results by Programme",
+  xlab = "Programme",
+  ylab = "Number of students",
+  legend.text = rownames(
+    programme_result_table
+  ),
+  args.legend = list(
+    x = "topright"
+  ),
+  las = 2
+)
+```
+
+# 8. Percentage bar chart
+
+```{r percentage-bar-chart}
+programme_result_percentage <- prop.table(
+  programme_result_table,
+  margin = 2
+) * 100
+
+barplot(
+  programme_result_percentage,
+  beside = FALSE,
+  main = "Percentage Results by Programme",
+  xlab = "Programme",
+  ylab = "Percentage",
+  legend.text = rownames(
+    programme_result_percentage
+  ),
+  args.legend = list(
+    x = "topright"
+  ),
+  las = 2
+)
+```
+
+# 9. Pie chart
+
+```{r basic-pie-chart}
+pie(
+  programme_counts,
+  main = "Programme Distribution"
+)
+```
+
+Pie charts are less effective when there are many categories or similar
+proportions.
+
+# 10. Histogram
+
+```{r basic-histogram}
+hist(
+  student_data$final_score,
+  main = "Distribution of Final Scores",
+  xlab = "Final score",
+  ylab = "Frequency"
+)
+```
+
+# 11. Histogram breaks
+
+```{r histogram-breaks}
+hist(
+  student_data$final_score,
+  breaks = 10,
+  main = "Distribution of Final Scores",
+  xlab = "Final score",
+  ylab = "Frequency"
+)
+```
+
+The choice of breaks affects the displayed shape.
+
+# 12. Density-scaled histogram
+
+```{r density-histogram}
+hist(
+  student_data$final_score,
+  probability = TRUE,
+  main = "Density of Final Scores",
+  xlab = "Final score",
+  ylab = "Density"
+)
+
+lines(
+  density(
+    student_data$final_score,
+    na.rm = TRUE
+  )
+)
+```
+
+# 13. Box plot
+
+```{r basic-boxplot}
+boxplot(
+  student_data$final_score,
+  main = "Box Plot of Final Scores",
+  ylab = "Final score"
+)
+```
+
+# 14. Grouped box plot
+
+```{r grouped-boxplot}
+boxplot(
+  final_score ~ programme,
+  data = student_data,
+  main = "Final Scores by Programme",
+  xlab = "Programme",
+  ylab = "Final score",
+  las = 2
+)
+```
+
+# 15. Extracting box-plot statistics
+
+```{r boxplot-statistics}
+boxplot.stats(
+  student_data$final_score
+)
+```
+
+# 16. Scatter plot
+
+```{r basic-scatterplot}
+plot(
+  student_data$coursework_score,
+  student_data$examination_score,
+  main = "Coursework and Examination Scores",
+  xlab = "Coursework score",
+  ylab = "Examination score",
+  pch = 19
+)
+```
+
+# 17. Adding a fitted line
+
+```{r scatterplot-fitted-line}
+plot(
+  student_data$coursework_score,
+  student_data$examination_score,
+  main = "Coursework and Examination Scores",
+  xlab = "Coursework score",
+  ylab = "Examination score",
+  pch = 19
+)
+
+fitted_model <- lm(
+  examination_score ~ coursework_score,
+  data = student_data
+)
+
+abline(
+  fitted_model,
+  lwd = 2
+)
+```
+
+# 18. Adding reference lines
+
+```{r scatterplot-reference-lines}
+plot(
+  student_data$coursework_score,
+  student_data$examination_score,
+  main = "Coursework and Examination Scores",
+  xlab = "Coursework score",
+  ylab = "Examination score",
+  pch = 19
+)
+
+abline(
+  v = mean(
+    student_data$coursework_score
+  ),
+  lty = 2
+)
+
+abline(
+  h = mean(
+    student_data$examination_score
+  ),
+  lty = 2
+)
+```
+
+# 19. Line graph
+
+```{r line-graph-example}
+monthly_values <- c(
+  12,
+  15,
+  14,
+  18,
+  20,
+  22
+)
+
+month_number <- 1:6
+
+plot(
+  month_number,
+  monthly_values,
+  type = "o",
+  main = "Monthly Trend",
+  xlab = "Month",
+  ylab = "Value",
+  xaxt = "n"
+)
+
+axis(
+  1,
+  at = month_number,
+  labels = month.abb[
+    month_number
+  ]
+)
+```
+
+# 20. Dot chart
+
+```{r dot-chart-example}
+programme_means <- tapply(
+  student_data$final_score,
+  student_data$programme,
+  mean,
+  na.rm = TRUE
+)
+
+dotchart(
+  programme_means,
+  main = "Mean Final Score by Programme",
+  xlab = "Mean final score"
+)
+```
+
+# 21. Stem-and-leaf display
+
+```{r stem-and-leaf}
+stem(
+  student_data$final_score
+)
+```
+
+# 22. Empirical cumulative distribution
+
+```{r empirical-cdf}
+plot(
+  ecdf(
+    student_data$final_score
+  ),
+  main = "Empirical Cumulative Distribution of Scores",
+  xlab = "Final score",
+  ylab = "Cumulative proportion"
+)
+```
+
+# 23. Plotting missingness counts
+
+```{r visualise-missingness}
+missing_counts <- colSums(
+  is.na(
+    clinic_data
+  )
+)
+
+barplot(
+  missing_counts,
+  main = "Missing Values by Clinic Variable",
+  xlab = "Variable",
+  ylab = "Number missing",
+  las = 2
+)
+```
+
+# 24. Multi-panel graphics
+
+```{r multi-panel-graphics}
+old_parameters <- par(
+  mfrow = c(
+    2,
+    2
+  )
+)
+
+hist(
+  student_data$final_score,
+  main = "Histogram",
+  xlab = "Final score"
+)
+
+boxplot(
+  student_data$final_score,
+  main = "Box Plot",
+  ylab = "Final score"
+)
+
+plot(
+  student_data$coursework_score,
+  student_data$examination_score,
+  main = "Scatter Plot",
+  xlab = "Coursework",
+  ylab = "Examination",
+  pch = 19
+)
+
+barplot(
+  programme_counts,
+  main = "Programme Counts",
+  las = 2
+)
+
+par(
+  old_parameters
+)
+```
+
+# 25. Axis limits
+
+```{r plot-axis-limits}
+plot(
+  student_data$coursework_score,
+  student_data$examination_score,
+  xlim = c(
+    0,
+    40
+  ),
+  ylim = c(
+    0,
+    60
+  ),
+  main = "Assessment Components",
+  xlab = "Coursework score",
+  ylab = "Examination score",
+  pch = 19
+)
+```
+
+Axis limits should not be used to conceal relevant data.
+
+# 26. Text annotations
+
+```{r plot-text-annotations}
+plot(
+  student_data$coursework_score,
+  student_data$examination_score,
+  main = "Assessment Components",
+  xlab = "Coursework score",
+  ylab = "Examination score",
+  pch = 19
+)
+
+highest_index <- which.max(
+  student_data$final_score
+)
+
+text(
+  student_data$coursework_score[
+    highest_index
+  ],
+  student_data$examination_score[
+    highest_index
+  ],
+  labels =
+    student_data$student_id[
+      highest_index
+    ],
+  pos = 3
+)
+```
+
+# 27. Saving a PNG graph
+
+```{r save-png-graph}
+output_directory <- "lesson_26_output"
+
+if (!dir.exists(
+  output_directory
+)) {
+  dir.create(
+    output_directory
+  )
+}
+
+png_path <- file.path(
+  output_directory,
+  "final_score_histogram.png"
+)
+
+png(
+  filename = png_path,
+  width = 1200,
+  height = 800,
+  res = 150
+)
+
+hist(
+  student_data$final_score,
+  main = "Distribution of Final Scores",
+  xlab = "Final score",
+  ylab = "Frequency"
+)
+
+dev.off()
+
+file.exists(
+  png_path
+)
+```
+
+# 28. Saving a PDF graph
+
+```{r save-pdf-graph}
+pdf_path <- file.path(
+  output_directory,
+  "final_score_boxplot.pdf"
+)
+
+pdf(
+  file = pdf_path,
+  width = 7,
+  height = 5
+)
+
+boxplot(
+  final_score ~ programme,
+  data = student_data,
+  main = "Final Scores by Programme",
+  xlab = "Programme",
+  ylab = "Final score",
+  las = 2
+)
+
+dev.off()
+
+file.exists(
+  pdf_path
+)
+```
+
+Cleanup:
+
+```{r cleanup-visualisation-output}
+unlink(
+  output_directory,
+  recursive = TRUE,
+  force = TRUE
+)
+```
+
+# 29. Reusable histogram function
+
+```{r histogram-function}
+plot_histogram <- function(
+  x,
+  title,
+  x_label,
+  breaks = "Sturges"
+) {
+  if (!is.numeric(x)) {
+    stop(
+      "`x` must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  hist(
+    x,
+    breaks = breaks,
+    main = title,
+    xlab = x_label,
+    ylab = "Frequency"
+  )
+
+  invisible(NULL)
+}
+
+plot_histogram(
+  student_data$final_score,
+  title = "Distribution of Final Scores",
+  x_label = "Final score"
+)
+```
+
+# 30. Reusable grouped box-plot function
+
+```{r grouped-boxplot-function}
+plot_grouped_boxplot <- function(
+  data,
+  numeric_variable,
+  group_variable,
+  title = NULL
+) {
+  if (!all(
+    c(
+      numeric_variable,
+      group_variable
+    ) %in%
+      names(data)
+  )) {
+    stop(
+      "Required variables are missing.",
+      call. = FALSE
+    )
+  }
+
+  formula_object <- reformulate(
+    group_variable,
+    response =
+      numeric_variable
+  )
+
+  boxplot(
+    formula_object,
+    data = data,
+    main = title,
+    xlab = group_variable,
+    ylab = numeric_variable,
+    las = 2
+  )
+
+  invisible(NULL)
+}
+
+plot_grouped_boxplot(
+  student_data,
+  "final_score",
+  "programme",
+  "Final Scores by Programme"
+)
+```
+
+# 31. Misleading graph practices
+
+Avoid:
+
+- truncated axes that exaggerate differences;
+- unequal category spacing;
+- three-dimensional effects;
+- excessive decoration;
+- too many colours or symbols;
+- unreadable labels;
+- inconsistent scales across panels;
+- graphs without denominators;
+- hiding missing values;
+- using line graphs for unordered categories.
+
+# 32. Graph interpretation
+
+A useful interpretation identifies:
+
+- the variable or relationship shown;
+- the dominant pattern;
+- variation;
+- unusual observations;
+- group differences;
+- and limitations of the graph.
+
+# 33. Common mistakes
+
+- choosing a graph unsuitable for the variable type;
+- using a pie chart with too many categories;
+- treating histogram bars as categories;
+- interpreting box-plot outliers as errors;
+- drawing a line through unordered observations;
+- adding a fitted line without interpretation;
+- failing to label axes;
+- saving low-resolution images;
+- forgetting to close graphics devices;
+- creating decorative rather than analytical graphs.
+
+# 34. Independent exercises
+
+1. create vertical and horizontal bar charts.
+2. create ordered frequency charts.
+3. create grouped and stacked bar charts.
+4. create a histogram with different breaks.
+5. create a density-scaled histogram.
+6. create a box plot and grouped box plot.
+7. create a scatter plot with a fitted line.
+8. create a line graph.
+9. create a dot chart.
+10. create an empirical cumulative distribution.
+11. create a multi-panel display.
+12. annotate an unusual point.
+13. save PNG and PDF graphs.
+14. write reusable plotting functions.
+15. critique misleading graph practices.
+
+# 35. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. chooses graphs based on variable type;
+2. produces bar charts;
+3. produces a histogram;
+4. produces a grouped box plot;
+5. produces a scatter plot with a fitted line;
+6. produces a line graph;
+7. creates a multi-panel display;
+8. saves at least two graph formats;
+9. uses reusable plotting functions; and
+10. interprets every graph.
+
+# 36. Completion checklist
+
+Confirm that you can:
+
+- choose an appropriate graph;
+- create bar charts;
+- create histograms;
+- create box plots;
+- create scatter plots;
+- create line graphs;
+- create dot charts;
+- create grouped displays;
+- add labels and legends;
+- annotate points;
+- create multi-panel graphics;
+- save graphics;
+- avoid misleading designs; and
+- interpret visual patterns.
+
+# Lesson conclusion
+
+A graph is an analytical argument presented visually. It must match the data,
+show the relevant pattern and avoid distortions.
+
+\[
+\boxed{
+\text{define purpose}
+\rightarrow
+\text{identify variable types}
+\rightarrow
+\text{choose graph}
+\rightarrow
+\text{label clearly}
+\rightarrow
+\text{interpret}
+}
+\]

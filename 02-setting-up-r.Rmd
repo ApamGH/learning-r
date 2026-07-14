@@ -1,0 +1,1488 @@
+---
+title: "Lesson 2: Setting Up and Managing the R Working Environment"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260713)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+# Lesson overview
+
+A learner can know many R commands and still struggle to complete a real analysis if the working environment is poorly organised. Files may be stored in several unrelated folders, packages may fail to load, the working directory may point to the wrong location, and code may run only because objects from an earlier session remain in memory.
+
+This lesson therefore focuses on the environment in which R work takes place. The emphasis is not only on installation. It is on building a reliable and reproducible project structure.
+
+The central principle is:
+
+\[
+\boxed{
+\text{A well-organised project reduces avoidable analytical errors.}
+}
+\]
+
+By the end of the lesson, the learner should be able to install and verify the essential software, open an R project correctly, understand working directories and file paths, install and load packages, manage sessions, inspect the R environment, create scripts and R Markdown documents, diagnose common setup failures and preserve a project that another person can run.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. distinguish the roles of R, RStudio, Pandoc and LaTeX;
+2. verify the installed versions of R and relevant tools;
+3. create and open an R project;
+4. explain the purpose of the working directory;
+5. use relative file paths correctly;
+6. identify the risks of absolute paths;
+7. create and inspect folders and files with R;
+8. install, load, update and inspect packages;
+9. explain the difference between installation and loading;
+10. inspect the search path and package library locations;
+11. manage R sessions and the global environment;
+12. create and run R scripts;
+13. create and knit R Markdown documents;
+14. interpret common project, package and path errors;
+15. record session information for reproducibility; and
+16. complete an environment audit before beginning data analysis.
+
+# 1. Why setup matters
+
+Consider two students who receive the same dataset and the same analysis instructions.
+
+The first student stores the data on the Desktop, the script in Downloads and the report in Documents. The script contains an absolute path that refers to a personal Windows account. When the project is moved to another computer, the code fails.
+
+The second student places the script, data and report inside one project folder. The code refers to the data through a relative path such as:
+
+```r
+read.csv("data/student_scores.csv")
+```
+
+The second project is easier to move, review, back up and share.
+
+The difference is not statistical knowledge. It is project organisation.
+
+A reproducible project should make these relationships clear:
+
+\[
+\text{project root}
+\rightarrow
+\text{data}
+\rightarrow
+\text{code}
+\rightarrow
+\text{output}.
+\]
+
+# 2. Components of the R working environment
+
+Several tools may participate in an R Markdown workflow.
+
+## 2.1 R
+
+R is the language and computational engine. It evaluates commands, stores objects and performs calculations.
+
+Check the installed R version:
+
+```{r check-r-version}
+R.version.string
+```
+
+A more detailed structure is available through:
+
+```{r inspect-r-version}
+R.version
+```
+
+Important fields include:
+
+- major and minor version numbers;
+- operating system;
+- platform; and
+- release nickname.
+
+## 2.2 RStudio
+
+RStudio is the integrated development environment. It helps the learner:
+
+- edit scripts;
+- run code;
+- inspect objects;
+- view plots;
+- access help;
+- manage projects; and
+- knit R Markdown documents.
+
+RStudio does not replace R. It sends instructions to the installed R engine.
+
+## 2.3 Pandoc
+
+Pandoc converts Markdown into formats such as HTML, Microsoft Word and LaTeX.
+
+Check the version available to R Markdown:
+
+```{r check-pandoc, eval=FALSE}
+rmarkdown::pandoc_version()
+```
+
+Check whether Pandoc is available:
+
+```{r check-pandoc-available, eval=FALSE}
+rmarkdown::pandoc_available()
+```
+
+A result of `TRUE` indicates that R Markdown can locate Pandoc.
+
+## 2.4 LaTeX
+
+LaTeX is used when producing PDF output.
+
+This course uses XeLaTeX because it handles Unicode characters, including the Ghana cedi symbol.
+
+Check whether XeLaTeX is available:
+
+```{r check-xelatex}
+Sys.which("xelatex")
+```
+
+An empty result means that no XeLaTeX executable has been found.
+
+TinyTeX can be installed through R:
+
+```{r install-tinytex, eval=FALSE}
+install.packages("tinytex")
+tinytex::install_tinytex()
+```
+
+The installation should be performed once, not every time a document is knitted.
+
+# 3. Checking the current project
+
+The project folder supplied with this course contains:
+
+```text
+learning-r/
+├── learning-r.Rproj
+├── 00-before-you-start.Rmd
+├── 00-setup-check.R
+├── 01-understanding-r.Rmd
+├── 02-setting-up-r.Rmd
+├── data/
+└── solutions/
+```
+
+The `.Rproj` file identifies the project for RStudio.
+
+## 3.1 Confirm the working directory
+
+```{r current-working-directory}
+getwd()
+```
+
+The result should be the root of the project.
+
+The exact path will differ across computers. A Windows example may resemble:
+
+```text
+C:/Users/Student/Documents/learning-r
+```
+
+A Linux or macOS example may resemble:
+
+```text
+/home/student/learning-r
+```
+
+## 3.2 Confirm important files
+
+```{r confirm-project-files}
+file.exists("learning-r.Rproj")
+file.exists("01-understanding-r.Rmd")
+file.exists("data/student_scores.csv")
+```
+
+All three should return `TRUE`.
+
+## 3.3 Why opening the project file is preferable
+
+If a student opens only an `.Rmd` file from Windows File Explorer, RStudio may use an unexpected working directory.
+
+Opening:
+
+```text
+learning-r.Rproj
+```
+
+tells RStudio to treat the containing folder as the project root.
+
+# 4. Working directories
+
+The working directory is the default location from which R reads files and to which it writes files when no other location is specified.
+
+## 4.1 Inspect the directory
+
+```{r inspect-working-directory}
+getwd()
+```
+
+## 4.2 List the contents
+
+```{r list-current-files}
+list.files()
+```
+
+List folders and files recursively:
+
+```{r list-recursive}
+list.files(recursive = TRUE)
+```
+
+## 4.3 Avoid unnecessary `setwd()`
+
+The function `setwd()` changes the working directory.
+
+```{r setwd-example, eval=FALSE}
+setwd("C:/Users/Student/Documents/learning-r")
+```
+
+This may work on one computer but fail on another.
+
+In a properly opened R project, the working directory is already the project root. Repeated use of `setwd()` inside course scripts is therefore discouraged.
+
+## 4.4 When `setwd()` may be temporarily useful
+
+A temporary interactive exploration may require a directory change. However, such changes should not be embedded in final reproducible scripts unless there is a clear reason.
+
+A safer approach is to organise files relative to the project root.
+
+# 5. Relative and absolute paths
+
+## 5.1 Absolute path
+
+An absolute path identifies a location from the top of the file system.
+
+Windows example:
+
+```text
+C:/Users/Student/Documents/learning-r/data/student_scores.csv
+```
+
+Linux example:
+
+```text
+/home/student/learning-r/data/student_scores.csv
+```
+
+Absolute paths are specific to a computer and user account.
+
+## 5.2 Relative path
+
+A relative path identifies a file from the current working directory.
+
+```text
+data/student_scores.csv
+```
+
+This path means:
+
+1. begin from the project root;
+2. enter the `data` folder;
+3. open `student_scores.csv`.
+
+## 5.3 Test a relative path
+
+```{r test-relative-path}
+student_file <- "data/student_scores.csv"
+
+file.exists(student_file)
+```
+
+## 5.4 Import with the relative path
+
+```{r import-relative-path}
+students <- read.csv(
+  student_file,
+  stringsAsFactors = FALSE
+)
+
+head(students)
+```
+
+## 5.5 Why relative paths are portable
+
+Suppose the entire project is copied from:
+
+```text
+C:/Users/Apam/Documents/learning-r
+```
+
+to:
+
+```text
+D:/Teaching/learning-r
+```
+
+The relative path remains:
+
+```text
+data/student_scores.csv
+```
+
+No code change is required.
+
+# 6. File path separators
+
+Windows commonly displays paths with backslashes:
+
+```text
+C:\Users\Student\Documents
+```
+
+In R strings, a single backslash is an escape character.
+
+This may fail:
+
+```r
+"C:\Users\Student\Documents"
+```
+
+Safer options are:
+
+```r
+"C:/Users/Student/Documents"
+```
+
+or:
+
+```r
+"C:\\Users\\Student\\Documents"
+```
+
+Forward slashes are usually easier to read.
+
+# 7. Creating folders and files with R
+
+R can inspect and create project resources.
+
+## 7.1 Check whether a directory exists
+
+```{r directory-exists}
+dir.exists("data")
+```
+
+## 7.2 Create a directory
+
+```{r create-temp-directory}
+practice_directory <- "practice_output"
+
+if (!dir.exists(practice_directory)) {
+  dir.create(practice_directory)
+}
+```
+
+The `if` statement prevents an unnecessary creation attempt when the folder already exists.
+
+## 7.3 Create nested directories
+
+```{r create-nested-directory}
+nested_directory <- file.path(
+  "practice_output",
+  "tables"
+)
+
+if (!dir.exists(nested_directory)) {
+  dir.create(
+    nested_directory,
+    recursive = TRUE
+  )
+}
+```
+
+The argument `recursive = TRUE` permits creation of missing parent folders.
+
+## 7.4 Construct paths with `file.path()`
+
+```{r file-path-function}
+output_file <- file.path(
+  "practice_output",
+  "tables",
+  "summary.csv"
+)
+
+output_file
+```
+
+`file.path()` uses the appropriate separator for the operating system.
+
+## 7.5 Write a file
+
+```{r write-summary-file}
+summary_data <- data.frame(
+  statistic = c("Mean", "Median"),
+  value = c(
+    mean(students$final_score),
+    median(students$final_score)
+  )
+)
+
+write.csv(
+  summary_data,
+  output_file,
+  row.names = FALSE
+)
+```
+
+## 7.6 Confirm the output
+
+```{r confirm-output-file}
+file.exists(output_file)
+```
+
+## 7.7 Read the output back
+
+```{r read-output-file}
+read.csv(
+  output_file,
+  stringsAsFactors = FALSE
+)
+```
+
+## 7.8 Clean up temporary practice output
+
+```{r clean-practice-output}
+unlink(
+  "practice_output",
+  recursive = TRUE,
+  force = TRUE
+)
+```
+
+Confirm removal:
+
+```{r confirm-practice-removal}
+dir.exists("practice_output")
+```
+
+# 8. Packages
+
+Packages extend R with additional functions, datasets and documentation.
+
+## 8.1 Installation and loading are different
+
+Installation places a package on the computer.
+
+```{r install-package-example, eval=FALSE}
+install.packages("rmarkdown")
+```
+
+Loading makes the installed package available in the current R session.
+
+```{r load-package-example, eval=FALSE}
+library(rmarkdown)
+```
+
+Installation is generally required once per R library. Loading is required in each new session when the package's functions are to be used without qualification.
+
+## 8.2 Check whether a package is installed
+
+```{r check-package-installed}
+requireNamespace(
+  "rmarkdown",
+  quietly = TRUE
+)
+```
+
+## 8.3 Install only when missing
+
+```{r install-if-missing, eval=FALSE}
+required_package <- "rmarkdown"
+
+if (!requireNamespace(
+  required_package,
+  quietly = TRUE
+)) {
+  install.packages(required_package)
+}
+```
+
+This pattern avoids reinstalling the package unnecessarily.
+
+## 8.4 Load a package
+
+```{r load-rmarkdown}
+library(rmarkdown)
+```
+
+## 8.5 Use a function without loading the package
+
+```{r namespace-operator}
+rmarkdown::pandoc_available()
+```
+
+The double-colon operator identifies the package explicitly.
+
+The pattern is:
+
+```text
+package_name::function_name()
+```
+
+This is useful in teaching materials because it shows where the function comes from.
+
+## 8.6 Inspect installed packages
+
+```{r inspect-installed-packages}
+installed <- installed.packages()
+
+head(
+  installed[, c("Package", "Version")]
+)
+```
+
+## 8.7 Check the version of a package
+
+```{r package-version, eval=FALSE}
+packageVersion("rmarkdown")
+```
+
+## 8.8 Locate package libraries
+
+```{r library-paths}
+.libPaths()
+```
+
+A library is a folder containing installed packages.
+
+## 8.9 Why package installation can fail
+
+Common causes include:
+
+- no internet connection;
+- restricted institutional network;
+- no write permission;
+- an unavailable compiler;
+- a package not supporting the installed R version;
+- a package dependency failing;
+- a locked library folder.
+
+The full error message should be read before another installation attempt is made.
+
+# 9. Updating packages
+
+List packages for which updates are available:
+
+```{r old-packages, eval=FALSE}
+old.packages()
+```
+
+Update packages interactively:
+
+```{r update-packages, eval=FALSE}
+update.packages(
+  ask = TRUE,
+  checkBuilt = TRUE
+)
+```
+
+Updating every package immediately before an important deadline may introduce unexpected changes. A safer approach is to update in a controlled period and rerun project checks.
+
+# 10. The search path
+
+The search path shows the environments and attached packages through which R looks for objects.
+
+```{r inspect-search-path}
+search()
+```
+
+Base packages such as `package:stats` and `package:graphics` are usually attached automatically.
+
+## 10.1 Function masking
+
+Two attached packages may contain functions with the same name. The package appearing earlier in the search path may mask the other function.
+
+A safe response is to use the namespace operator:
+
+```r
+package_name::function_name()
+```
+
+This explicitly selects the intended function.
+
+# 11. The global environment
+
+Objects created interactively are normally stored in the global environment.
+
+```{r create-global-objects}
+course_name <- "Learning R"
+student_total <- 35
+```
+
+Inspect names:
+
+```{r inspect-global-environment}
+ls()
+```
+
+Inspect one object:
+
+```{r inspect-one-global-object}
+course_name
+```
+
+## 11.1 Hidden state
+
+Suppose a script uses:
+
+```r
+mean(examination_scores)
+```
+
+but never creates `examination_scores`. The command may still work if the object was created manually earlier.
+
+This is hidden state. The script is incomplete even though it runs in the current session.
+
+Restarting R reveals the problem.
+
+# 12. Session management
+
+## 12.1 Restarting R
+
+In RStudio, use:
+
+```text
+Session → Restart R
+```
+
+The keyboard shortcut is commonly:
+
+```text
+Ctrl + Shift + F10
+```
+
+A restarted session clears ordinary objects and detaches most non-base packages.
+
+## 12.2 Saving and restoring `.RData`
+
+R may offer to save the workspace when closing.
+
+Automatically restoring `.RData` can recreate hidden objects and make a script appear more complete than it is.
+
+For reproducible teaching and analysis, a recommended setting is:
+
+```text
+Tools → Global Options → General
+```
+
+Then:
+
+- disable automatic restoration of `.RData`;
+- select “Never” for saving the workspace on exit.
+
+## 12.3 `.Rhistory`
+
+The `.Rhistory` file may store commands entered in the Console. It is not a substitute for a script because it lacks a clear analytical structure and may contain abandoned commands.
+
+# 13. R scripts
+
+An R script is a plain-text file ending in `.R`.
+
+## 13.1 Create a script
+
+In RStudio:
+
+```text
+File → New File → R Script
+```
+
+Save it with a meaningful name:
+
+```text
+practice_analysis.R
+```
+
+## 13.2 A simple script structure
+
+```r
+# Purpose: Summarise student final scores.
+# Input: data/student_scores.csv
+# Output: Printed summary statistics.
+
+students <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+mean(students$final_score)
+median(students$final_score)
+```
+
+## 13.3 Run one line
+
+Place the cursor on the line and press:
+
+```text
+Ctrl + Enter
+```
+
+## 13.4 Run several lines
+
+Select the required lines and press:
+
+```text
+Ctrl + Enter
+```
+
+## 13.5 Source the complete script
+
+```{r source-script-example, eval=FALSE}
+source("practice_analysis.R")
+```
+
+A sourced script should normally be able to run from beginning to end in a clean session.
+
+# 14. R Markdown documents
+
+R Markdown combines narrative and executable code.
+
+## 14.1 YAML header
+
+The header appears between lines of three hyphens.
+
+```yaml
+---
+title: "My First R Report"
+author: "Student Name"
+output: html_document
+---
+```
+
+The YAML header controls metadata and output format.
+
+## 14.2 Markdown headings
+
+```text
+# Main heading
+## Second-level heading
+### Third-level heading
+```
+
+## 14.3 Code chunk
+
+A code chunk begins with three backticks and a chunk header.
+
+````text
+```{r calculate-mean}
+scores <- c(65, 72, 81)
+mean(scores)
+```
+````
+
+## 14.4 Chunk labels
+
+A label such as:
+
+```text
+calculate-mean
+```
+
+should be unique within the document.
+
+Duplicate labels cause knitting errors.
+
+## 14.5 Common chunk options
+
+```text
+echo = TRUE
+```
+
+shows the code.
+
+```text
+echo = FALSE
+```
+
+hides the code but shows results.
+
+```text
+include = FALSE
+```
+
+runs the code but hides both code and output.
+
+```text
+eval = FALSE
+```
+
+shows code without executing it.
+
+```text
+warning = FALSE
+```
+
+hides warnings. This should be used only when the warning is expected and understood.
+
+```text
+message = FALSE
+```
+
+hides package or function messages.
+
+## 14.6 Inline R code
+
+Inline code inserts a computed value into a sentence.
+
+```text
+The mean score was `r mean(c(65, 72, 81))`.
+```
+
+This keeps written results synchronised with the calculations.
+
+# 15. Knitting formats
+
+## 15.1 HTML
+
+HTML is usually the easiest format for interactive study.
+
+```yaml
+output: html_document
+```
+
+It does not require LaTeX.
+
+## 15.2 Microsoft Word
+
+```yaml
+output: word_document
+```
+
+Word output is useful when a document must be edited further.
+
+## 15.3 PDF
+
+```yaml
+output:
+  pdf_document:
+    latex_engine: xelatex
+```
+
+PDF requires a LaTeX distribution.
+
+## 15.4 Render from the Console
+
+```{r render-html-example, eval=FALSE}
+rmarkdown::render(
+  "02-setting-up-r.Rmd",
+  output_format = "html_document"
+)
+```
+
+Render to Word:
+
+```{r render-word-example, eval=FALSE}
+rmarkdown::render(
+  "02-setting-up-r.Rmd",
+  output_format = "word_document"
+)
+```
+
+Render to PDF:
+
+```{r render-pdf-example, eval=FALSE}
+rmarkdown::render(
+  "02-setting-up-r.Rmd",
+  output_format = "pdf_document"
+)
+```
+
+# 16. Diagnosing path errors
+
+## 16.1 File not found
+
+```r
+read.csv("student_scores.csv")
+```
+
+This fails because the file is inside `data`.
+
+Correct:
+
+```r
+read.csv("data/student_scores.csv")
+```
+
+## 16.2 Check before reading
+
+```{r check-before-reading}
+student_path <- "data/student_scores.csv"
+
+if (!file.exists(student_path)) {
+  stop(
+    "The student dataset was not found.",
+    call. = FALSE
+  )
+}
+```
+
+## 16.3 Inspect nearby files
+
+```{r inspect-data-folder}
+list.files("data")
+```
+
+## 16.4 Check spelling and case
+
+On some operating systems:
+
+```text
+Student_Scores.csv
+```
+
+and:
+
+```text
+student_scores.csv
+```
+
+are different filenames.
+
+Use the exact name.
+
+# 17. Diagnosing package errors
+
+## 17.1 “There is no package called…”
+
+This means the package is not installed in a library visible to the current R installation.
+
+Check:
+
+```{r diagnose-package}
+requireNamespace(
+  "knitr",
+  quietly = TRUE
+)
+```
+
+Install if needed:
+
+```{r install-knitr-if-needed, eval=FALSE}
+install.packages("knitr")
+```
+
+## 17.2 Installed under another R version
+
+A new R version may use a different library folder.
+
+Inspect:
+
+```{r diagnose-library-path}
+.libPaths()
+```
+
+Then reinstall required packages for the active R version.
+
+## 17.3 Package loads but function is missing
+
+Check spelling:
+
+```r
+rmarkdown::render()
+```
+
+not:
+
+```r
+rmarkdown::Render()
+```
+
+R is case-sensitive.
+
+# 18. Diagnosing PDF errors
+
+## 18.1 XeLaTeX not found
+
+```{r xelatex-diagnosis}
+Sys.which("xelatex")
+```
+
+If empty, install TinyTeX:
+
+```{r install-tinytex-again, eval=FALSE}
+install.packages("tinytex")
+tinytex::install_tinytex()
+```
+
+## 18.2 Unicode character error
+
+A document containing characters such as `₵` may fail under pdfLaTeX.
+
+Use:
+
+```yaml
+pdf_document:
+  latex_engine: xelatex
+```
+
+## 18.3 LaTeX log files
+
+When PDF compilation fails, inspect the `.log` file named in the error. The first error is usually more useful than later cascading errors.
+
+# 19. Session information
+
+Record the R version, platform and attached packages:
+
+```{r session-info}
+sessionInfo()
+```
+
+This is useful when:
+
+- sharing code;
+- reporting a bug;
+- archiving a project;
+- reproducing an old analysis;
+- comparing results across computers.
+
+A more compact version is:
+
+```{r r-session-details}
+R.version.string
+Sys.info()[c("sysname", "release", "machine")]
+```
+
+# 20. Environment audit
+
+Before starting a major analysis, perform a short audit.
+
+```{r environment-audit}
+audit_results <- c(
+  project_file = file.exists("learning-r.Rproj"),
+  lesson_one = file.exists("01-understanding-r.Rmd"),
+  lesson_two = file.exists("02-setting-up-r.Rmd"),
+  student_data = file.exists("data/student_scores.csv"),
+  rmarkdown_installed = requireNamespace(
+    "rmarkdown",
+    quietly = TRUE
+  ),
+  knitr_installed = requireNamespace(
+    "knitr",
+    quietly = TRUE
+  ),
+  pandoc_available = rmarkdown::pandoc_available()
+)
+
+audit_results
+```
+
+Check whether all conditions are satisfied:
+
+```{r environment-audit-all}
+all(audit_results)
+```
+
+If the result is `FALSE`, inspect the named elements to identify the failing condition.
+
+# 21. Integrated setup exercise
+
+The following exercise brings together the main ideas.
+
+## 21.1 Define the input path
+
+```{r integrated-path}
+input_file <- "data/monthly_sales.csv"
+```
+
+## 21.2 Validate the file
+
+```{r integrated-file-validation}
+if (!file.exists(input_file)) {
+  stop(
+    paste(
+      "Required file not found:",
+      input_file
+    ),
+    call. = FALSE
+  )
+}
+```
+
+## 21.3 Import the file
+
+```{r integrated-import-sales}
+sales <- read.csv(
+  input_file,
+  stringsAsFactors = FALSE
+)
+```
+
+## 21.4 Inspect the structure
+
+```{r integrated-inspect-sales}
+head(sales)
+str(sales)
+dim(sales)
+names(sales)
+```
+
+## 21.5 Create an output folder
+
+```{r integrated-create-output}
+output_directory <- "practice_output"
+
+if (!dir.exists(output_directory)) {
+  dir.create(output_directory)
+}
+```
+
+## 21.6 Create a summary
+
+```{r integrated-sales-summary}
+sales_summary <- data.frame(
+  statistic = c(
+    "Number of records",
+    "Total units sold",
+    "Total revenue",
+    "Mean revenue"
+  ),
+  value = c(
+    nrow(sales),
+    sum(sales$units_sold),
+    sum(sales$revenue),
+    mean(sales$revenue)
+  )
+)
+
+sales_summary
+```
+
+## 21.7 Write the summary
+
+```{r integrated-write-summary}
+summary_path <- file.path(
+  output_directory,
+  "monthly_sales_summary.csv"
+)
+
+write.csv(
+  sales_summary,
+  summary_path,
+  row.names = FALSE
+)
+```
+
+## 21.8 Confirm and read back
+
+```{r integrated-confirm-summary}
+file.exists(summary_path)
+
+read.csv(
+  summary_path,
+  stringsAsFactors = FALSE
+)
+```
+
+## 21.9 Remove the practice folder
+
+```{r integrated-clean-output}
+unlink(
+  output_directory,
+  recursive = TRUE,
+  force = TRUE
+)
+```
+
+This exercise demonstrates a reproducible sequence:
+
+\[
+\text{define path}
+\rightarrow
+\text{validate}
+\rightarrow
+\text{import}
+\rightarrow
+\text{inspect}
+\rightarrow
+\text{analyse}
+\rightarrow
+\text{export}
+\rightarrow
+\text{verify}.
+\]
+
+# 22. Guided practice
+
+## 22.1 Working directory check
+
+Run:
+
+```{r guided-directory}
+getwd()
+list.files()
+```
+
+Explain whether the result indicates that the project was opened correctly.
+
+## 22.2 Package check
+
+```{r guided-package-check}
+packages_needed <- c(
+  "rmarkdown",
+  "knitr"
+)
+
+package_status <- vapply(
+  packages_needed,
+  requireNamespace,
+  quietly = TRUE,
+  FUN.VALUE = logical(1)
+)
+
+package_status
+```
+
+Explain each named result.
+
+## 22.3 Dataset audit
+
+```{r guided-data-audit}
+dataset_paths <- c(
+  "data/student_scores.csv",
+  "data/monthly_sales.csv",
+  "data/rainfall_records.csv",
+  "data/clinic_visits.csv"
+)
+
+file.exists(dataset_paths)
+```
+
+## 22.4 Import and export
+
+Import `clinic_visits.csv`, calculate the mean waiting time and write the result to a temporary CSV file.
+
+```{r guided-clinic-export}
+clinic <- read.csv(
+  "data/clinic_visits.csv",
+  stringsAsFactors = FALSE
+)
+
+clinic_summary <- data.frame(
+  statistic = "Mean waiting time",
+  value = mean(
+    clinic$waiting_time,
+    na.rm = TRUE
+  )
+)
+
+write.csv(
+  clinic_summary,
+  "clinic_summary.csv",
+  row.names = FALSE
+)
+
+file.exists("clinic_summary.csv")
+```
+
+Remove the temporary output:
+
+```{r guided-clinic-cleanup}
+unlink("clinic_summary.csv")
+```
+
+# 23. Independent exercises
+
+## Exercise 1
+
+Explain the roles of:
+
+- R;
+- RStudio;
+- Pandoc;
+- XeLaTeX; and
+- an R package.
+
+## Exercise 2
+
+Run `getwd()` and write a short explanation of the path returned.
+
+## Exercise 3
+
+Use `list.files()` to identify every CSV file in the `data` folder.
+
+## Exercise 4
+
+Create a character vector containing all four dataset paths. Use `file.exists()` to test them together.
+
+## Exercise 5
+
+Use `packageVersion()` to report the installed versions of `rmarkdown` and `knitr`.
+
+## Exercise 6
+
+Create a folder named `student_output`, write a CSV summary into it and remove the folder afterwards.
+
+## Exercise 7
+
+Create a simple R script named `environment_practice.R`. It should:
+
+1. define the path to `student_scores.csv`;
+2. stop with a clear message if the file is missing;
+3. import the data;
+4. print the number of students;
+5. print the mean final score.
+
+## Exercise 8
+
+Create a standalone R Markdown document with HTML, Word and PDF outputs. Configure PDF output to use XeLaTeX.
+
+## Exercise 9
+
+Explain why an absolute path may work for the author but fail for another student.
+
+## Exercise 10
+
+Restart R and rerun the complete exercise script. Explain why this is a useful reproducibility test.
+
+# 24. Lesson assessment
+
+## Part A: Knowledge questions
+
+1. What is the purpose of an R project?
+2. What is a working directory?
+3. What is the difference between a relative and an absolute path?
+4. Why is repeated use of `setwd()` discouraged in project-based work?
+5. What is the difference between installing and loading a package?
+6. What does `.libPaths()` display?
+7. What is hidden state?
+8. Why can automatic restoration of `.RData` weaken reproducibility?
+9. What is Pandoc used for?
+10. Why does this course use XeLaTeX for PDF output?
+11. What does `sessionInfo()` record?
+12. Why should a file be checked with `file.exists()` before importation?
+
+## Part B: Practical assessment
+
+Create a standalone R Markdown report that:
+
+1. verifies the project working directory;
+2. confirms that all supplied datasets exist;
+3. checks that `rmarkdown` and `knitr` are installed;
+4. reports the current R version;
+5. reports the available Pandoc version;
+6. imports `monthly_sales.csv`;
+7. creates and exports a summary table;
+8. verifies the exported file;
+9. removes the temporary output;
+10. includes explanatory text for every stage; and
+11. knits successfully to HTML.
+
+# 25. Key terms
+
+**Absolute path:** A complete file-system location beginning from the root or drive.
+
+**Global environment:** The environment in which ordinary interactive objects are stored.
+
+**Hidden state:** Undocumented objects or settings that allow code to run even though the source file is incomplete.
+
+**IDE:** An integrated development environment used to write, run and manage code.
+
+**Library:** A folder containing installed R packages.
+
+**Package:** A collection of R functions, data and documentation.
+
+**Pandoc:** A document converter used by R Markdown.
+
+**Project root:** The top-level folder containing the files for one analytical project.
+
+**Relative path:** A file location described from the current working directory.
+
+**R Markdown:** A format combining prose, code and output.
+
+**Session:** One running instance of R with its current objects, packages and settings.
+
+**Working directory:** The default folder from which R reads and writes files.
+
+**XeLaTeX:** A Unicode-capable LaTeX engine used to produce PDF documents.
+
+# 26. Completion checklist
+
+Before moving to the next lesson, confirm that you can:
+
+- open `learning-r.Rproj`;
+- explain the roles of R and RStudio;
+- check the R version;
+- confirm Pandoc availability;
+- check for XeLaTeX;
+- use `getwd()`;
+- list project files;
+- use relative paths;
+- explain why absolute paths reduce portability;
+- create and remove folders with R;
+- construct paths with `file.path()`;
+- install and load a package;
+- inspect package versions;
+- inspect `.libPaths()`;
+- restart R;
+- explain hidden state;
+- create and source an R script;
+- create and knit an R Markdown file;
+- diagnose a missing-file error;
+- diagnose a missing-package error;
+- record `sessionInfo()`; and
+- complete an environment audit.
+
+# 27. Lesson conclusion
+
+Reliable statistical work begins before the first statistical command is executed. The project must be opened correctly, files must be located predictably, packages must be available and the analysis must not depend on hidden objects.
+
+The preferred workflow is:
+
+\[
+\boxed{
+\text{Open project}
+\rightarrow
+\text{verify environment}
+\rightarrow
+\text{validate files}
+\rightarrow
+\text{run saved code}
+\rightarrow
+\text{record session information}
+}
+\]
+
+The next lesson will move from environment management into a deeper treatment of the first R session, including command execution, objects, vectors, indexing, operator behaviour and systematic inspection of results.

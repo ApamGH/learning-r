@@ -1,0 +1,871 @@
+---
+title: "Lesson 22: Sorting, Filtering, Recoding and Creating Variables"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Data transformation converts raw variables into forms required for analysis.
+Common tasks include:
+
+- sorting records;
+- filtering observations;
+- selecting variables;
+- creating totals and percentages;
+- recoding categories;
+- grouping numerical values;
+- creating indicators;
+- standardising units;
+- and validating derived variables.
+
+This lesson uses base R so that the underlying logic remains visible. Optional
+`dplyr` equivalents are introduced near the end.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. sort vectors and data frames;
+2. order records by one or more variables;
+3. filter rows using logical conditions;
+4. select and exclude columns;
+5. create new variables;
+6. recode character and numeric values;
+7. create binary indicators;
+8. group continuous variables into categories;
+9. use `ifelse()`, `cut()` and named mappings;
+10. transform units and scales;
+11. create centred and standardised variables;
+12. validate derived variables;
+13. preserve raw and transformed versions; and
+14. document transformation rules.
+
+# 1. Import data
+
+```{r import-student-transform}
+raw_student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+student_data <- raw_student_data
+```
+
+# 2. Sorting vectors
+
+```{r sort-vector}
+scores <- student_data$final_score
+
+sort(scores)
+sort(
+  scores,
+  decreasing = TRUE
+)
+```
+
+# 3. Ordering indices
+
+```{r order-indices-transform}
+ascending_index <- order(
+  student_data$final_score
+)
+
+descending_index <- order(
+  student_data$final_score,
+  decreasing = TRUE
+)
+
+ascending_index
+descending_index
+```
+
+# 4. Sorting a data frame
+
+```{r sort-data-frame}
+students_high_to_low <- student_data[
+  descending_index,
+]
+
+students_high_to_low
+```
+
+# 5. Sorting by several variables
+
+```{r multi-sort-data-frame}
+programme_score_order <- order(
+  student_data$programme,
+  -student_data$final_score
+)
+
+students_by_programme <- student_data[
+  programme_score_order,
+]
+
+students_by_programme
+```
+
+# 6. Filtering rows
+
+Passing students:
+
+```{r filter-passing-students}
+passing_students <- student_data[
+  student_data$final_score >= 50,
+]
+
+passing_students
+```
+
+Distinction students:
+
+```{r filter-distinction-students}
+distinction_students <- student_data[
+  student_data$final_score >= 80,
+]
+
+distinction_students
+```
+
+# 7. Filtering with several conditions
+
+```{r filter-several-conditions}
+selected_students <- student_data[
+  student_data$final_score >= 70 &
+    student_data$programme %in%
+    c(
+      "Statistics",
+      "Procurement"
+    ),
+]
+
+selected_students
+```
+
+# 8. Filtering missing and complete values
+
+```{r filter-complete-values}
+complete_score_records <- student_data[
+  !is.na(
+    student_data$final_score
+  ),
+]
+
+complete_score_records
+```
+
+# 9. Selecting columns
+
+```{r select-transform-columns}
+selected_columns <- student_data[
+  c(
+    "student_id",
+    "programme",
+    "final_score"
+  )
+]
+
+selected_columns
+```
+
+# 10. Excluding columns
+
+```{r exclude-transform-columns}
+without_components <- student_data[
+  ,
+  !names(student_data) %in%
+    c(
+      "coursework_score",
+      "examination_score"
+    )
+]
+
+without_components
+```
+
+# 11. Creating arithmetic variables
+
+```{r create-total-variable}
+student_data$calculated_final_score <-
+  student_data$coursework_score +
+  student_data$examination_score
+
+head(
+  student_data[
+    c(
+      "coursework_score",
+      "examination_score",
+      "final_score",
+      "calculated_final_score"
+    )
+  ]
+)
+```
+
+# 12. Validating derived arithmetic
+
+```{r validate-derived-score}
+student_data$final_score_matches <-
+  student_data$final_score ==
+  student_data$calculated_final_score
+
+table(
+  student_data$final_score_matches,
+  useNA = "ifany"
+)
+```
+
+# 13. Creating percentage variables
+
+```{r create-percentage-variable}
+student_data$coursework_percentage <-
+  student_data$coursework_score /
+  40 *
+  100
+
+student_data$examination_percentage <-
+  student_data$examination_score /
+  60 *
+  100
+
+head(
+  student_data[
+    c(
+      "coursework_percentage",
+      "examination_percentage"
+    )
+  ]
+)
+```
+
+# 14. Creating binary indicators
+
+```{r create-binary-indicator}
+student_data$passed <-
+  student_data$final_score >= 50
+
+student_data$distinction <-
+  student_data$final_score >= 80
+
+head(
+  student_data[
+    c(
+      "final_score",
+      "passed",
+      "distinction"
+    )
+  ]
+)
+```
+
+# 15. Character recoding with named mappings
+
+```{r character-recode-map}
+programme_code <- c(
+  Statistics = "STAT",
+  Procurement = "PROC",
+  Hospitality = "HOSP",
+  Agriculture = "AGRIC"
+)
+
+student_data$programme_code <- unname(
+  programme_code[
+    student_data$programme
+  ]
+)
+
+head(
+  student_data[
+    c(
+      "programme",
+      "programme_code"
+    )
+  ]
+)
+```
+
+# 16. Detecting failed recodes
+
+```{r detect-failed-recodes}
+failed_recode <-
+  is.na(
+    student_data$programme_code
+  ) &
+  !is.na(
+    student_data$programme
+  )
+
+student_data[
+  failed_recode,
+  c(
+    "programme",
+    "programme_code"
+  )
+]
+```
+
+# 17. Recoding with `ifelse()`
+
+```{r ifelse-recode}
+student_data$result_label <- ifelse(
+  student_data$final_score >= 50,
+  "Pass",
+  "Fail"
+)
+
+head(
+  student_data[
+    c(
+      "final_score",
+      "result_label"
+    )
+  ]
+)
+```
+
+# 18. Multi-category recoding with nested `ifelse()`
+
+```{r nested-ifelse-recode}
+student_data$performance_band <- ifelse(
+  student_data$final_score >= 80,
+  "Excellent",
+  ifelse(
+    student_data$final_score >= 70,
+    "Very good",
+    ifelse(
+      student_data$final_score >= 60,
+      "Good",
+      ifelse(
+        student_data$final_score >= 50,
+        "Satisfactory",
+        "Unsatisfactory"
+      )
+    )
+  )
+)
+
+table(
+  student_data$performance_band
+)
+```
+
+# 19. Grouping with `cut()`
+
+```{r cut-performance-band}
+student_data$grade <- cut(
+  student_data$final_score,
+  breaks = c(
+    -Inf,
+    49,
+    59,
+    69,
+    79,
+    Inf
+  ),
+  labels = c(
+    "F",
+    "D",
+    "C",
+    "B",
+    "A"
+  ),
+  right = TRUE
+)
+
+table(
+  student_data$grade,
+  useNA = "ifany"
+)
+```
+
+# 20. Interval boundaries
+
+```{r inspect-cut-boundaries}
+boundary_scores <- c(
+  49,
+  50,
+  59,
+  60,
+  69,
+  70,
+  79,
+  80
+)
+
+cut(
+  boundary_scores,
+  breaks = c(
+    -Inf,
+    49,
+    59,
+    69,
+    79,
+    Inf
+  ),
+  labels = c(
+    "F",
+    "D",
+    "C",
+    "B",
+    "A"
+  ),
+  right = TRUE
+)
+```
+
+Boundary testing is essential.
+
+# 21. Creating quantile groups
+
+```{r quantile-groups}
+quartile_breaks <- quantile(
+  student_data$final_score,
+  probs = seq(
+    0,
+    1,
+    0.25
+  ),
+  na.rm = TRUE
+)
+
+quartile_breaks
+```
+
+Create groups only if break values are unique:
+
+```{r create-quantile-groups}
+unique_breaks <- unique(
+  quartile_breaks
+)
+
+if (length(
+  unique_breaks
+) >= 2L) {
+  student_data$score_quartile <- cut(
+    student_data$final_score,
+    breaks = unique_breaks,
+    include.lowest = TRUE
+  )
+}
+
+head(
+  student_data
+)
+```
+
+# 22. Unit conversion
+
+```{r unit-conversion}
+distance_kilometres <- c(
+  2.5,
+  5,
+  10
+)
+
+distance_metres <-
+  distance_kilometres *
+  1000
+
+distance_metres
+```
+
+# 23. Currency conversion example
+
+```{r currency-conversion-example}
+revenue_ghs <- c(
+  1000,
+  2500,
+  4200
+)
+
+exchange_rate <- 15.5
+
+revenue_usd <-
+  revenue_ghs /
+  exchange_rate
+
+revenue_usd
+```
+
+Exchange rates change over time and should be documented with date and source.
+
+# 24. Log transformation
+
+```{r log-transformation}
+positive_values <- c(
+  10,
+  100,
+  1000
+)
+
+log_values <- log(
+  positive_values
+)
+
+log10_values <- log10(
+  positive_values
+)
+
+log_values
+log10_values
+```
+
+Do not apply logarithms to zero or negative values without a defensible rule.
+
+# 25. Centring
+
+```{r centre-variable}
+mean_final_score <- mean(
+  student_data$final_score,
+  na.rm = TRUE
+)
+
+student_data$final_score_centred <-
+  student_data$final_score -
+  mean_final_score
+
+mean(
+  student_data$final_score_centred,
+  na.rm = TRUE
+)
+```
+
+# 26. Standardising
+
+```{r standardise-variable}
+student_data$final_score_z <- as.numeric(
+  scale(
+    student_data$final_score
+  )
+)
+
+mean(
+  student_data$final_score_z,
+  na.rm = TRUE
+)
+
+sd(
+  student_data$final_score_z,
+  na.rm = TRUE
+)
+```
+
+# 27. Ranking
+
+```{r rank-variable}
+student_data$score_rank <- rank(
+  -student_data$final_score,
+  ties.method = "min"
+)
+
+student_data[
+  order(
+    student_data$score_rank
+  ),
+  c(
+    "student_id",
+    "final_score",
+    "score_rank"
+  )
+]
+```
+
+# 28. Within-group ranks
+
+```{r within-group-rank}
+student_data$programme_rank <- ave(
+  -student_data$final_score,
+  student_data$programme,
+  FUN = function(x) {
+    rank(
+      x,
+      ties.method = "min"
+    )
+  }
+)
+
+student_data[
+  order(
+    student_data$programme,
+    student_data$programme_rank
+  ),
+  c(
+    "programme",
+    "student_id",
+    "final_score",
+    "programme_rank"
+  )
+]
+```
+
+# 29. Row-wise totals
+
+```{r row-wise-total}
+score_components <- student_data[
+  c(
+    "coursework_score",
+    "examination_score"
+  )
+]
+
+student_data$row_total <- rowSums(
+  score_components,
+  na.rm = FALSE
+)
+
+head(
+  student_data[
+    c(
+      "row_total",
+      "final_score"
+    )
+  ]
+)
+```
+
+# 30. Row-wise missing count
+
+```{r row-wise-missing-count}
+student_data$component_missing_count <-
+  rowSums(
+    is.na(
+      score_components
+    )
+  )
+
+table(
+  student_data$component_missing_count
+)
+```
+
+# 31. Preserving raw variables
+
+```{r preserve-raw-variable}
+student_data$programme_raw <-
+  student_data$programme
+
+student_data$programme_clean <-
+  trimws(
+    tools::toTitleCase(
+      tolower(
+        student_data$programme
+      )
+    )
+  )
+```
+
+Do not overwrite the original variable until transformations have been
+verified.
+
+# 32. Transformation log
+
+```{r transformation-log}
+transformation_log <- data.frame(
+  new_variable = c(
+    "calculated_final_score",
+    "passed",
+    "grade",
+    "final_score_z"
+  ),
+  source_variables = c(
+    "coursework_score + examination_score",
+    "final_score",
+    "final_score",
+    "final_score"
+  ),
+  rule = c(
+    "Arithmetic sum",
+    "final_score >= 50",
+    "Cut points: 49, 59, 69, 79",
+    "Mean-centred and divided by standard deviation"
+  ),
+  stringsAsFactors = FALSE
+)
+
+transformation_log
+```
+
+# 33. Optional `dplyr`
+
+```{r check-dplyr-transform}
+requireNamespace(
+  "dplyr",
+  quietly = TRUE
+)
+```
+
+Template:
+
+```{r dplyr-transform-template, eval=FALSE}
+student_transformed <- student_data |>
+  dplyr::filter(
+    final_score >= 50
+  ) |>
+  dplyr::mutate(
+    passed =
+      final_score >= 50,
+    grade = dplyr::case_when(
+      final_score >= 80 ~ "A",
+      final_score >= 70 ~ "B",
+      final_score >= 60 ~ "C",
+      final_score >= 50 ~ "D",
+      TRUE ~ "F"
+    )
+  ) |>
+  dplyr::arrange(
+    dplyr::desc(
+      final_score
+    )
+  )
+```
+
+# 34. Validation after transformation
+
+```{r validate-transformations}
+all(
+  student_data$calculated_final_score ==
+    student_data$final_score
+)
+
+all(
+  student_data$passed ==
+    (
+      student_data$final_score >= 50
+    )
+)
+
+all(
+  !is.na(
+    student_data$programme_code
+  )
+)
+```
+
+# 35. Common mistakes
+
+- sorting one vector without reordering the whole data frame;
+- filtering before preserving raw data;
+- using nested `ifelse()` without testing boundaries;
+- recoding unmatched values silently to `NA`;
+- changing units without documenting the conversion;
+- applying logarithms to invalid values;
+- overwriting original variables;
+- calculating standard scores without checking missing values;
+- using row sums with inappropriate `na.rm`;
+- failing to validate derived variables.
+
+# 36. Independent exercises
+
+1. sort a vector and a data frame.
+2. order by two variables.
+3. filter using one and multiple conditions.
+4. select and exclude columns.
+5. create arithmetic variables.
+6. create percentage variables.
+7. create binary indicators.
+8. recode categories with a named mapping.
+9. group scores with `cut()`.
+10. test interval boundaries.
+11. create centred and standardised variables.
+12. rank observations.
+13. create within-group ranks.
+14. build a transformation log.
+15. validate all derived variables.
+
+# 37. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. preserves raw data;
+2. sorts and filters records;
+3. selects variables;
+4. creates arithmetic and percentage variables;
+5. creates indicators;
+6. recodes categories;
+7. groups a continuous variable;
+8. performs unit and scale transformations;
+9. creates ranks;
+10. logs every transformation; and
+11. validates the final dataset.
+
+# 38. Completion checklist
+
+Confirm that you can:
+
+- sort vectors;
+- order data frames;
+- filter rows;
+- select columns;
+- exclude columns;
+- create derived variables;
+- create indicators;
+- recode categories;
+- use `cut()`;
+- test boundaries;
+- convert units;
+- centre and standardise;
+- rank observations;
+- preserve raw variables;
+- document transformations; and
+- validate transformed data.
+
+# Lesson conclusion
+
+Data transformation should be transparent, reversible and validated. Every
+derived variable must have a documented source and rule.
+
+\[
+\boxed{
+\text{preserve raw data}
+\rightarrow
+\text{transform}
+\rightarrow
+\text{label}
+\rightarrow
+\text{validate}
+\rightarrow
+\text{document}
+}
+\]

@@ -1,0 +1,2159 @@
+---
+title: "Lesson 1: Understanding R and Statistical Computing"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260713)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+# Lesson overview
+
+R is often introduced as software for calculating means, producing graphs or running statistical tests. That description is correct, but incomplete. R is better understood as a language in which an analyst describes a sequence of operations that should be performed on information.
+
+A spreadsheet user may enter values into cells and click through several menus. An R user writes instructions that identify the data, define the required calculation, preserve the result and document the complete procedure. This difference is important because it changes statistical analysis from a sequence of partly hidden actions into a transparent and reproducible workflow.
+
+This lesson begins with elementary calculations, but its real purpose is broader. It introduces the habits that will be used throughout the course:
+
+- describe a problem before writing code;
+- translate the problem into a clear computational instruction;
+- inspect the result rather than accepting it automatically;
+- preserve the instruction in a script or R Markdown document;
+- distinguish a valid calculation from a sensible analysis; and
+- explain the result in ordinary language.
+
+The examples are drawn from education, agriculture, health, hospitality, procurement, business and environmental analysis. The same commands are revisited in different settings so that the learner understands their general purpose rather than memorising one isolated example.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. explain what R is and describe how it supports statistical computing;
+2. distinguish R, RStudio, packages, scripts and R Markdown documents;
+3. use R as a calculator while respecting mathematical precedence;
+4. create, inspect, modify and remove objects;
+5. explain assignment, evaluation and automatic printing;
+6. use functions with positional, named and default arguments;
+7. create and inspect numeric, character and logical vectors;
+8. apply elementary summary functions appropriately;
+9. use logical comparisons to answer practical questions;
+10. identify and handle missing, infinite and undefined values;
+11. import and inspect the datasets supplied with the lesson;
+12. interpret common errors, warnings and unexpected results;
+13. preserve work in a reproducible R Markdown document; and
+14. complete a small end-to-end analysis and communicate its findings.
+
+# 1. Statistical computing before R
+
+Before using R, it is useful to understand what a statistical computer program is expected to do.
+
+Suppose a lecturer has the examination scores of 100 students. The lecturer may need to:
+
+1. store the scores;
+2. check that impossible values such as 145 or -10 are absent;
+3. identify missing scores;
+4. calculate the class mean and median;
+5. determine the number of students who passed;
+6. compare programmes or groups;
+7. produce a graph;
+8. write the results into a report; and
+9. repeat the process when corrected data arrive.
+
+The arithmetic is only one part of this workflow. Data validation, documentation, interpretation and repetition are equally important. R supports all these tasks within one environment.
+
+The central idea of statistical computing is therefore:
+
+\[
+\text{data}
+\rightarrow
+\text{instructions}
+\rightarrow
+\text{results}
+\rightarrow
+\text{interpretation}.
+\]
+
+A reliable analysis adds two further stages:
+
+\[
+\text{validation}
+\rightarrow
+\text{reproducible record}.
+\]
+
+# 2. What R is
+
+R is an open-source programming language and computing environment designed especially for statistics, graphics and data analysis. The word *language* means that R has rules for writing instructions. The word *environment* means that R also provides a place in which objects are stored, functions are executed, packages are loaded and results are produced.
+
+R can be used to:
+
+- perform elementary and advanced calculations;
+- import data from CSV, Excel, SPSS, Stata, databases and web services;
+- clean and restructure datasets;
+- calculate descriptive statistics;
+- conduct hypothesis tests;
+- estimate regression, time-series and multilevel models;
+- analyse experiments and surveys;
+- generate statistical graphics;
+- simulate random processes;
+- automate repetitive reports;
+- create dashboards and web applications; and
+- develop new statistical methods.
+
+The breadth of R does not mean that everything must be learnt at once. The language becomes manageable when it is studied in layers. This lesson deals only with the first layer: expressions, objects, functions, vectors, logical conditions and simple data inspection.
+
+## 2.1 R is not merely a statistical menu
+
+In menu-driven software, an analysis may be performed by selecting options from dialog boxes. This can be convenient, but the complete procedure is not always visible.
+
+In R, the procedure is written explicitly. For example:
+
+```{r mean-command-first-look}
+mean(c(68, 74, 81, 59, 90))
+```
+
+The instruction can be read from the inside out:
+
+1. `c(68, 74, 81, 59, 90)` combines five scores into one vector;
+2. `mean(...)` receives that vector;
+3. R calculates the arithmetic mean;
+4. the result is printed.
+
+The command is short, but it contains a complete and repeatable description of the calculation.
+
+# 3. R, RStudio, packages, scripts and R Markdown
+
+Beginners commonly use these terms as though they refer to one thing. They do not.
+
+## 3.1 R
+
+R is the language and the computational engine. It performs the calculation.
+
+When R evaluates:
+
+```{r r-engine-example}
+7 * 8
+```
+
+R itself performs the multiplication.
+
+## 3.2 RStudio
+
+RStudio is an integrated development environment, usually shortened to IDE. It provides a convenient interface for writing files, running commands, viewing objects, inspecting plots and reading help pages.
+
+A useful comparison is:
+
+\[
+\text{R is the engine}
+\qquad
+\text{RStudio is the organised workspace around the engine}.
+\]
+
+R can run without RStudio. RStudio cannot execute R code unless an R installation is available.
+
+## 3.3 R package
+
+A package is an organised collection of functions, datasets and documentation that extends R.
+
+Base R already contains functions such as:
+
+```r
+mean()
+sum()
+min()
+max()
+plot()
+```
+
+Later lessons will introduce additional packages when they provide a genuine benefit. Packages should not be loaded merely to make elementary work look sophisticated.
+
+## 3.4 R script
+
+An R script is a text file whose name ends in `.R`. It contains R commands and comments.
+
+A script is useful when the main output is code. For example, a file named:
+
+```text
+clean_student_data.R
+```
+
+may contain the instructions used to clean a dataset.
+
+## 3.5 R Markdown document
+
+An R Markdown document ends in `.Rmd`. It combines:
+
+- explanatory text;
+- headings;
+- equations;
+- executable R code;
+- generated output;
+- tables; and
+- figures.
+
+This lesson is an R Markdown document. When it is knitted, the code chunks are executed and the results are placed into the final document.
+
+The practical distinction is:
+
+\[
+\text{R script} = \text{mainly code}
+\]
+
+\[
+\text{R Markdown} = \text{explanation + code + output + interpretation}.
+\]
+
+# 4. Understanding the working environment
+
+A standard RStudio window commonly contains four panes.
+
+## 4.1 Source pane
+
+The Source pane is where scripts and R Markdown documents are written and saved. Important work belongs here because saved code can be reviewed, corrected and rerun.
+
+## 4.2 Console
+
+The Console is where R receives commands directly.
+
+The normal prompt is:
+
+```text
+>
+```
+
+If a command is incomplete, R may display:
+
+```text
++
+```
+
+For example, entering:
+
+```r
+mean(c(10, 20, 30)
+```
+
+without the final closing parenthesis leaves the instruction unfinished. Pressing `Esc` cancels the incomplete command.
+
+The Console is useful for experiments, but it should not be the only record of important analysis. Work typed only into the Console is easy to lose and difficult to reproduce.
+
+## 4.3 Environment pane
+
+The Environment pane lists objects currently stored in memory.
+
+If the following code is run:
+
+```{r environment-example}
+student_count <- 120
+```
+
+an object named `student_count` appears in the Environment.
+
+## 4.4 Files, plots, packages and help pane
+
+This pane supports:
+
+- file navigation;
+- display of graphs;
+- inspection of installed packages;
+- reading function documentation; and
+- previewing rendered output.
+
+# 5. R as a calculator
+
+The calculator stage may seem elementary, but it introduces the core process of evaluation. R receives an expression, interprets its components and returns a value.
+
+## 5.1 Addition and subtraction
+
+Assume that a department had 84 students and admitted 17 more.
+
+```{r addition-context}
+84 + 17
+```
+
+The result is 101. R has evaluated a numeric expression.
+
+Now assume that 9 students withdrew:
+
+```{r subtraction-context}
+101 - 9
+```
+
+The result is 92.
+
+The operators are:
+
+- `+` for addition;
+- `-` for subtraction.
+
+The same operators are used later with vectors, matrices and model components.
+
+## 5.2 Multiplication
+
+Suppose 35 participants each receive GH₵60 as transport reimbursement.
+
+```{r multiplication-context}
+35 * 60
+```
+
+The calculation is:
+
+\[
+35 \times 60 = 2100.
+\]
+
+The total reimbursement is GH₵2,100.
+
+## 5.3 Division
+
+Suppose a total cost of GH₵4,800 is shared equally among 12 departments.
+
+```{r division-context}
+4800 / 12
+```
+
+Each department contributes GH₵400.
+
+Division in R normally produces a decimal value where necessary:
+
+```{r division-decimal}
+7 / 3
+```
+
+The answer is not rounded automatically. Display precision and actual stored precision are different ideas, which will be discussed later.
+
+## 5.4 Exponentiation
+
+The operator `^` raises a value to a power.
+
+```{r exponent-example}
+5 ^ 2
+```
+
+This means:
+
+\[
+5^2 = 5 \times 5 = 25.
+\]
+
+Exponentiation is important in statistical formulae. For example, the squared deviation of a score \(x_i\) from the mean \(\bar{x}\) is:
+
+\[
+(x_i-\bar{x})^2.
+\]
+
+In R:
+
+```{r squared-deviation-example}
+score <- 72
+mean_score <- 68
+
+(score - mean_score) ^ 2
+```
+
+The deviation is \(72-68=4\), and the squared deviation is \(4^2=16\).
+
+## 5.5 Integer division and remainder
+
+The operator `%/%` returns the number of complete times one number fits into another. The operator `%%` returns the remainder.
+
+Suppose 125 students must be placed into groups of 12.
+
+```{r complete-groups}
+125 %/% 12
+```
+
+This gives 10 complete groups.
+
+```{r remaining-students}
+125 %% 12
+```
+
+This gives 5 students remaining.
+
+The two answers describe different parts of the same problem:
+
+\[
+125 = (10 \times 12) + 5.
+\]
+
+These operators are useful when creating batches, allocating records or separating a duration into hours and minutes.
+
+### Time conversion example
+
+Suppose an activity lasted 157 minutes.
+
+```{r time-complete-hours}
+157 %/% 60
+```
+
+This gives 2 complete hours.
+
+```{r time-remaining-minutes}
+157 %% 60
+```
+
+This gives 37 remaining minutes.
+
+The duration is therefore 2 hours and 37 minutes.
+
+## 5.6 Order of operations
+
+R follows conventional mathematical precedence.
+
+Consider:
+
+```{r precedence-one}
+10 + 2 * 5
+```
+
+Multiplication is performed first:
+
+\[
+10 + 2 \times 5
+=
+10 + 10
+=
+20.
+\]
+
+Now use parentheses:
+
+```{r precedence-two}
+(10 + 2) * 5
+```
+
+The expression inside the parentheses is evaluated first:
+
+\[
+(10+2)\times 5
+=
+12 \times 5
+=
+60.
+\]
+
+Parentheses are not only for changing the calculation. They also make a complicated expression easier to read.
+
+## 5.7 Weighted score example
+
+Suppose coursework contributes 40 per cent and the examination contributes 60 per cent to a final score.
+
+```{r weighted-score-context}
+coursework_score <- 78
+examination_score <- 65
+
+final_score <- (0.40 * coursework_score) +
+  (0.60 * examination_score)
+
+final_score
+```
+
+Line-by-line interpretation:
+
+1. `coursework_score <- 78` stores the coursework score;
+2. `examination_score <- 65` stores the examination score;
+3. `0.40 * coursework_score` calculates the coursework contribution;
+4. `0.60 * examination_score` calculates the examination contribution;
+5. the two contributions are added;
+6. the result is stored as `final_score`.
+
+The calculation is:
+
+\[
+(0.40 \times 78) + (0.60 \times 65)
+=
+31.2 + 39
+=
+70.2.
+\]
+
+The final weighted score is 70.2.
+
+### Common mistake: confusing percentages and proportions
+
+The weights must be entered as 0.40 and 0.60, not 40 and 60.
+
+Incorrect:
+
+```r
+40 * coursework_score + 60 * examination_score
+```
+
+That command multiplies by 40 and 60 rather than by 40 per cent and 60 per cent.
+
+# 6. Expressions, evaluation and output
+
+An expression is something R can evaluate.
+
+```{r simple-expression}
+6 * 7
+```
+
+Because no assignment is used, R prints the result immediately.
+
+```text
+#> [1] 42
+```
+
+The `[1]` is an index marker. It says that the first printed value on that line is element number 1. It is not part of the calculated answer.
+
+## 6.1 Storing a result
+
+Use the assignment operator `<-` to store a result.
+
+```{r storing-result}
+answer <- 6 * 7
+```
+
+R calculates 42 and stores it under the name `answer`. It does not print the value automatically.
+
+Display the object by entering its name:
+
+```{r automatic-printing}
+answer
+```
+
+Or print it explicitly:
+
+```{r explicit-printing}
+print(answer)
+```
+
+At this stage, both approaches produce the same visible result. Explicit printing becomes especially important inside loops and functions.
+
+## 6.2 Assignment is not equality
+
+The expression:
+
+```r
+answer <- 42
+```
+
+means “store 42 under the name `answer`”.
+
+It does not mean that `answer` is permanently equal to 42. The object can be changed:
+
+```{r reassignment-example}
+answer <- 42
+answer <- 100
+answer
+```
+
+The second assignment replaces the first value.
+
+# 7. Objects and object names
+
+An object is a named structure stored in memory. An object may contain one value, many values, a table, a model, a function or another complex structure.
+
+## 7.1 Creating objects
+
+```{r creating-basic-objects}
+student_age <- 22
+programme_name <- "Statistics"
+has_paid_fees <- TRUE
+```
+
+These objects contain different kinds of information:
+
+- `student_age` contains a number;
+- `programme_name` contains text;
+- `has_paid_fees` contains a logical value.
+
+## 7.2 Why meaningful names matter
+
+Compare:
+
+```r
+x <- 22
+```
+
+with:
+
+```r
+student_age <- 22
+```
+
+Both commands work, but the second communicates the meaning of the value. Meaningful names reduce errors when a project becomes large.
+
+Recommended style uses `snake_case`:
+
+```r
+average_score
+monthly_sales
+clinic_waiting_time
+number_of_students
+```
+
+## 7.3 Rules for object names
+
+Valid names may contain letters, numbers, underscores and full stops, but they should not begin with a number.
+
+Valid:
+
+```r
+score_1
+first_score
+student.mean
+```
+
+Invalid:
+
+```r
+1st_score
+```
+
+A better version is:
+
+```r
+first_score
+```
+
+Avoid spaces:
+
+```r
+student score <- 80
+```
+
+This is invalid because R treats the space as a separation between tokens.
+
+Use:
+
+```r
+student_score <- 80
+```
+
+## 7.4 R is case-sensitive
+
+```{r case-sensitivity}
+score <- 70
+Score <- 85
+
+score
+Score
+```
+
+The two object names are different because one begins with a lower-case letter and the other with an upper-case letter.
+
+Case sensitivity is a frequent source of beginner errors. A useful rule is to use lower-case names consistently.
+
+## 7.5 Updating an object
+
+Suppose a student's recorded score is corrected from 68 to 72.
+
+```{r object-update}
+recorded_score <- 68
+recorded_score <- 72
+
+recorded_score
+```
+
+The current object contains 72.
+
+An object can also be updated using its previous value:
+
+```{r object-update-from-old}
+account_balance <- 1500
+account_balance <- account_balance + 350
+
+account_balance
+```
+
+The new balance is:
+
+\[
+1500 + 350 = 1850.
+\]
+
+The right-hand side is evaluated first. The result is then assigned back to `account_balance`.
+
+## 7.6 Inspecting available objects
+
+```{r list-objects}
+ls()
+```
+
+The `ls()` function lists objects in the current environment.
+
+Remove one object:
+
+```{r remove-one-object}
+temporary_value <- 999
+rm(temporary_value)
+```
+
+Check whether it still exists:
+
+```{r check-object-existence}
+exists("temporary_value")
+```
+
+The result is `FALSE`.
+
+### A caution about clearing the environment
+
+The command:
+
+```r
+rm(list = ls())
+```
+
+removes all objects from the current environment. It is sometimes used at the beginning of scripts, but it should not be used carelessly in a shared or interactive session because unsaved work can be lost.
+
+A better reproducibility practice is to restart R and rerun the complete script from the beginning.
+
+# 8. Functions and arguments
+
+A function is a reusable operation. It receives one or more inputs, performs a defined task and returns a result.
+
+The general pattern is:
+
+```text
+function_name(argument_1, argument_2)
+```
+
+## 8.1 A one-argument function
+
+```{r square-root-function}
+sqrt(81)
+```
+
+Here:
+
+- `sqrt` is the function;
+- `81` is the argument;
+- `9` is the returned value.
+
+## 8.2 Positional arguments
+
+Some functions accept several arguments.
+
+```{r round-positional}
+round(3.14159265, 3)
+```
+
+R interprets the first value as the number to round and the second as the number of decimal places because of their positions.
+
+## 8.3 Named arguments
+
+The same instruction can be written more clearly:
+
+```{r round-named}
+round(x = 3.14159265, digits = 3)
+```
+
+Named arguments are valuable because they communicate purpose.
+
+## 8.4 Mixing positional and named arguments
+
+```{r round-mixed}
+round(3.14159265, digits = 2)
+```
+
+The first argument is positional. The second is named.
+
+## 8.5 Default arguments
+
+Many functions have default settings.
+
+```{r round-default}
+round(3.14159265)
+```
+
+Because `digits` is not supplied, `round()` uses its default value.
+
+To inspect a function's arguments:
+
+```{r inspect-function-arguments}
+args(round)
+```
+
+## 8.6 Nested functions
+
+A function call can be placed inside another function call.
+
+```{r nested-functions}
+round(mean(c(10, 12, 14, 16, 18)), digits = 1)
+```
+
+Read from the inside out:
+
+1. `c(...)` creates the vector;
+2. `mean(...)` calculates its mean;
+3. `round(...)` rounds the mean.
+
+For teaching and debugging, separate steps may be clearer:
+
+```{r nested-functions-separated}
+scores <- c(10, 12, 14, 16, 18)
+mean_score <- mean(scores)
+rounded_mean <- round(mean_score, digits = 1)
+
+rounded_mean
+```
+
+Both approaches are correct. The separated version exposes the intermediate results.
+
+# 9. Vectors: several values in one object
+
+A vector is one of the most important data structures in R. It stores an ordered collection of values of the same basic type.
+
+## 9.1 Numeric vector
+
+```{r numeric-vector}
+scores <- c(68, 74, 81, 59, 90)
+scores
+```
+
+The `c()` function combines the five numbers.
+
+## 9.2 Character vector
+
+```{r character-vector}
+programmes <- c(
+  "Statistics",
+  "Procurement",
+  "Hospitality",
+  "Agriculture"
+)
+
+programmes
+```
+
+Text must be placed in quotation marks.
+
+## 9.3 Logical vector
+
+```{r logical-vector}
+attendance_complete <- c(TRUE, TRUE, FALSE, TRUE)
+attendance_complete
+```
+
+Logical values are written without quotation marks.
+
+## 9.4 Inspecting a vector
+
+```{r inspect-vector}
+length(scores)
+typeof(scores)
+class(scores)
+```
+
+Interpretation:
+
+- `length()` returns the number of elements;
+- `typeof()` describes the internal storage type;
+- `class()` describes the object's behavioural class.
+
+## 9.5 Vector arithmetic
+
+R applies arithmetic operations element by element.
+
+```{r vector-addition}
+coursework <- c(30, 26, 35, 21, 32)
+examination <- c(52, 44, 50, 38, 54)
+
+final_scores <- coursework + examination
+final_scores
+```
+
+The first coursework score is added to the first examination score, the second to the second, and so on.
+
+\[
+\begin{aligned}
+30 + 52 &= 82,\\
+26 + 44 &= 70,\\
+35 + 50 &= 85,\\
+21 + 38 &= 59,\\
+32 + 54 &= 86.
+\end{aligned}
+\]
+
+This element-wise behaviour is one reason R is effective for statistical computing.
+
+## 9.6 Adding a constant to every value
+
+Suppose each score receives a moderation adjustment of 2 marks.
+
+```{r add-constant}
+moderated_scores <- final_scores + 2
+moderated_scores
+```
+
+R adds 2 to every element.
+
+## 9.7 Multiplying every value
+
+Convert proportions to percentages:
+
+```{r proportion-to-percentage}
+completion_proportions <- c(0.72, 0.84, 0.91, 0.65)
+completion_percentages <- completion_proportions * 100
+
+completion_percentages
+```
+
+## 9.8 Recycling
+
+When vectors have different lengths, R may recycle the shorter vector.
+
+```{r recycling-example}
+c(10, 20, 30, 40) + c(1, 2)
+```
+
+R behaves as though the shorter vector were:
+
+```text
+1, 2, 1, 2
+```
+
+Therefore:
+
+\[
+(10+1,\ 20+2,\ 30+1,\ 40+2)
+=
+(11,\ 22,\ 31,\ 42).
+\]
+
+Recycling can be useful, but it can also hide mistakes. If the longer vector's length is not an exact multiple of the shorter vector's length, R usually gives a warning.
+
+# 10. Elementary summary functions
+
+Summary functions condense several observations into interpretable quantities.
+
+Use:
+
+```{r summary-data}
+student_scores <- c(68, 74, 81, 59, 90)
+```
+
+## 10.1 Number of observations
+
+```{r summary-length}
+length(student_scores)
+```
+
+There are five observations.
+
+## 10.2 Total
+
+```{r summary-sum}
+sum(student_scores)
+```
+
+The total is:
+
+\[
+68+74+81+59+90=372.
+\]
+
+## 10.3 Mean
+
+```{r summary-mean}
+mean(student_scores)
+```
+
+The arithmetic mean is:
+
+\[
+\bar{x}
+=
+\frac{\sum x_i}{n}
+=
+\frac{372}{5}
+=
+74.4.
+\]
+
+The mean describes the arithmetic centre, but it can be strongly affected by extreme values.
+
+## 10.4 Median
+
+```{r summary-median}
+median(student_scores)
+```
+
+The ordered values are:
+
+\[
+59,\ 68,\ 74,\ 81,\ 90.
+\]
+
+The middle observation is 74, so the median is 74.
+
+## 10.5 Minimum and maximum
+
+```{r summary-extremes}
+min(student_scores)
+max(student_scores)
+```
+
+The minimum is 59 and the maximum is 90.
+
+## 10.6 Range
+
+The word *range* is used in two ways.
+
+The `range()` function returns the endpoints:
+
+```{r range-function}
+range(student_scores)
+```
+
+The numerical width is:
+
+```{r range-width}
+max(student_scores) - min(student_scores)
+```
+
+That gives:
+
+\[
+90 - 59 = 31.
+\]
+
+## 10.7 Standard deviation
+
+```{r summary-sd}
+sd(student_scores)
+```
+
+The standard deviation measures the typical spread of observations around the mean. Its mathematical development will be treated in detail in a later lesson.
+
+## 10.8 Summary across different contexts
+
+The same function can answer different practical questions.
+
+### Agriculture: mean crop yield
+
+```{r agriculture-mean}
+maize_yield_kg <- c(1840, 1925, 1760, 2050, 1985)
+mean(maize_yield_kg)
+```
+
+### Health: median waiting time
+
+```{r health-median}
+waiting_minutes <- c(18, 22, 17, 95, 25, 20)
+median(waiting_minutes)
+```
+
+The median is useful because the 95-minute observation is unusually high.
+
+### Procurement: maximum delivery delay
+
+```{r procurement-maximum}
+delivery_delay_days <- c(0, 2, 1, 7, 3, 0)
+max(delivery_delay_days)
+```
+
+### Hospitality: total room revenue
+
+```{r hospitality-total}
+daily_room_revenue <- c(4200, 5100, 4750, 5600, 4950)
+sum(daily_room_revenue)
+```
+
+The command has not changed; only the meaning of the data has changed.
+
+# 11. Logical comparisons
+
+Logical comparisons ask whether a condition is true or false.
+
+## 11.1 Comparison operators
+
+| Operator | Meaning |
+|---|---|
+| `>` | greater than |
+| `<` | less than |
+| `>=` | greater than or equal to |
+| `<=` | less than or equal to |
+| `==` | equal to |
+| `!=` | not equal to |
+
+## 11.2 Student pass example
+
+```{r logical-pass}
+student_scores >= 50
+```
+
+Each score is compared with 50.
+
+Because all five scores are at least 50, all results are `TRUE`.
+
+Count the number of passes:
+
+```{r count-passes}
+sum(student_scores >= 50)
+```
+
+R treats `TRUE` as 1 and `FALSE` as 0 when logical values are summed.
+
+Calculate the pass proportion:
+
+```{r pass-proportion}
+mean(student_scores >= 50)
+```
+
+Calculate the percentage:
+
+```{r pass-percentage}
+mean(student_scores >= 50) * 100
+```
+
+The same logical condition is being summarised in three ways:
+
+- the vector shows each student's status;
+- `sum()` counts students satisfying the condition;
+- `mean()` gives the proportion satisfying the condition.
+
+## 11.3 Distinction example
+
+```{r distinction-count}
+sum(student_scores >= 80)
+```
+
+Two students scored at least 80.
+
+## 11.4 Health example
+
+Suppose a clinic aims to see patients within 30 minutes.
+
+```{r health-target}
+clinic_waiting_times <- c(18, 42, 27, 35, 22, 51)
+
+clinic_waiting_times <= 30
+mean(clinic_waiting_times <= 30) * 100
+```
+
+The percentage describes the proportion of visits meeting the target.
+
+## 11.5 Procurement example
+
+```{r supplier-compliance}
+delivery_days <- c(4, 6, 5, 8, 3, 5)
+agreed_limit <- 5
+
+delivery_days <= agreed_limit
+sum(delivery_days <= agreed_limit)
+```
+
+## 11.6 Combining conditions
+
+Use `&` when both conditions must be true.
+
+Suppose a student qualifies for an award when the final score is at least 80 and attendance is at least 90 per cent.
+
+```{r combined-and-condition}
+scores <- c(82, 78, 91, 85)
+attendance <- c(0.95, 0.96, 0.88, 0.92)
+
+award_eligible <- (scores >= 80) & (attendance >= 0.90)
+award_eligible
+```
+
+Use `|` when at least one condition must be true.
+
+```{r combined-or-condition}
+requires_follow_up <- (scores < 50) | (attendance < 0.75)
+requires_follow_up
+```
+
+Use `!` to negate a condition:
+
+```{r negation-condition}
+!award_eligible
+```
+
+## 11.7 Membership testing
+
+The `%in%` operator checks whether values belong to a specified set.
+
+```{r membership-example}
+programme <- c(
+  "Statistics",
+  "Hospitality",
+  "Agriculture",
+  "Procurement"
+)
+
+programme %in% c("Statistics", "Procurement")
+```
+
+This is often clearer than writing several equality comparisons.
+
+# 12. Missing, infinite and undefined values
+
+Real data are often incomplete or contain values that cannot be interpreted through ordinary arithmetic.
+
+## 12.1 Missing values: `NA`
+
+```{r missing-vector}
+rainfall_mm <- c(115.2, 98.4, NA, 121.7, 110.5)
+rainfall_mm
+```
+
+`NA` means that a value is missing.
+
+Attempting to calculate the mean:
+
+```{r missing-mean-default}
+mean(rainfall_mm)
+```
+
+returns `NA`. R does not silently discard the missing observation.
+
+Remove missing values explicitly:
+
+```{r missing-mean-remove}
+mean(rainfall_mm, na.rm = TRUE)
+```
+
+The argument `na.rm = TRUE` means “remove missing values for this calculation”.
+
+The analyst should still explain why the observation is missing and whether exclusion is appropriate.
+
+## 12.2 Detecting missing values
+
+```{r detect-missing}
+is.na(rainfall_mm)
+```
+
+Count them:
+
+```{r count-missing}
+sum(is.na(rainfall_mm))
+```
+
+Identify positions:
+
+```{r positions-missing}
+which(is.na(rainfall_mm))
+```
+
+## 12.3 Why `x == NA` is wrong
+
+A missing value is not an ordinary value that can be compared using `==`.
+
+Incorrect:
+
+```r
+rainfall_mm == NA
+```
+
+Correct:
+
+```r
+is.na(rainfall_mm)
+```
+
+## 12.4 Infinite values
+
+Division by zero may produce infinity:
+
+```{r infinity-example}
+1 / 0
+```
+
+Check:
+
+```{r check-infinite}
+is.infinite(1 / 0)
+```
+
+## 12.5 Undefined numeric results
+
+Some operations have no defined numeric answer:
+
+```{r nan-example}
+0 / 0
+```
+
+The result is `NaN`, meaning “not a number”.
+
+Check:
+
+```{r check-nan}
+is.nan(0 / 0)
+```
+
+## 12.6 Finite values
+
+```{r finite-example}
+values <- c(10, NA, Inf, -Inf, NaN, 25)
+is.finite(values)
+```
+
+A finite value is neither missing nor infinite.
+
+# 13. Character data
+
+Character data represent text.
+
+```{r character-basics}
+student_name <- "Akosua"
+programme <- "Applied Statistics"
+```
+
+Quotation marks are required because unquoted text is interpreted as an object name.
+
+## 13.1 Combining text
+
+```{r paste-example}
+paste(student_name, "studies", programme)
+```
+
+The `paste()` function joins pieces of text and inserts a space by default.
+
+Use a custom separator:
+
+```{r paste-separator}
+paste("BTU", "STAT", "001", sep = "-")
+```
+
+The result is:
+
+```text
+BTU-STAT-001
+```
+
+## 13.2 Counting characters
+
+```{r nchar-example}
+nchar(programme)
+```
+
+## 13.3 Changing letter case
+
+```{r case-conversion}
+toupper(programme)
+tolower(programme)
+```
+
+These functions are useful when inconsistent capitalisation prevents categories from matching.
+
+# 14. Creating sequences and repeated values
+
+## 14.1 Colon operator
+
+```{r colon-sequence}
+1:10
+```
+
+This creates consecutive integers from 1 to 10.
+
+## 14.2 `seq()`
+
+```{r seq-example}
+seq(from = 0, to = 100, by = 10)
+```
+
+This creates:
+
+\[
+0,10,20,\ldots,100.
+\]
+
+Specify the required number of values:
+
+```{r seq-length}
+seq(from = 0, to = 1, length.out = 6)
+```
+
+## 14.3 `rep()`
+
+```{r rep-times}
+rep("Group A", times = 4)
+```
+
+Repeat each element:
+
+```{r rep-each}
+rep(c("Male", "Female"), each = 3)
+```
+
+These functions become useful when constructing identifiers, experimental groups and simulation inputs.
+
+# 15. Getting help
+
+No serious programmer memorises every function. Knowing how to obtain help is a core skill.
+
+## 15.1 Help for a known function
+
+```{r help-known-function, eval=FALSE}
+?mean
+```
+
+Or:
+
+```{r help-function-call, eval=FALSE}
+help(mean)
+```
+
+## 15.2 Search when the function name is unknown
+
+```{r help-search, eval=FALSE}
+help.search("standard deviation")
+```
+
+## 15.3 Inspect arguments
+
+```{r args-mean}
+args(mean)
+```
+
+## 15.4 View examples
+
+```{r examples-mean, eval=FALSE}
+example(mean)
+```
+
+A help page normally contains:
+
+- description;
+- usage;
+- arguments;
+- details;
+- returned value;
+- references; and
+- examples.
+
+The learner should practise reading help documentation rather than treating it as a last resort.
+
+# 16. Importing the supplied datasets
+
+The lesson includes all files used by the examples.
+
+## 16.1 Confirm the current working directory
+
+```{r show-working-directory}
+getwd()
+```
+
+When the project file has been opened correctly, the working directory should be the project root.
+
+## 16.2 Confirm that a file exists
+
+```{r confirm-data-file}
+file.exists("data/student_scores.csv")
+```
+
+The expected result is `TRUE`.
+
+## 16.3 Import the student data
+
+```{r import-student-data}
+student_data <- read.csv(
+  file = "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+```
+
+Explanation:
+
+- `read.csv()` imports a comma-separated file;
+- `file` specifies its relative path;
+- `stringsAsFactors = FALSE` keeps text columns as character values;
+- the imported table is stored as `student_data`.
+
+## 16.4 Inspect the imported data
+
+```{r inspect-imported-data}
+head(student_data)
+str(student_data)
+dim(student_data)
+names(student_data)
+```
+
+Interpretation:
+
+- `head()` shows the first six rows;
+- `str()` displays the structure and variable types;
+- `dim()` reports rows and columns;
+- `names()` lists variable names.
+
+## 16.5 Access one variable
+
+```{r access-one-variable}
+student_data$final_score
+```
+
+The `$` operator selects a named column from a data frame.
+
+## 16.6 Summarise a variable
+
+```{r summarise-imported-score}
+mean(student_data$final_score)
+median(student_data$final_score)
+min(student_data$final_score)
+max(student_data$final_score)
+```
+
+## 16.7 Count categories
+
+```{r count-programmes}
+table(student_data$programme)
+```
+
+Convert counts to proportions:
+
+```{r programme-proportions}
+prop.table(table(student_data$programme))
+```
+
+Convert to percentages:
+
+```{r programme-percentages}
+prop.table(table(student_data$programme)) * 100
+```
+
+## 16.8 Validate scores
+
+```{r validate-score-range}
+all(student_data$final_score >= 0 &
+      student_data$final_score <= 100)
+```
+
+Check the arithmetic relationship:
+
+```{r validate-score-sum}
+all(
+  student_data$final_score ==
+    student_data$coursework_score +
+    student_data$examination_score
+)
+```
+
+Validation is a professional habit. A calculation performed on invalid data may be technically correct but substantively useless.
+
+# 17. Elementary graphics
+
+Graphs are analytical tools, not decorations. A good graph helps the analyst see distribution, variation, comparison or association.
+
+## 17.1 Histogram
+
+```{r histogram-final-score}
+hist(
+  student_data$final_score,
+  main = "Distribution of Final Scores",
+  xlab = "Final score",
+  ylab = "Frequency"
+)
+```
+
+A histogram groups numerical observations into intervals and displays how many fall in each interval.
+
+## 17.2 Bar chart
+
+```{r barplot-programmes}
+programme_counts <- table(student_data$programme)
+
+barplot(
+  programme_counts,
+  main = "Students by Programme",
+  xlab = "Programme",
+  ylab = "Number of students",
+  las = 2
+)
+```
+
+A bar chart is suitable for category counts. It should not be confused with a histogram.
+
+## 17.3 Scatterplot
+
+```{r scatter-coursework-exam}
+plot(
+  x = student_data$coursework_score,
+  y = student_data$examination_score,
+  main = "Coursework and Examination Scores",
+  xlab = "Coursework score",
+  ylab = "Examination score",
+  pch = 19
+)
+```
+
+A scatterplot displays the relationship between two numerical variables.
+
+At this stage, the graph should be described rather than overinterpreted. Formal correlation and regression will be introduced later.
+
+# 18. Errors, warnings and unexpected results
+
+Errors are part of programming. The goal is not to avoid every error but to learn how to diagnose them.
+
+## 18.1 Object not found
+
+```r
+mean(student_score)
+```
+
+If the object is actually named `student_scores`, R reports that `student_score` cannot be found.
+
+Check:
+
+- spelling;
+- singular versus plural;
+- capitalisation;
+- whether the object has been created.
+
+## 18.2 Missing punctuation
+
+```r
+mean(c(10, 20, 30)
+```
+
+The closing parenthesis is missing. R may display the continuation prompt.
+
+## 18.3 Incorrect function capitalisation
+
+```r
+Mean(student_scores)
+```
+
+The correct function is:
+
+```r
+mean(student_scores)
+```
+
+R is case-sensitive.
+
+## 18.4 Wrong data type
+
+```{r wrong-type-example, error=TRUE}
+mean(c("High", "Medium", "Low"))
+```
+
+The mean is defined for numerical information, not category labels.
+
+## 18.5 Recycling warning
+
+```{r recycling-warning, warning=TRUE}
+c(10, 20, 30, 40, 50) + c(1, 2)
+```
+
+The longer length is not an exact multiple of the shorter length, so R warns that recycling may be unintended.
+
+## 18.6 A systematic debugging method
+
+When code fails:
+
+1. read the full message;
+2. identify the named object or function;
+3. check spelling and case;
+4. inspect commas, brackets and quotation marks;
+5. confirm that required objects exist;
+6. inspect the object with `str()`, `class()` and `typeof()`;
+7. run a smaller part of the expression;
+8. compare the command with the help page;
+9. restart R and rerun the document if hidden state is suspected.
+
+# 19. Reproducible working habits
+
+A professional workflow should make it possible for another person, or the future version of the same analyst, to rerun the work.
+
+## 19.1 Use relative paths
+
+Good:
+
+```r
+read.csv("data/student_scores.csv")
+```
+
+Poor:
+
+```r
+read.csv("C:/Users/Name/Desktop/student_scores.csv")
+```
+
+The relative path travels with the project.
+
+## 19.2 Preserve raw data
+
+Do not manually alter the original CSV file merely to make an analysis work. Corrections should be recorded in code.
+
+## 19.3 Use comments to explain purpose
+
+```r
+# Calculate the pass percentage using the institution's pass mark of 50.
+pass_percentage <- mean(student_data$final_score >= 50) * 100
+```
+
+A comment should explain why a step is performed, not merely repeat the command.
+
+## 19.4 Rerun from a clean session
+
+A document that works only because several objects already exist in memory is not reproducible.
+
+Restart R, then run the document from the beginning.
+
+## 19.5 Inspect results
+
+A command completing without an error does not prove that the result is sensible.
+
+Ask:
+
+- Is the data type correct?
+- Is the scale plausible?
+- Are missing values present?
+- Does the denominator make sense?
+- Does the result answer the intended question?
+
+# 20. Integrated worked analysis
+
+This section combines the first-lesson skills into a small analysis.
+
+## 20.1 Analytical questions
+
+Using `student_scores.csv`, determine:
+
+1. how many student records are available;
+2. the mean and median final scores;
+3. the minimum and maximum final scores;
+4. the number and percentage who passed;
+5. the number who obtained a distinction;
+6. the distribution of students by programme; and
+7. whether the final-score arithmetic is internally consistent.
+
+## 20.2 Import and inspect
+
+```{r integrated-import}
+students <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+head(students)
+str(students)
+```
+
+The import should be inspected before any summary is calculated.
+
+## 20.3 Number of records
+
+```{r integrated-record-count}
+number_of_students <- nrow(students)
+number_of_students
+```
+
+`nrow()` returns the number of rows. In this dataset, each row represents one student.
+
+## 20.4 Mean and median
+
+```{r integrated-centre}
+mean_final_score <- mean(students$final_score)
+median_final_score <- median(students$final_score)
+
+mean_final_score
+median_final_score
+```
+
+The mean uses all values arithmetically. The median identifies the middle of the ordered distribution.
+
+## 20.5 Minimum and maximum
+
+```{r integrated-extremes}
+minimum_final_score <- min(students$final_score)
+maximum_final_score <- max(students$final_score)
+
+minimum_final_score
+maximum_final_score
+```
+
+## 20.6 Pass status
+
+```{r integrated-pass}
+pass_mark <- 50
+
+students$final_score >= pass_mark
+```
+
+Count passes:
+
+```{r integrated-pass-count}
+number_passed <- sum(students$final_score >= pass_mark)
+number_passed
+```
+
+Calculate percentage:
+
+```{r integrated-pass-percent}
+pass_percentage <- mean(students$final_score >= pass_mark) * 100
+pass_percentage
+```
+
+## 20.7 Distinctions
+
+```{r integrated-distinction}
+distinction_cutoff <- 80
+
+number_with_distinction <- sum(
+  students$final_score >= distinction_cutoff
+)
+
+number_with_distinction
+```
+
+## 20.8 Programme distribution
+
+```{r integrated-programme}
+programme_distribution <- table(students$programme)
+programme_distribution
+```
+
+Percentages:
+
+```{r integrated-programme-percent}
+programme_percentages <- prop.table(programme_distribution) * 100
+programme_percentages
+```
+
+## 20.9 Internal validation
+
+```{r integrated-validation}
+score_arithmetic_is_valid <- all(
+  students$final_score ==
+    students$coursework_score +
+    students$examination_score
+)
+
+score_arithmetic_is_valid
+```
+
+A result of `TRUE` indicates that all records satisfy the stated arithmetic relationship.
+
+## 20.10 Communicating the result
+
+A statistical report should not consist only of printed output. A suitable interpretation may read:
+
+> The dataset contained `r nrow(read.csv("data/student_scores.csv"))` student records. The mean final score was `r round(mean(read.csv("data/student_scores.csv")$final_score), 1)`, while the median was `r median(read.csv("data/student_scores.csv")$final_score)`. Using a pass mark of 50, `r sum(read.csv("data/student_scores.csv")$final_score >= 50)` students passed. The score-validation check confirmed that each final score equalled the sum of its coursework and examination components.
+
+This paragraph demonstrates inline R code. The reported values are generated from the data rather than typed manually.
+
+# 21. Guided practice scenarios
+
+## 21.1 Agriculture
+
+The yields from six maize plots are:
+
+\[
+1840,\ 1765,\ 2010,\ 1920,\ 1875,\ 2055.
+\]
+
+Tasks:
+
+1. store the values as `maize_yield`;
+2. calculate the number of plots;
+3. calculate mean, median, minimum and maximum yield;
+4. count plots with yield above 1900 kg;
+5. calculate the percentage above 1900 kg.
+
+```{r guided-agriculture}
+maize_yield <- c(1840, 1765, 2010, 1920, 1875, 2055)
+
+length(maize_yield)
+mean(maize_yield)
+median(maize_yield)
+min(maize_yield)
+max(maize_yield)
+sum(maize_yield > 1900)
+mean(maize_yield > 1900) * 100
+```
+
+## 21.2 Procurement
+
+Delivery times in days are:
+
+\[
+4,\ 6,\ 5,\ 8,\ 3,\ 5,\ 7.
+\]
+
+The agreed limit is five days.
+
+```{r guided-procurement}
+delivery_time <- c(4, 6, 5, 8, 3, 5, 7)
+delivery_limit <- 5
+
+on_time <- delivery_time <= delivery_limit
+
+on_time
+sum(on_time)
+mean(on_time) * 100
+```
+
+## 21.3 Health
+
+Waiting times contain one missing observation.
+
+```{r guided-health}
+waiting_time <- c(18, 25, NA, 31, 22, 40, 17)
+
+sum(is.na(waiting_time))
+mean(waiting_time, na.rm = TRUE)
+median(waiting_time, na.rm = TRUE)
+mean(waiting_time <= 30, na.rm = TRUE) * 100
+```
+
+The missing observation is excluded only because `na.rm = TRUE` is stated explicitly.
+
+## 21.4 Hospitality
+
+```{r guided-hospitality}
+available_rooms <- 80
+occupied_rooms <- 62
+average_room_rate <- 420
+
+occupancy_rate <- occupied_rooms / available_rooms
+estimated_room_revenue <- occupied_rooms * average_room_rate
+
+occupancy_rate
+occupancy_rate * 100
+estimated_room_revenue
+```
+
+# 22. Independent exercises
+
+## Exercise 1: Objects and arithmetic
+
+Create objects representing:
+
+- 250 registered students;
+- 18 withdrawals;
+- 12 late registrations.
+
+Calculate the revised student count. Explain the order in which the operations are performed.
+
+## Exercise 2: Weighted assessment
+
+A course uses:
+
+- 30 per cent assignments;
+- 20 per cent mid-semester examination;
+- 50 per cent final examination.
+
+A student obtains 82, 74 and 68 respectively. Calculate the weighted final score.
+
+## Exercise 3: Vector summaries
+
+Create:
+
+```r
+monthly_sales <- c(1250, 1480, 1325, 1610, 1540, 1725)
+```
+
+Calculate the number of months, total sales, mean, median, minimum, maximum and numerical range.
+
+## Exercise 4: Logical conditions
+
+Using the sales values above:
+
+1. identify months with sales above 1500;
+2. count them;
+3. calculate their percentage.
+
+## Exercise 5: Missing data
+
+Create:
+
+```r
+rainfall <- c(115.2, 98.4, NA, 121.7, 110.5)
+```
+
+Explain why `mean(rainfall)` returns `NA`. Then calculate the observed mean and count the missing values.
+
+## Exercise 6: Text
+
+Create a student identifier from:
+
+```r
+institution <- "BTU"
+programme <- "STAT"
+number <- "015"
+```
+
+The required form is:
+
+```text
+BTU-STAT-015
+```
+
+## Exercise 7: Dataset import
+
+Import `data/clinic_visits.csv`, then:
+
+1. inspect its first rows;
+2. report its dimensions;
+3. list its variable names;
+4. calculate the mean waiting time;
+5. determine the percentage with waiting time of 30 minutes or less.
+
+## Exercise 8: Debugging
+
+Correct and explain the errors:
+
+```r
+Student Score <- c(65, 72, 80)
+Mean(student_score)
+```
+
+## Exercise 9: Data validation
+
+Import `data/monthly_sales.csv`. Check whether:
+
+- all units sold are non-negative;
+- all revenue values are positive;
+- the file has at least one row.
+
+## Exercise 10: Interpretation
+
+Write a paragraph explaining the difference among:
+
+- a command;
+- an expression;
+- an object;
+- a function;
+- an argument;
+- a vector; and
+- a logical condition.
+
+# 23. Lesson assessment
+
+## Part A: Conceptual questions
+
+1. Why is R described as both a programming language and an environment?
+2. What is the difference between R and RStudio?
+3. Why should important work be written in a script or R Markdown file?
+4. What does the assignment operator do?
+5. Why are meaningful object names important?
+6. What is the difference between positional and named arguments?
+7. Why does `mean(c(10, NA, 20))` return `NA`?
+8. How can logical values be used to calculate a proportion?
+9. What is the difference between an error and a warning?
+10. Why should a successful command still be checked for plausibility?
+
+## Part B: Practical task
+
+Create a standalone R Markdown report that:
+
+1. imports `data/student_scores.csv`;
+2. inspects the data structure;
+3. validates the score range;
+4. reports mean, median, minimum and maximum final score;
+5. calculates pass and distinction percentages;
+6. displays the programme distribution;
+7. produces one histogram and one bar chart;
+8. explains each result in complete sentences; and
+9. knits successfully from a newly restarted R session.
+
+# 24. Key terms
+
+**Argument:** A value supplied to a function.
+
+**Assignment:** The process of storing a value or result under an object name.
+
+**Character value:** Text enclosed in quotation marks.
+
+**Console:** The interface through which commands are sent directly to R.
+
+**Data validation:** The process of checking whether data satisfy expected rules.
+
+**Expression:** A combination of values, operators, objects and functions that R can evaluate.
+
+**Function:** A reusable operation that receives inputs and returns a result.
+
+**Logical value:** `TRUE` or `FALSE`.
+
+**Missing value:** An unavailable observation represented by `NA`.
+
+**Object:** A named structure stored in memory.
+
+**R Markdown:** A document format that combines narrative, code and generated output.
+
+**Reproducibility:** The ability to rerun an analysis from documented inputs and instructions.
+
+**Vector:** An ordered collection of values of the same basic type.
+
+# 25. Completion checklist
+
+Before moving to the next lesson, confirm that you can:
+
+- open the project correctly;
+- knit this lesson successfully;
+- distinguish R from RStudio;
+- use arithmetic operators;
+- explain order of operations;
+- create and update objects;
+- use meaningful names;
+- call functions with named arguments;
+- create numeric, character and logical vectors;
+- calculate elementary summaries;
+- count observations satisfying a condition;
+- identify missing values;
+- import the supplied CSV files;
+- inspect a data frame;
+- read a basic error message;
+- use relative paths; and
+- explain results in ordinary language.
+
+# 26. Lesson conclusion
+
+The most important outcome of this lesson is not the ability to remember a list of commands. It is the ability to think computationally.
+
+A practical question is translated into data and conditions. R evaluates the instructions. The analyst then checks whether the result is valid, interprets it in context and preserves the complete procedure.
+
+The working cycle is:
+
+\[
+\boxed{
+\text{Question}
+\rightarrow
+\text{Data}
+\rightarrow
+\text{R instruction}
+\rightarrow
+\text{Result}
+\rightarrow
+\text{Validation}
+\rightarrow
+\text{Interpretation}
+}
+\]
+
+The next lesson will build on this foundation by examining the R working environment, project organisation, file paths, package installation and session management in greater detail.

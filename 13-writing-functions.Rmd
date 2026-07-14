@@ -1,0 +1,1131 @@
+---
+title: "Lesson 13: Writing and Using Functions"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+A function packages a reusable operation under a meaningful name. Functions
+reduce duplication, clarify analytical intent and make code easier to test.
+
+A well-designed function should:
+
+- have one clear purpose;
+- accept explicit inputs;
+- validate important assumptions;
+- return a predictable result;
+- avoid unnecessary side effects;
+- use meaningful argument names; and
+- provide useful error messages.
+
+This lesson moves from simple functions to functions that work with vectors and
+data frames.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. explain the purpose of functions;
+2. write a function using `function()`;
+3. define formal arguments;
+4. use default arguments;
+5. return values explicitly and implicitly;
+6. validate arguments;
+7. write functions for vectors and data frames;
+8. use `...` appropriately;
+9. distinguish pure functions from side-effect functions;
+10. document a function;
+11. test functions with representative inputs;
+12. apply functions repeatedly; and
+13. debug common function errors.
+
+# 1. Why functions are useful
+
+Suppose the same pass percentage is calculated several times:
+
+```{r repeated-pass-code}
+scores_a <- c(
+  45,
+  58,
+  72,
+  84
+)
+
+scores_b <- c(
+  65,
+  71,
+  49,
+  90
+)
+
+mean(scores_a >= 50) * 100
+mean(scores_b >= 50) * 100
+```
+
+Create a function:
+
+```{r create-pass-function}
+calculate_pass_percentage <- function(
+  scores,
+  pass_mark = 50
+) {
+  mean(
+    scores >= pass_mark,
+    na.rm = TRUE
+  ) * 100
+}
+```
+
+Use it:
+
+```{r use-pass-function}
+calculate_pass_percentage(
+  scores_a
+)
+
+calculate_pass_percentage(
+  scores_b
+)
+```
+
+# 2. Function anatomy
+
+```text
+function_name <- function(arguments) {
+  body
+}
+```
+
+In:
+
+```r
+calculate_pass_percentage <- function(
+  scores,
+  pass_mark = 50
+) {
+  ...
+}
+```
+
+- `calculate_pass_percentage` is the object name;
+- `function` creates a function object;
+- `scores` is a required argument;
+- `pass_mark` has a default;
+- braces contain the body.
+
+# 3. A function with no arguments
+
+```{r no-argument-function}
+greet_learner <- function() {
+  "Welcome to Learning R."
+}
+
+greet_learner()
+```
+
+The function returns the final expression.
+
+# 4. One required argument
+
+```{r one-argument-function}
+square_value <- function(x) {
+  x ^ 2
+}
+
+square_value(5)
+square_value(-3)
+```
+
+# 5. Several arguments
+
+```{r several-argument-function}
+calculate_weighted_score <- function(
+  coursework,
+  examination,
+  coursework_weight,
+  examination_weight
+) {
+  coursework * coursework_weight +
+    examination * examination_weight
+}
+
+calculate_weighted_score(
+  coursework = 78,
+  examination = 65,
+  coursework_weight = 0.40,
+  examination_weight = 0.60
+)
+```
+
+# 6. Default arguments
+
+```{r default-argument-function}
+calculate_weighted_score <- function(
+  coursework,
+  examination,
+  coursework_weight = 0.40,
+  examination_weight = 0.60
+) {
+  coursework * coursework_weight +
+    examination * examination_weight
+}
+
+calculate_weighted_score(
+  coursework = 78,
+  examination = 65
+)
+```
+
+Override defaults:
+
+```{r override-function-default}
+calculate_weighted_score(
+  coursework = 78,
+  examination = 65,
+  coursework_weight = 0.30,
+  examination_weight = 0.70
+)
+```
+
+# 7. Positional and named matching
+
+```{r positional-function-call}
+calculate_weighted_score(
+  78,
+  65
+)
+```
+
+Named calls are clearer:
+
+```{r named-function-call}
+calculate_weighted_score(
+  coursework = 78,
+  examination = 65
+)
+```
+
+# 8. Return values
+
+The final evaluated expression is returned automatically.
+
+```{r implicit-return}
+add_values <- function(
+  x,
+  y
+) {
+  x + y
+}
+
+add_values(
+  5,
+  7
+)
+```
+
+Explicit return:
+
+```{r explicit-return}
+add_values_explicit <- function(
+  x,
+  y
+) {
+  result <- x + y
+
+  return(result)
+}
+
+add_values_explicit(
+  5,
+  7
+)
+```
+
+# 9. Early return
+
+```{r early-return-function}
+classify_score <- function(
+  score
+) {
+  if (is.na(score)) {
+    return("Missing")
+  }
+
+  if (score >= 80) {
+    return("Distinction")
+  }
+
+  if (score >= 50) {
+    return("Pass")
+  }
+
+  "Fail"
+}
+
+classify_score(85)
+classify_score(65)
+classify_score(45)
+classify_score(NA)
+```
+
+# 10. Argument validation
+
+```{r validate-function-argument}
+calculate_mean_score <- function(
+  scores
+) {
+  if (!is.numeric(scores)) {
+    stop(
+      "`scores` must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  mean(
+    scores,
+    na.rm = TRUE
+  )
+}
+
+calculate_mean_score(
+  c(
+    65,
+    72,
+    81
+  )
+)
+```
+
+Invalid call:
+
+```{r invalid-function-call, error=TRUE}
+calculate_mean_score(
+  c(
+    "High",
+    "Low"
+  )
+)
+```
+
+# 11. Range validation
+
+```{r score-validation-function}
+validate_scores <- function(
+  scores
+) {
+  if (!is.numeric(scores)) {
+    stop(
+      "`scores` must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  if (length(scores) == 0L) {
+    stop(
+      "`scores` must not be empty.",
+      call. = FALSE
+    )
+  }
+
+  if (!all(
+    scores >= 0 &
+      scores <= 100,
+    na.rm = TRUE
+  )) {
+    stop(
+      "Scores must lie between 0 and 100.",
+      call. = FALSE
+    )
+  }
+
+  TRUE
+}
+
+validate_scores(
+  c(
+    65,
+    72,
+    81
+  )
+)
+```
+
+# 12. Returning several values
+
+Use a named list:
+
+```{r multi-result-function}
+summarise_scores <- function(
+  scores
+) {
+  validate_scores(scores)
+
+  list(
+    number = length(scores),
+    missing = sum(
+      is.na(scores)
+    ),
+    mean = mean(
+      scores,
+      na.rm = TRUE
+    ),
+    median = median(
+      scores,
+      na.rm = TRUE
+    ),
+    minimum = min(
+      scores,
+      na.rm = TRUE
+    ),
+    maximum = max(
+      scores,
+      na.rm = TRUE
+    )
+  )
+}
+
+score_summary <- summarise_scores(
+  c(
+    65,
+    72,
+    NA,
+    81
+  )
+)
+
+score_summary
+```
+
+Extract:
+
+```{r extract-function-result}
+score_summary$mean
+score_summary$missing
+```
+
+# 13. Returning a data frame
+
+```{r data-frame-return-function}
+summarise_numeric_vector <- function(
+  x,
+  variable_name = "x"
+) {
+  if (!is.numeric(x)) {
+    stop(
+      "`x` must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  data.frame(
+    variable = variable_name,
+    observed = sum(
+      !is.na(x)
+    ),
+    missing = sum(
+      is.na(x)
+    ),
+    mean = mean(
+      x,
+      na.rm = TRUE
+    ),
+    median = median(
+      x,
+      na.rm = TRUE
+    ),
+    minimum = min(
+      x,
+      na.rm = TRUE
+    ),
+    maximum = max(
+      x,
+      na.rm = TRUE
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
+summarise_numeric_vector(
+  c(
+    10,
+    20,
+    NA,
+    30
+  ),
+  variable_name = "waiting_time"
+)
+```
+
+# 14. Vectorised functions
+
+```{r vectorised-function}
+convert_to_percentage <- function(
+  proportion
+) {
+  proportion * 100
+}
+
+convert_to_percentage(
+  c(
+    0.45,
+    0.72,
+    0.91
+  )
+)
+```
+
+The function works vector-wise because multiplication is vectorised.
+
+# 15. Functions using conditions
+
+```{r conditional-function}
+assign_grade <- function(
+  score
+) {
+  ifelse(
+    is.na(score),
+    NA_character_,
+    ifelse(
+      score >= 80,
+      "A",
+      ifelse(
+        score >= 70,
+        "B",
+        ifelse(
+          score >= 60,
+          "C",
+          ifelse(
+            score >= 50,
+            "D",
+            "F"
+          )
+        )
+      )
+    )
+  )
+}
+
+assign_grade(
+  c(
+    45,
+    58,
+    72,
+    84,
+    NA
+  )
+)
+```
+
+# 16. Functions for data frames
+
+```{r data-frame-function}
+add_result_columns <- function(
+  data,
+  score_variable = "final_score",
+  pass_mark = 50,
+  distinction_mark = 80
+) {
+  if (!is.data.frame(data)) {
+    stop(
+      "`data` must be a data frame.",
+      call. = FALSE
+    )
+  }
+
+  if (!score_variable %in%
+      names(data)) {
+    stop(
+      paste(
+        "Variable not found:",
+        score_variable
+      ),
+      call. = FALSE
+    )
+  }
+
+  score_values <-
+    data[[
+      score_variable
+    ]]
+
+  data$pass_status <- ifelse(
+    score_values >= pass_mark,
+    "Pass",
+    "Fail"
+  )
+
+  data$distinction_status <- ifelse(
+    score_values >= distinction_mark,
+    "Yes",
+    "No"
+  )
+
+  data
+}
+```
+
+Use it:
+
+```{r use-data-frame-function}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+student_results <- add_result_columns(
+  student_data
+)
+
+head(student_results)
+```
+
+# 17. Dynamic variable selection
+
+```{r dynamic-column-function}
+calculate_variable_mean <- function(
+  data,
+  variable
+) {
+  if (!variable %in%
+      names(data)) {
+    stop(
+      paste(
+        "Variable not found:",
+        variable
+      ),
+      call. = FALSE
+    )
+  }
+
+  values <- data[[
+    variable
+  ]]
+
+  if (!is.numeric(values)) {
+    stop(
+      paste(
+        variable,
+        "must be numeric."
+      ),
+      call. = FALSE
+    )
+  }
+
+  mean(
+    values,
+    na.rm = TRUE
+  )
+}
+
+calculate_variable_mean(
+  student_data,
+  "final_score"
+)
+```
+
+# 18. The `...` argument
+
+`...` allows additional arguments to be passed onward.
+
+```{r dots-function}
+calculate_mean <- function(
+  x,
+  ...
+) {
+  mean(
+    x,
+    ...
+  )
+}
+
+calculate_mean(
+  c(
+    10,
+    NA,
+    20
+  ),
+  na.rm = TRUE
+)
+```
+
+# 19. Function side effects
+
+A pure function returns a value without altering external state.
+
+```{r pure-function}
+double_value <- function(x) {
+  x * 2
+}
+
+double_value(5)
+```
+
+A side-effect function may print, write a file or alter graphics.
+
+```{r side-effect-function}
+announce_result <- function(
+  message_text
+) {
+  message(
+    message_text
+  )
+
+  invisible(NULL)
+}
+
+announce_result(
+  "Analysis completed."
+)
+```
+
+# 20. Invisible return values
+
+```{r invisible-return-function}
+store_and_report <- function(
+  x
+) {
+  message(
+    "Value processed."
+  )
+
+  invisible(x)
+}
+
+processed_value <- store_and_report(
+  25
+)
+
+processed_value
+```
+
+# 21. Functions calling functions
+
+```{r function-calling-function}
+calculate_pass_count <- function(
+  scores,
+  pass_mark = 50
+) {
+  validate_scores(scores)
+
+  sum(
+    scores >= pass_mark,
+    na.rm = TRUE
+  )
+}
+
+calculate_pass_percentage <- function(
+  scores,
+  pass_mark = 50
+) {
+  pass_count <- calculate_pass_count(
+    scores,
+    pass_mark
+  )
+
+  observed_count <- sum(
+    !is.na(scores)
+  )
+
+  pass_count /
+    observed_count *
+    100
+}
+
+calculate_pass_percentage(
+  c(
+    45,
+    58,
+    72,
+    84
+  )
+)
+```
+
+# 22. Anonymous functions
+
+```{r anonymous-function}
+vapply(
+  student_data[
+    vapply(
+      student_data,
+      is.numeric,
+      FUN.VALUE = logical(1)
+    )
+  ],
+  function(x) {
+    mean(
+      x,
+      na.rm = TRUE
+    )
+  },
+  FUN.VALUE = numeric(1)
+)
+```
+
+# 23. Applying a custom function
+
+```{r apply-custom-function}
+numeric_variables <- names(
+  student_data
+)[
+  vapply(
+    student_data,
+    is.numeric,
+    FUN.VALUE = logical(1)
+  )
+]
+
+variable_summaries <- lapply(
+  numeric_variables,
+  function(variable_name) {
+    summarise_numeric_vector(
+      student_data[[
+        variable_name
+      ]],
+      variable_name
+    )
+  }
+)
+
+variable_summaries
+```
+
+Combine:
+
+```{r combine-function-results}
+combined_summaries <- do.call(
+  rbind,
+  variable_summaries
+)
+
+combined_summaries
+```
+
+# 24. Function documentation
+
+A simple documentation block:
+
+```r
+# Calculate the percentage of observed scores meeting a pass mark.
+#
+# Arguments:
+# scores: Numeric vector of scores.
+# pass_mark: Numeric pass threshold. Default is 50.
+#
+# Returns:
+# A single numeric percentage.
+```
+
+Good documentation states:
+
+- purpose;
+- arguments;
+- expected types;
+- returned value;
+- missing-value behaviour;
+- important assumptions;
+- examples.
+
+# 25. Testing functions
+
+Test typical input:
+
+```{r test-typical-function-input}
+calculate_pass_percentage(
+  c(
+    45,
+    58,
+    72,
+    84
+  )
+)
+```
+
+Boundary input:
+
+```{r test-boundary-function-input}
+calculate_pass_percentage(
+  c(
+    49,
+    50,
+    51
+  )
+)
+```
+
+Missing input:
+
+```{r test-missing-function-input}
+calculate_pass_percentage(
+  c(
+    45,
+    NA,
+    72
+  )
+)
+```
+
+Invalid input:
+
+```{r test-invalid-function-input, error=TRUE}
+calculate_pass_percentage(
+  c(
+    "Pass",
+    "Fail"
+  )
+)
+```
+
+# 26. `stopifnot()`
+
+```{r stopifnot-function}
+calculate_ratio <- function(
+  numerator,
+  denominator
+) {
+  stopifnot(
+    is.numeric(numerator),
+    is.numeric(denominator),
+    length(numerator) == 1L,
+    length(denominator) == 1L,
+    denominator != 0
+  )
+
+  numerator / denominator
+}
+
+calculate_ratio(
+  10,
+  2
+)
+```
+
+`stopifnot()` is concise, but custom `stop()` messages are often more helpful
+for learners and users.
+
+# 27. Naming functions
+
+Good function names describe an action:
+
+```text
+calculate_mean_score
+validate_student_data
+create_summary_table
+classify_waiting_time
+import_monthly_sales
+```
+
+Avoid vague names such as:
+
+```text
+do_it
+run
+test
+fun
+process
+```
+
+# 28. Integrated example: clinic summary function
+
+```{r clinic-summary-function}
+summarise_clinic_waiting <- function(
+  data,
+  waiting_variable = "waiting_minutes",
+  target_minutes = 30
+) {
+  if (!is.data.frame(data)) {
+    stop(
+      "`data` must be a data frame.",
+      call. = FALSE
+    )
+  }
+
+  if (!waiting_variable %in%
+      names(data)) {
+    stop(
+      paste(
+        "Variable not found:",
+        waiting_variable
+      ),
+      call. = FALSE
+    )
+  }
+
+  waiting_values <-
+    data[[
+      waiting_variable
+    ]]
+
+  if (!is.numeric(waiting_values)) {
+    stop(
+      "Waiting time must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  data.frame(
+    observed_visits = sum(
+      !is.na(waiting_values)
+    ),
+    missing_visits = sum(
+      is.na(waiting_values)
+    ),
+    mean_waiting_minutes = mean(
+      waiting_values,
+      na.rm = TRUE
+    ),
+    median_waiting_minutes = median(
+      waiting_values,
+      na.rm = TRUE
+    ),
+    percentage_meeting_target = mean(
+      waiting_values <=
+        target_minutes,
+      na.rm = TRUE
+    ) * 100
+  )
+}
+```
+
+Use it:
+
+```{r use-clinic-summary-function}
+clinic_data <- read.csv(
+  "data/clinic_visits.csv",
+  stringsAsFactors = FALSE
+)
+
+summarise_clinic_waiting(
+  clinic_data
+)
+```
+
+# 29. Common mistakes
+
+- forgetting parentheses when calling a function;
+- confusing function creation and function execution;
+- relying on global objects instead of arguments;
+- omitting validation;
+- returning inconsistent types;
+- using vague argument names;
+- hiding errors with defaults;
+- using `...` without understanding forwarded arguments;
+- creating unnecessary side effects;
+- failing to test boundary and invalid inputs.
+
+# 30. Independent exercises
+
+1. Write a function with no arguments.
+2. write a one-argument mathematical function.
+3. create a function with default arguments.
+4. use explicit and implicit returns.
+5. validate a numeric argument.
+6. return several results in a list.
+7. return a summary data frame.
+8. create a vectorised classification function.
+9. create a function that modifies a data frame copy.
+10. use dynamic variable selection.
+11. pass arguments using `...`.
+12. write a function that calls another function.
+13. document a function.
+14. test typical, boundary, missing and invalid inputs.
+
+# 31. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. defines at least five custom functions;
+2. includes required and default arguments;
+3. demonstrates explicit and implicit returns;
+4. validates inputs;
+5. returns a list and a data frame;
+6. includes a vectorised function;
+7. includes a data-frame function;
+8. uses `...`;
+9. documents every function;
+10. tests representative and invalid inputs; and
+11. applies a function to supplied data.
+
+# 32. Completion checklist
+
+Confirm that you can:
+
+- define a function;
+- call a function;
+- use required and default arguments;
+- use named arguments;
+- return values;
+- use early return;
+- validate inputs;
+- return lists and data frames;
+- write vectorised functions;
+- write data-frame functions;
+- select variables dynamically;
+- use `...`;
+- distinguish return values and side effects;
+- use anonymous functions;
+- document functions; and
+- test functions systematically.
+
+# Lesson conclusion
+
+Functions convert repeated analytical logic into reusable, testable components.
+
+\[
+\boxed{
+\text{define purpose}
+\rightarrow
+\text{specify arguments}
+\rightarrow
+\text{validate}
+\rightarrow
+\text{compute}
+\rightarrow
+\text{return}
+\rightarrow
+\text{test}
+}
+\]

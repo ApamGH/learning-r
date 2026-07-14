@@ -1,0 +1,803 @@
+---
+title: "Lesson 33: Analysis of Variance and Post Hoc Comparisons"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Analysis of variance compares the means of three or more groups through a
+single inferential framework.
+
+Rather than conducting many separate t-tests, ANOVA partitions total variation
+into:
+
+- variation between groups; and
+- variation within groups.
+
+The F statistic compares these two sources of variation.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. explain the logic of one-way ANOVA;
+2. state ANOVA hypotheses;
+3. calculate group summaries;
+4. fit an ANOVA model with `aov()` and `lm()`;
+5. interpret the ANOVA table;
+6. assess assumptions;
+7. calculate effect sizes;
+8. conduct Tukey post hoc comparisons;
+9. perform planned contrasts;
+10. distinguish omnibus and pairwise tests;
+11. conduct Welch's ANOVA;
+12. create diagnostic plots;
+13. build reusable ANOVA reporting functions; and
+14. report results accurately.
+
+# 1. Importing data
+
+```{r import-anova-data}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+student_data$programme <- factor(
+  student_data$programme
+)
+```
+
+# 2. Research question
+
+Do mean final scores differ across programmes?
+
+The hypotheses are:
+
+\[
+H_0:
+\mu_1 =
+\mu_2 =
+\mu_3 =
+\cdots
+\]
+
+\[
+H_1:
+\text{At least one group mean differs.}
+\]
+
+# 3. Group summaries
+
+```{r anova-group-summary}
+aggregate(
+  final_score ~ programme,
+  data = student_data,
+  FUN = function(x) {
+    c(
+      n = length(x),
+      mean = mean(x),
+      sd = sd(x)
+    )
+  }
+)
+```
+
+# 4. Visual comparison
+
+```{r anova-boxplot}
+boxplot(
+  final_score ~ programme,
+  data = student_data,
+  main = "Final Scores by Programme",
+  xlab = "Programme",
+  ylab = "Final score",
+  las = 2
+)
+```
+
+# 5. Fitting one-way ANOVA
+
+```{r fit-one-way-anova}
+anova_model <- aov(
+  final_score ~ programme,
+  data = student_data
+)
+
+summary(
+  anova_model
+)
+```
+
+# 6. ANOVA through linear modelling
+
+```{r anova-lm-equivalent}
+linear_model <- lm(
+  final_score ~ programme,
+  data = student_data
+)
+
+anova(
+  linear_model
+)
+```
+
+# 7. ANOVA decomposition
+
+Total variation is divided into:
+
+\[
+SS_{\text{Total}}
+=
+SS_{\text{Between}}
++
+SS_{\text{Within}}.
+\]
+
+The F statistic is:
+
+\[
+F
+=
+\frac{
+MS_{\text{Between}}
+}{
+MS_{\text{Within}}
+}.
+\]
+
+# 8. Extracting the ANOVA table
+
+```{r extract-anova-table}
+anova_table <- summary(
+  anova_model
+)[[1]]
+
+anova_table
+```
+
+# 9. Manual F-ratio extraction
+
+```{r extract-anova-components}
+between_mean_square <-
+  anova_table[
+    "programme",
+    "Mean Sq"
+  ]
+
+within_mean_square <-
+  anova_table[
+    "Residuals",
+    "Mean Sq"
+  ]
+
+manual_f <-
+  between_mean_square /
+  within_mean_square
+
+manual_f
+```
+
+# 10. Assumption: independent observations
+
+Independence is primarily a design assumption. It cannot be verified by a
+single statistical test.
+
+Potential violations include:
+
+- repeated measures treated as independent;
+- clustered observations;
+- multiple records from the same respondent;
+- paired data analysed as separate groups.
+
+# 11. Assumption: normality of residuals
+
+```{r anova-residuals}
+anova_residuals <- residuals(
+  anova_model
+)
+
+hist(
+  anova_residuals,
+  main = "Distribution of ANOVA Residuals",
+  xlab = "Residual"
+)
+
+qqnorm(
+  anova_residuals,
+  main = "Q-Q Plot of ANOVA Residuals"
+)
+
+qqline(
+  anova_residuals
+)
+```
+
+# 12. Shapiro-Wilk test of residuals
+
+```{r anova-shapiro}
+shapiro.test(
+  anova_residuals
+)
+```
+
+Use this together with the Q-Q plot and sample size.
+
+# 13. Assumption: homogeneity of variances
+
+```{r bartlett-test}
+bartlett.test(
+  final_score ~ programme,
+  data = student_data
+)
+```
+
+Bartlett's test is sensitive to non-normality.
+
+# 14. Fligner-Killeen test
+
+```{r fligner-test}
+fligner.test(
+  final_score ~ programme,
+  data = student_data
+)
+```
+
+This is more robust to non-normality.
+
+# 15. Diagnostic plots
+
+```{r anova-diagnostic-plots}
+old_parameters <- par(
+  mfrow = c(
+    2,
+    2
+  )
+)
+
+plot(
+  anova_model
+)
+
+par(
+  old_parameters
+)
+```
+
+# 16. Eta squared
+
+\[
+\eta^2
+=
+\frac{
+SS_{\text{Between}}
+}{
+SS_{\text{Total}}
+}.
+\]
+
+```{r eta-squared}
+between_sum_squares <-
+  anova_table[
+    "programme",
+    "Sum Sq"
+  ]
+
+within_sum_squares <-
+  anova_table[
+    "Residuals",
+    "Sum Sq"
+  ]
+
+total_sum_squares <-
+  between_sum_squares +
+  within_sum_squares
+
+eta_squared <-
+  between_sum_squares /
+  total_sum_squares
+
+eta_squared
+```
+
+# 17. Omega squared
+
+\[
+\omega^2
+=
+\frac{
+SS_{\text{Between}}
+-
+df_{\text{Between}}
+MS_{\text{Within}}
+}{
+SS_{\text{Total}}
++
+MS_{\text{Within}}
+}.
+\]
+
+```{r omega-squared}
+between_df <-
+  anova_table[
+    "programme",
+    "Df"
+  ]
+
+omega_squared <- (
+  between_sum_squares -
+    between_df *
+    within_mean_square
+) / (
+  total_sum_squares +
+    within_mean_square
+)
+
+omega_squared
+```
+
+# 18. Tukey post hoc comparisons
+
+```{r tukey-post-hoc}
+tukey_results <- TukeyHSD(
+  anova_model
+)
+
+tukey_results
+```
+
+# 19. Plotting Tukey intervals
+
+```{r tukey-plot}
+plot(
+  tukey_results,
+  las = 1
+)
+```
+
+# 20. Extracting Tukey results
+
+```{r extract-tukey-results}
+tukey_table <- as.data.frame(
+  tukey_results$programme
+)
+
+tukey_table$comparison <-
+  rownames(
+    tukey_table
+  )
+
+rownames(
+  tukey_table
+) <- NULL
+
+tukey_table
+```
+
+# 21. Planned contrasts
+
+Suppose the planned comparison is Statistics versus the average of the other
+observed programmes.
+
+The number of contrast weights must equal the number of factor levels. The
+weights are therefore constructed dynamically rather than assuming a fixed
+number of programmes.
+
+```{r planned-contrast}
+student_data$programme_planned <- droplevels(
+  student_data$programme
+)
+
+programme_levels <- levels(
+  student_data$programme_planned
+)
+
+number_of_programmes <- length(
+  programme_levels
+)
+
+if (
+  number_of_programmes < 2L
+) {
+  stop(
+    "At least two programme levels are required.",
+    call. = FALSE
+  )
+}
+
+target_programme <- "Statistics"
+
+if (!target_programme %in% programme_levels) {
+  stop(
+    paste(
+      "The target programme",
+      shQuote(target_programme),
+      "is not present in the data."
+    ),
+    call. = FALSE
+  )
+}
+
+planned_weights <- rep(
+  -1,
+  number_of_programmes
+)
+
+names(
+  planned_weights
+) <- programme_levels
+
+planned_weights[
+  target_programme
+] <- number_of_programmes - 1
+
+planned_weights
+sum(
+  planned_weights
+)
+```
+
+Create a full contrast matrix with one row for every observed programme:
+
+```{r planned-contrast-matrix}
+contrast_matrix <- contr.helmert(
+  number_of_programmes
+)
+
+contrast_matrix[
+  ,
+  1
+] <- planned_weights
+
+rownames(
+  contrast_matrix
+) <- programme_levels
+
+contrast_matrix
+```
+
+Apply the matrix to a separate factor so the original programme coding remains
+unchanged:
+
+```{r apply-planned-contrast}
+contrasts(
+  student_data$programme_planned
+) <- contrast_matrix
+
+planned_model <- lm(
+  final_score ~ programme_planned,
+  data = student_data
+)
+
+summary(
+  planned_model
+)
+```
+
+The first coefficient for `programme_planned` represents the planned
+Statistics-versus-others comparison. The remaining columns complete the factor
+coding and keep the model full rank.
+
+# 22. Welch's ANOVA
+
+```{r welch-anova}
+oneway.test(
+  final_score ~ programme,
+  data = student_data,
+  var.equal = FALSE
+)
+```
+
+Welch's ANOVA is useful when group variances differ.
+
+# 23. Pairwise t-tests
+
+```{r pairwise-t-tests}
+pairwise.t.test(
+  student_data$final_score,
+  student_data$programme,
+  p.adjust.method = "holm",
+  pool.sd = FALSE
+)
+```
+
+Multiplicity adjustment is essential when performing several comparisons.
+
+# 24. Omnibus versus post hoc testing
+
+The omnibus ANOVA asks:
+
+> Is there evidence that at least one mean differs?
+
+Post hoc comparisons ask:
+
+> Which group pairs differ?
+
+A significant omnibus test does not identify the specific groups.
+
+# 25. Reusable ANOVA reporting function
+
+```{r anova-report-function}
+report_one_way_anova <- function(
+  data,
+  outcome,
+  group
+) {
+  required <- c(
+    outcome,
+    group
+  )
+
+  if (!all(
+    required %in%
+      names(data)
+  )) {
+    stop(
+      "Required variables are missing.",
+      call. = FALSE
+    )
+  }
+
+  formula_object <- reformulate(
+    group,
+    response = outcome
+  )
+
+  model <- aov(
+    formula_object,
+    data = data
+  )
+
+  table_result <- summary(
+    model
+  )[[1]]
+
+  between_ss <-
+    table_result[
+      1,
+      "Sum Sq"
+    ]
+
+  residual_ss <-
+    table_result[
+      2,
+      "Sum Sq"
+    ]
+
+  total_ss <-
+    between_ss +
+    residual_ss
+
+  data.frame(
+    outcome = outcome,
+    group = group,
+    df_between =
+      table_result[
+        1,
+        "Df"
+      ],
+    df_within =
+      table_result[
+        2,
+        "Df"
+      ],
+    f =
+      table_result[
+        1,
+        "F value"
+      ],
+    p_value =
+      table_result[
+        1,
+        "Pr(>F)"
+      ],
+    eta_squared =
+      between_ss /
+      total_ss,
+    stringsAsFactors = FALSE
+  )
+}
+
+report_one_way_anova(
+  student_data,
+  "final_score",
+  "programme"
+)
+```
+
+# 26. Reusable group summary function
+
+```{r anova-group-summary-function}
+create_anova_group_summary <- function(
+  data,
+  outcome,
+  group
+) {
+  groups <- split(
+    data[[
+      outcome
+    ]],
+    data[[
+      group
+    ]]
+  )
+
+  results <- lapply(
+    names(groups),
+    function(group_name) {
+      x <- groups[[
+        group_name
+      ]]
+
+      data.frame(
+        group = group_name,
+        n = sum(
+          !is.na(x)
+        ),
+        mean = mean(
+          x,
+          na.rm = TRUE
+        ),
+        standard_deviation = sd(
+          x,
+          na.rm = TRUE
+        ),
+        stringsAsFactors = FALSE
+      )
+    }
+  )
+
+  result <- do.call(
+    rbind,
+    results
+  )
+
+  names(result)[1] <- group
+
+  result
+}
+
+create_anova_group_summary(
+  student_data,
+  "final_score",
+  "programme"
+)
+```
+
+# 27. Reporting template
+
+A complete report includes:
+
+- group sample sizes;
+- group means and standard deviations;
+- F statistic;
+- degrees of freedom;
+- p-value;
+- effect size;
+- post hoc results;
+- and assumption checks.
+
+# 28. Common mistakes
+
+- conducting multiple unadjusted t-tests;
+- interpreting a significant F test as proof that every group differs;
+- ignoring group sample sizes;
+- using pooled ANOVA under severe variance inequality;
+- testing normality of the raw outcome instead of residuals;
+- relying only on Bartlett's test;
+- omitting effect sizes;
+- conducting post hoc tests without a clear purpose;
+- confusing planned contrasts and post hoc tests;
+- ignoring dependence in repeated observations.
+
+# 29. Independent exercises
+
+1. state ANOVA hypotheses.
+2. create group summaries.
+3. fit an ANOVA model.
+4. extract the ANOVA table.
+5. calculate the F ratio manually.
+6. inspect residual assumptions.
+7. test variance homogeneity.
+8. calculate eta squared and omega squared.
+9. conduct Tukey comparisons.
+10. conduct adjusted pairwise t-tests.
+11. conduct Welch's ANOVA.
+12. create a planned contrast.
+13. create reusable reporting functions.
+14. write a complete interpretation.
+
+# 30. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. states the research question and hypotheses;
+2. reports group summaries;
+3. fits a one-way ANOVA;
+4. assesses residual and variance assumptions;
+5. calculates effect sizes;
+6. conducts Tukey post hoc comparisons;
+7. compares classical and Welch ANOVA;
+8. includes one planned contrast;
+9. uses reusable functions; and
+10. reports the findings accurately.
+
+# 31. Completion checklist
+
+Confirm that you can:
+
+- explain ANOVA logic;
+- state hypotheses;
+- fit one-way ANOVA;
+- interpret an ANOVA table;
+- inspect residuals;
+- test homogeneity;
+- calculate eta squared;
+- calculate omega squared;
+- conduct Tukey comparisons;
+- conduct Welch's ANOVA;
+- use planned contrasts; and
+- report ANOVA results.
+
+# Lesson conclusion
+
+ANOVA provides an omnibus test of mean differences across several groups.
+Complete analysis combines group summaries, diagnostic checks, effect sizes and
+appropriate follow-up comparisons.
+
+\[
+\boxed{
+\text{group summaries}
+\rightarrow
+\text{ANOVA}
+\rightarrow
+\text{diagnostics}
+\rightarrow
+\text{effect size}
+\rightarrow
+\text{post hoc interpretation}
+}
+\]

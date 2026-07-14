@@ -1,0 +1,947 @@
+---
+title: "Learning R"
+subtitle: "From First Principles to Advanced Statistical Computing"
+author: "Benjamin Apam (PhD)"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+documentclass: book
+classoption:
+  - openany
+fontsize: 11pt
+geometry:
+  - margin=1in
+lang: en-GB
+output:
+  pdf_document:
+    latex_engine: xelatex
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    keep_tex: true
+    fig_caption: true
+    highlight: tango
+header-includes:
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{array}
+  - \usepackage{float}
+  - \usepackage{caption}
+  - \usepackage{setspace}
+  - \usepackage{fancyhdr}
+  - \usepackage{titlesec}
+  - \usepackage{xcolor}
+  - \usepackage{hyperref}
+  - \hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue}
+  - \setstretch{1.15}
+  - \pagestyle{fancy}
+  - \fancyhf{}
+  - \fancyhead[LE,RO]{Learning R}
+  - \fancyhead[RE,LO]{\leftmark}
+  - \fancyfoot[C]{\thepage}
+  - \setlength{\headheight}{14pt}
+  - \setcounter{secnumdepth}{3}
+  - \setcounter{tocdepth}{2}
+---
+
+```{r book-setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90,
+  encoding = "UTF-8"
+)
+
+Sys.setenv(
+  LANG = "en_US.UTF-8",
+  LC_ALL = "en_US.UTF-8"
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5,
+  fig.pos = "H"
+)
+
+# Permit the master document to handle labels after prefixing them.
+options(
+  knitr.duplicate.label = "allow"
+)
+
+lesson_files <- c(
+  "00-before-you-start.Rmd",
+  "01-understanding-r.Rmd",
+  "02-setting-up-r.Rmd",
+  "03-first-r-session.Rmd",
+  "04-objects-and-assignment.Rmd",
+  "05-data-types.Rmd",
+  "06-vectors.Rmd",
+  "07-matrices-and-arrays.Rmd",
+  "08-lists-data-frames-and-tibbles.Rmd",
+  "09-indexing-and-subsetting.Rmd",
+  "10-operators-and-logical-conditions.Rmd",
+  "11-conditional-execution.Rmd",
+  "12-loops-and-repetition.Rmd",
+  "13-writing-functions.Rmd",
+  "14-function-scope-and-environments.Rmd",
+  "15-importing-delimited-files.Rmd",
+  "16-importing-excel-spss-stata-sas.Rmd",
+  "17-data-inspection-and-validation.Rmd",
+  "18-missing-values-and-incomplete-data.Rmd",
+  "19-character-data-and-regular-expressions.Rmd",
+  "20-dates-times-and-durations.Rmd",
+  "21-factors-and-categorical-data.Rmd",
+  "22-sorting-filtering-and-recoding.Rmd",
+  "23-combining-joining-and-reshaping-data.Rmd",
+  "24-descriptive-statistics.Rmd",
+  "25-frequency-tables-and-grouped-summaries.Rmd",
+  "26-base-r-data-visualisation.Rmd",
+  "27-ggplot2-data-visualisation.Rmd",
+  "28-exploratory-data-analysis.Rmd",
+  "29-correlation-and-visual-association.Rmd",
+  "30-sampling-distributions-and-standard-errors.Rmd",
+  "31-confidence-intervals-and-estimation.Rmd",
+  "32-hypothesis-testing-and-t-tests.Rmd",
+  "33-analysis-of-variance-and-post-hoc-tests.Rmd",
+  "34-chi-square-tests-for-categorical-data.Rmd",
+  "35-non-parametric-and-rank-based-tests.Rmd",
+  "36-simple-linear-regression.Rmd",
+  "37-multiple-linear-regression.Rmd",
+  "38-regression-diagnostics-and-validation.Rmd",
+  "39-reproducible-analysis-and-version-control.Rmd",
+  "40-integrated-capstone-analysis.Rmd"
+)
+
+include_solutions <- TRUE
+
+# Keep FALSE for the book build. When FALSE, solution scripts are displayed
+# as syntax-highlighted R code but are not executed.
+evaluate_solutions <- TRUE
+
+solution_files <- c(
+  "01" = file.path(
+    "solutions",
+    "01-understanding-r-solutions.R"
+  ),
+  "02" = file.path(
+    "solutions",
+    "02-setting-up-r-solutions.R"
+  ),
+  "03" = file.path(
+    "solutions",
+    "03-first-r-session-solutions.R"
+  ),
+  "04" = file.path(
+    "solutions",
+    "04-objects-and-assignment-solutions.R"
+  ),
+  "05" = file.path(
+    "solutions",
+    "05-data-types-solutions.R"
+  ),
+  "06" = file.path(
+    "solutions",
+    "06-vectors-solutions.R"
+  ),
+  "07" = file.path(
+    "solutions",
+    "07-matrices-and-arrays-solutions.R"
+  ),
+  "08" = file.path(
+    "solutions",
+    "08-lists-data-frames-and-tibbles-solutions.R"
+  ),
+  "09" = file.path(
+    "solutions",
+    "09-indexing-and-subsetting-solutions.R"
+  ),
+  "10" = file.path(
+    "solutions",
+    "10-operators-and-logical-conditions-solutions.R"
+  ),
+  "11" = file.path(
+    "solutions",
+    "11-conditional-execution-solutions.R"
+  ),
+  "12" = file.path(
+    "solutions",
+    "12-loops-and-repetition-solutions.R"
+  ),
+  "13" = file.path(
+    "solutions",
+    "13-writing-functions-solutions.R"
+  ),
+  "14" = file.path(
+    "solutions",
+    "14-function-scope-and-environments-solutions.R"
+  ),
+  "15" = file.path(
+    "solutions",
+    "15-importing-delimited-files-solutions.R"
+  ),
+  "16" = file.path(
+    "solutions",
+    "16-importing-excel-spss-stata-sas-solutions.R"
+  ),
+  "17" = file.path(
+    "solutions",
+    "17-data-inspection-and-validation-solutions.R"
+  ),
+  "18" = file.path(
+    "solutions",
+    "18-missing-values-and-incomplete-data-solutions.R"
+  ),
+  "19" = file.path(
+    "solutions",
+    "19-character-data-and-regular-expressions-solutions.R"
+  ),
+  "20" = file.path(
+    "solutions",
+    "20-dates-times-and-durations-solutions.R"
+  ),
+  "21" = file.path(
+    "solutions",
+    "21-factors-and-categorical-data-solutions.R"
+  ),
+  "22" = file.path(
+    "solutions",
+    "22-sorting-filtering-and-recoding-solutions.R"
+  ),
+  "23" = file.path(
+    "solutions",
+    "23-combining-joining-and-reshaping-data-solutions.R"
+  ),
+  "24" = file.path(
+    "solutions",
+    "24-descriptive-statistics-solutions.R"
+  ),
+  "25" = file.path(
+    "solutions",
+    "25-frequency-tables-and-grouped-summaries-solutions.R"
+  ),
+  "26" = file.path(
+    "solutions",
+    "26-base-r-data-visualisation-solutions.R"
+  ),
+  "27" = file.path(
+    "solutions",
+    "27-ggplot2-data-visualisation-solutions.R"
+  ),
+  "28" = file.path(
+    "solutions",
+    "28-exploratory-data-analysis-solutions.R"
+  ),
+  "29" = file.path(
+    "solutions",
+    "29-correlation-and-visual-association-solutions.R"
+  ),
+  "30" = file.path(
+    "solutions",
+    "30-sampling-distributions-and-standard-errors-solutions.R"
+  ),
+  "31" = file.path(
+    "solutions",
+    "31-confidence-intervals-and-estimation-solutions.R"
+  ),
+  "32" = file.path(
+    "solutions",
+    "32-hypothesis-testing-and-t-tests-solutions.R"
+  ),
+  "33" = file.path(
+    "solutions",
+    "33-analysis-of-variance-and-post-hoc-tests-solutions.R"
+  ),
+  "34" = file.path(
+    "solutions",
+    "34-chi-square-tests-for-categorical-data-solutions.R"
+  ),
+  "35" = file.path(
+    "solutions",
+    "35-non-parametric-and-rank-based-tests-solutions.R"
+  ),
+  "36" = file.path(
+    "solutions",
+    "36-simple-linear-regression-solutions.R"
+  ),
+  "37" = file.path(
+    "solutions",
+    "37-multiple-linear-regression-solutions.R"
+  ),
+  "38" = file.path(
+    "solutions",
+    "38-regression-diagnostics-and-validation-solutions.R"
+  ),
+  "39" = file.path(
+    "solutions",
+    "39-reproducible-analysis-and-version-control-solutions.R"
+  ),
+  "40" = file.path(
+    "solutions",
+    "40-integrated-capstone-analysis-solutions.R"
+  )
+)
+
+if (include_solutions) {
+  missing_solutions <- solution_files[
+    !file.exists(
+      solution_files
+    )
+  ]
+
+  if (length(missing_solutions) > 0L) {
+    stop(
+      paste0(
+        "The following solution files are missing:\n",
+        paste(
+          missing_solutions,
+          collapse = "\n"
+        )
+      ),
+      call. = FALSE
+    )
+  }
+}
+
+
+missing_lessons <- lesson_files[
+  !file.exists(
+    lesson_files
+  )
+]
+
+if (length(missing_lessons) > 0L) {
+  stop(
+    paste0(
+      "The following lesson files are missing from the project root:\n",
+      paste(
+        missing_lessons,
+        collapse = "\n"
+      )
+    ),
+    call. = FALSE
+  )
+}
+
+if (!dir.exists("data")) {
+  stop(
+    "The `data/` directory is missing from the project root.",
+    call. = FALSE
+  )
+}
+
+extract_yaml_title <- function(
+  lines,
+  fallback
+) {
+  title_line <- grep(
+    "^title:[[:space:]]*",
+    lines,
+    value = TRUE
+  )
+
+  if (length(title_line) == 0L) {
+    return(fallback)
+  }
+
+  title <- sub(
+    "^title:[[:space:]]*",
+    "",
+    title_line[1]
+  )
+
+  title <- sub(
+    '^"(.*)"$',
+    "\\1",
+    title
+  )
+
+  title <- sub(
+    "^'(.*)'$",
+    "\\1",
+    title
+  )
+
+  title
+}
+
+remove_yaml_header <- function(
+  lines
+) {
+  if (
+    length(lines) >= 3L &&
+    trimws(lines[1]) == "---"
+  ) {
+    closing_positions <- which(
+      trimws(lines) == "---"
+    )
+
+    if (length(closing_positions) >= 2L) {
+      closing <- closing_positions[2]
+
+      if (closing < length(lines)) {
+        return(
+          lines[
+            seq.int(
+              closing + 1L,
+              length(lines)
+            )
+          ]
+        )
+      }
+
+      return(character(0))
+    }
+  }
+
+  lines
+}
+
+remove_setup_chunk <- function(
+  lines
+) {
+  output_lines <- character(0)
+  inside_removed_chunk <- FALSE
+
+  for (line in lines) {
+    if (!inside_removed_chunk) {
+      is_setup_header <- grepl(
+        "^```\\{r[[:space:]]+setup([,}[:space:]])",
+        line
+      )
+
+      if (is_setup_header) {
+        inside_removed_chunk <- TRUE
+      } else {
+        output_lines <- c(
+          output_lines,
+          line
+        )
+      }
+    } else if (trimws(line) == "```") {
+      inside_removed_chunk <- FALSE
+    }
+  }
+
+  output_lines
+}
+
+prefix_chunk_labels <- function(
+  lines,
+  prefix
+) {
+  vapply(
+    lines,
+    function(line) {
+      if (!grepl(
+        "^```\\{r",
+        line
+      )) {
+        return(line)
+      }
+
+      # An unnamed chunk starts with ```{r} or ```{r, ...}.
+      if (grepl(
+        "^```\\{r[},]",
+        line
+      )) {
+        return(line)
+      }
+
+      sub(
+        "^```\\{r[[:space:]]+([^,}[:space:]]+)",
+        paste0(
+          "```{r ",
+          prefix,
+          "-\\1"
+        ),
+        line
+      )
+    },
+    FUN.VALUE = character(1),
+    USE.NAMES = FALSE
+  )
+}
+
+demote_markdown_headings <- function(
+  lines
+) {
+  output_lines <- character(
+    length(lines)
+  )
+
+  inside_fence <- FALSE
+  fence_marker <- NULL
+
+  for (index in seq_along(lines)) {
+    line <- lines[index]
+    trimmed <- trimws(line)
+
+    if (grepl(
+      "^(```|~~~)",
+      trimmed
+    )) {
+      marker <- substr(
+        trimmed,
+        1,
+        3
+      )
+
+      if (!inside_fence) {
+        inside_fence <- TRUE
+        fence_marker <- marker
+      } else if (marker == fence_marker) {
+        inside_fence <- FALSE
+        fence_marker <- NULL
+      }
+
+      output_lines[index] <- line
+      next
+    }
+
+    if (
+      !inside_fence &&
+      grepl(
+        "^#{1,5}[[:space:]]",
+        line
+      )
+    ) {
+      output_lines[index] <- paste0(
+        "#",
+        line
+      )
+    } else {
+      output_lines[index] <- line
+    }
+  }
+
+  output_lines
+}
+
+
+normalise_utf8 <- function(
+  lines
+) {
+  converted <- iconv(
+    lines,
+    from = "",
+    to = "UTF-8",
+    sub = ""
+  )
+
+  converted[
+    is.na(converted)
+  ] <- ""
+
+  converted
+}
+
+disable_environment_check_chunks <- function(
+  lines
+) {
+  environment_check_labels <- c(
+    "check-pandoc",
+    "check-pandoc-available",
+    "check-xelatex",
+    "check-r-version",
+    "session-information"
+  )
+
+  vapply(
+    lines,
+    function(line) {
+      if (!grepl(
+        "^```\\{r",
+        line
+      )) {
+        return(line)
+      }
+
+      matching_label <- environment_check_labels[
+        vapply(
+          environment_check_labels,
+          function(label) {
+            grepl(
+              paste0(
+                "^```\\{r[[:space:]]+",
+                label,
+                "([,}[:space:]])"
+              ),
+              line
+            )
+          },
+          FUN.VALUE = logical(1)
+        )
+      ]
+
+      if (
+        length(matching_label) == 0L ||
+        grepl(
+          "(^|[,[:space:]])eval[[:space:]]*=",
+          line
+        )
+      ) {
+        return(line)
+      }
+
+      sub(
+        "\\}[[:space:]]*$",
+        ", eval=FALSE}",
+        line
+      )
+    },
+    FUN.VALUE = character(1),
+    USE.NAMES = FALSE
+  )
+}
+
+prepare_lesson <- function(
+  file_path,
+  lesson_prefix
+) {
+  original_lines <- readLines(
+    file_path,
+    warn = FALSE,
+    encoding = "UTF-8",
+    skipNul = TRUE
+  )
+
+  original_lines <- normalise_utf8(
+    original_lines
+  )
+
+  title <- extract_yaml_title(
+    original_lines,
+    fallback = tools::file_path_sans_ext(
+      basename(file_path)
+    )
+  )
+
+  body_lines <- remove_yaml_header(
+    original_lines
+  )
+
+  body_lines <- remove_setup_chunk(
+    body_lines
+  )
+
+  body_lines <- disable_environment_check_chunks(
+    body_lines
+  )
+
+  body_lines <- prefix_chunk_labels(
+    body_lines,
+    lesson_prefix
+  )
+
+  body_lines <- demote_markdown_headings(
+    body_lines
+  )
+
+  # Remove excessive blank lines at the beginning and end.
+  while (
+    length(body_lines) > 0L &&
+    trimws(body_lines[1]) == ""
+  ) {
+    body_lines <- body_lines[-1]
+  }
+
+  while (
+    length(body_lines) > 0L &&
+    trimws(
+      body_lines[
+        length(body_lines)
+      ]
+    ) == ""
+  ) {
+    body_lines <- body_lines[
+      -length(body_lines)
+    ]
+  }
+
+  list(
+    title = title,
+    body = body_lines
+  )
+}
+
+
+escape_code_fence <- function(
+  lines
+) {
+  # A four-backtick outer fence safely contains ordinary three-backtick text.
+  c(
+    "````r",
+    lines,
+    "````"
+  )
+}
+
+prepare_solution <- function(
+  file_path
+) {
+  solution_lines <- readLines(
+    file_path,
+    warn = FALSE,
+    encoding = "UTF-8",
+    skipNul = TRUE
+  )
+
+  solution_lines <- normalise_utf8(
+    solution_lines
+  )
+
+  while (
+    length(solution_lines) > 0L &&
+    trimws(solution_lines[1]) == ""
+  ) {
+    solution_lines <- solution_lines[-1]
+  }
+
+  while (
+    length(solution_lines) > 0L &&
+    trimws(
+      solution_lines[
+        length(solution_lines)
+      ]
+    ) == ""
+  ) {
+    solution_lines <- solution_lines[
+      -length(solution_lines)
+    ]
+  }
+
+  solution_lines
+}
+
+render_solution <- function(
+  solution_file,
+  lesson_number,
+  lines_per_block = 60L
+) {
+  if (!file.exists(
+    solution_file
+  )) {
+    stop(
+      paste(
+        "Solution file not found:",
+        solution_file
+      ),
+      call. = FALSE
+    )
+  }
+
+  solution_lines <- readLines(
+    solution_file,
+    warn = FALSE,
+    encoding = "UTF-8",
+    skipNul = TRUE
+  )
+
+  solution_lines <- iconv(
+    solution_lines,
+    from = "",
+    to = "UTF-8",
+    sub = ""
+  )
+
+  solution_lines[
+    is.na(
+      solution_lines
+    )
+  ] <- ""
+
+  cat(
+    "\n\n## Suggested Solutions {-}\n\n"
+  )
+
+  cat(
+    "> Attempt the lesson exercises before consulting these suggested ",
+    "solutions. Alternative correct approaches are possible.\n\n",
+    sep = ""
+  )
+
+  if (
+    length(
+      solution_lines
+    ) == 0L
+  ) {
+    cat(
+      "_No solution code was found in this file._\n\n"
+    )
+
+    return(
+      invisible(NULL)
+    )
+  }
+
+  block_number <- ceiling(
+    seq_along(
+      solution_lines
+    ) /
+      lines_per_block
+  )
+
+  solution_blocks <- split(
+    solution_lines,
+    block_number
+  )
+
+  total_blocks <- length(
+    solution_blocks
+  )
+
+  for (current_block in seq_along(
+    solution_blocks
+  )) {
+    cat(
+      "```r\n"
+    )
+
+    cat(
+      paste(
+        solution_blocks[[
+          current_block
+        ]],
+        collapse = "\n"
+      )
+    )
+
+    cat(
+      "\n```\n\n"
+    )
+
+    if (
+      current_block <
+        total_blocks
+    ) {
+      cat(
+        "<!-- Solution code continues -->\n\n"
+      )
+    }
+  }
+
+  invisible(NULL)
+}
+
+part_titles <- c(
+  "01" = "R Foundations",
+  "09" = "Accessing and Controlling Data",
+  "15" = "Importing, Cleaning and Transforming Data",
+  "24" = "Descriptive Analysis and Data Visualisation",
+  "30" = "Statistical Inference and Hypothesis Testing",
+  "36" = "Regression Modelling and Reproducible Statistical Workflows"
+)
+```
+
+# Preface {-}
+
+This book combines the complete **Learning R** core course into one
+reproducible document. It contains a preparatory chapter and 40 progressively
+structured lessons, beginning with the foundations of R and ending with
+regression modelling, reproducibility and an integrated capstone analysis.
+
+The individual lesson files remain the authoritative source documents. This
+master file reads them in numerical order, removes their separate document
+headers, gives every code chunk a unique book-level label and compiles the
+content into one PDF.
+
+When `include_solutions` is set to `TRUE`, the corresponding solution script is
+placed after each lesson. By default, solutions are printed as
+syntax-highlighted R code without being executed during the book build.
+
+\newpage
+
+```{r assemble-book, results='asis', echo=FALSE}
+for (lesson_file in lesson_files) {
+  lesson_number <- substr(
+    basename(lesson_file),
+    1,
+    2
+  )
+
+  if (
+    lesson_number %in%
+      names(
+        part_titles
+      )
+  ) {
+    cat(
+      "\n\n\\part{",
+      part_titles[
+        lesson_number
+      ],
+      "}\n\n",
+      sep = ""
+    )
+  }
+
+  prepared <- prepare_lesson(
+    lesson_file,
+    lesson_prefix = paste0(
+      "lesson",
+      lesson_number
+    )
+  )
+
+  if (
+    lesson_number == "00"
+  ) {
+    cat(
+      "\n\n# ",
+      prepared$title,
+      " {-}\n\n",
+      sep = ""
+    )
+  } else {
+    cat(
+      "\n\n# ",
+      prepared$title,
+      "\n\n",
+      sep = ""
+    )
+  }
+
+  lesson_environment <- new.env(
+    parent = globalenv()
+  )
+
+  knitted_lesson <- knitr::knit_child(
+    text = prepared$body,
+    envir = lesson_environment,
+    quiet = TRUE,
+    encoding = "UTF-8"
+  )
+
+  cat(
+    paste(
+      knitted_lesson,
+      collapse = "\n"
+    )
+  )
+
+  if (
+    include_solutions &&
+    lesson_number != "00"
+  ) {
+    render_solution(
+      solution_file =
+        solution_files[
+          lesson_number
+        ],
+      lesson_number =
+        lesson_number
+    )
+  }
+
+  cat(
+    "\n\n\\clearpage\n\n"
+  )
+}
+```

@@ -1,0 +1,919 @@
+---
+title: "Lesson 5: Atomic Data Types and Special Values"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(digits = 4, scipen = 999, width = 90)
+set.seed(20260713)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Every value stored in R has an underlying type. The type determines what the
+value means, how it is stored and which operations are valid. A number can be
+added, text can be joined, and a logical value can be used in a condition.
+However, applying a numerical function to text usually fails because the
+operation is incompatible with the object's type.
+
+This lesson introduces R's atomic data types and the special values that appear
+in real datasets. Particular attention is given to:
+
+- doubles and integers;
+- character values;
+- logical values;
+- complex values;
+- raw values;
+- missing values;
+- infinite values;
+- undefined numerical results;
+- type testing;
+- coercion; and
+- explicit conversion.
+
+The aim is to develop the habit of checking data types before analysis.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. explain the meaning of an atomic data type;
+2. distinguish double and integer storage;
+3. create character and logical values correctly;
+4. identify complex and raw values;
+5. use `typeof()`, `class()` and type-testing functions;
+6. explain implicit coercion;
+7. convert values explicitly;
+8. recognise invalid conversions;
+9. distinguish `NA`, `NaN`, `Inf`, `-Inf` and `NULL`;
+10. test for missing, finite and infinite values;
+11. explain typed missing values;
+12. handle missing values in summaries;
+13. identify type problems in imported data; and
+14. validate variables before analysis.
+
+# 1. Atomic values
+
+An atomic value is one of the simplest values R can store. Atomic vectors
+contain values that share one common atomic type.
+
+The principal atomic types are:
+
+- logical;
+- integer;
+- double;
+- complex;
+- character; and
+- raw.
+
+In ordinary statistical work, logical, integer, double and character values are
+encountered most often.
+
+# 2. Double values
+
+R normally stores ordinary decimal numbers as doubles.
+
+```{r double-value}
+x <- 25
+typeof(x)
+class(x)
+```
+
+Although `25` looks like a whole number, its internal type is usually
+`double`.
+
+```{r decimal-double}
+temperature_celsius <- 31.7
+typeof(temperature_celsius)
+```
+
+Doubles can represent:
+
+- whole-looking values;
+- decimals;
+- very large values;
+- very small values; and
+- scientific notation.
+
+```{r scientific-notation}
+large_value <- 1.5e6
+small_value <- 2.5e-4
+
+large_value
+small_value
+```
+
+# 3. Integer values
+
+Append `L` to create an integer literal.
+
+```{r integer-value}
+student_count <- 120L
+typeof(student_count)
+class(student_count)
+```
+
+The `L` tells R to store the value as an integer.
+
+```{r integer-versus-double}
+double_count <- 120
+integer_count <- 120L
+
+typeof(double_count)
+typeof(integer_count)
+```
+
+The values are numerically equal:
+
+```{r integer-double-equality}
+double_count == integer_count
+```
+
+Their storage types differ.
+
+## 3.1 Why integers matter
+
+Integers are appropriate for counts such as:
+
+- number of students;
+- number of farms;
+- number of visits;
+- number of items; and
+- number of completed tasks.
+
+However, R frequently converts integers to doubles during calculations.
+
+```{r integer-arithmetic}
+integer_count / 3L
+typeof(integer_count / 3L)
+```
+
+# 4. Character values
+
+Character values represent text.
+
+```{r character-values}
+student_name <- "Abena"
+programme_name <- "Applied Statistics"
+
+typeof(student_name)
+class(programme_name)
+```
+
+Text must be enclosed in quotation marks.
+
+```{r quotation-marks}
+single_quotes <- 'R programming'
+double_quotes <- "R programming"
+
+single_quotes == double_quotes
+```
+
+Both forms create character values.
+
+## 4.1 Numbers stored as text
+
+```{r numeric-looking-character}
+student_id <- "00125"
+typeof(student_id)
+```
+
+The leading zeros are preserved because the identifier is stored as text.
+
+Student identifiers, telephone numbers and codes should often be character
+rather than numeric because arithmetic is not meaningful for them.
+
+# 5. Logical values
+
+Logical values are:
+
+```text
+TRUE
+FALSE
+```
+
+```{r logical-values}
+is_registered <- TRUE
+has_completed <- FALSE
+
+typeof(is_registered)
+class(has_completed)
+```
+
+Logical values are produced by comparisons.
+
+```{r comparison-produces-logical}
+score <- 68
+score >= 50
+```
+
+## 5.1 Logical values in arithmetic
+
+```{r logical-arithmetic}
+sum(c(TRUE, FALSE, TRUE, TRUE))
+mean(c(TRUE, FALSE, TRUE, TRUE))
+```
+
+R treats:
+
+\[
+TRUE=1,\qquad FALSE=0.
+\]
+
+This makes logical vectors useful for counts and proportions.
+
+# 6. Complex values
+
+Complex numbers contain real and imaginary components.
+
+```{r complex-value}
+z <- 3 + 4i
+typeof(z)
+class(z)
+```
+
+Inspect components:
+
+```{r complex-components}
+Re(z)
+Im(z)
+Mod(z)
+Arg(z)
+```
+
+Complex numbers are important in some areas of engineering, signal processing
+and advanced mathematics, but they are less common in introductory applied
+statistics.
+
+# 7. Raw values
+
+Raw values store bytes.
+
+```{r raw-value}
+raw_example <- charToRaw("R")
+raw_example
+typeof(raw_example)
+```
+
+Convert back:
+
+```{r raw-to-character}
+rawToChar(raw_example)
+```
+
+Raw values are relevant when handling binary files, encodings and low-level
+data transfer.
+
+# 8. Inspecting types
+
+## 8.1 `typeof()`
+
+```{r typeof-examples}
+typeof(25)
+typeof(25L)
+typeof("25")
+typeof(TRUE)
+typeof(3 + 2i)
+```
+
+## 8.2 `class()`
+
+```{r class-examples}
+class(25)
+class(25L)
+class("25")
+class(TRUE)
+```
+
+For simple atomic values, `class()` often resembles the conceptual data class,
+while `typeof()` reports internal storage.
+
+## 8.3 `mode()` and `storage.mode()`
+
+```{r mode-storage-mode}
+mode(25)
+storage.mode(25)
+```
+
+These functions exist for historical and technical reasons. For most learning
+tasks, `typeof()` and `class()` are clearer.
+
+# 9. Type-testing functions
+
+```{r type-tests}
+is.numeric(25)
+is.integer(25L)
+is.double(25)
+is.character("25")
+is.logical(TRUE)
+is.complex(3 + 2i)
+is.raw(charToRaw("R"))
+```
+
+## 9.1 Numeric is broader than double
+
+```{r numeric-broader}
+is.numeric(25)
+is.numeric(25L)
+```
+
+Both doubles and integers are considered numeric.
+
+# 10. Implicit coercion
+
+Atomic vectors must use one common type. When values of different types are
+combined, R finds a compatible type.
+
+A simplified coercion hierarchy is:
+
+\[
+logical
+\rightarrow
+integer
+\rightarrow
+double
+\rightarrow
+complex
+\rightarrow
+character.
+\]
+
+## 10.1 Logical and integer
+
+```{r coercion-logical-integer}
+x <- c(TRUE, FALSE, 3L)
+x
+typeof(x)
+```
+
+Logical values become integers.
+
+## 10.2 Integer and double
+
+```{r coercion-integer-double}
+x <- c(1L, 2.5)
+x
+typeof(x)
+```
+
+Integers become doubles.
+
+## 10.3 Numeric and character
+
+```{r coercion-numeric-character}
+x <- c(10, 20, "Thirty")
+x
+typeof(x)
+```
+
+Everything becomes character.
+
+## 10.4 Why coercion matters
+
+```{r coercion-summary-warning, warning=TRUE}
+mean(x)
+```
+
+A numerical summary fails because the vector is character.
+
+# 11. Explicit conversion
+
+Use conversion functions when the intended type is known.
+
+## 11.1 To numeric
+
+```{r convert-to-numeric}
+x <- c("10", "20", "30")
+as.numeric(x)
+```
+
+## 11.2 Invalid numeric conversion
+
+```{r invalid-numeric-conversion, warning=TRUE}
+as.numeric(c("10", "Twenty", "30"))
+```
+
+The invalid value becomes `NA`.
+
+## 11.3 To integer
+
+```{r convert-to-integer}
+as.integer(c(3.8, 4.2, -2.9))
+```
+
+The decimal part is truncated rather than conventionally rounded.
+
+## 11.4 To character
+
+```{r convert-to-character}
+as.character(c(10, 20, 30))
+```
+
+## 11.5 To logical
+
+```{r convert-to-logical}
+as.logical(c(0, 1, 2, -4))
+```
+
+Zero becomes `FALSE`; non-zero values become `TRUE`.
+
+# 12. Missing values
+
+R represents missing values with `NA`.
+
+```{r missing-value}
+score <- NA
+score
+```
+
+A missing value is not the same as zero.
+
+```{r missing-versus-zero}
+is.na(NA)
+is.na(0)
+```
+
+## 12.1 Typed missing values
+
+```{r typed-missing-values}
+typeof(NA)
+typeof(NA_integer_)
+typeof(NA_real_)
+typeof(NA_character_)
+typeof(NA_complex_)
+```
+
+Typed missing values are useful in advanced programming and function design.
+
+# 13. Detecting missing values
+
+```{r detect-missing}
+scores <- c(65, NA, 72, 81, NA)
+
+is.na(scores)
+sum(is.na(scores))
+anyNA(scores)
+which(is.na(scores))
+```
+
+## 13.1 Why `x == NA` is incorrect
+
+```{r compare-with-na}
+scores == NA
+```
+
+Use:
+
+```{r correct-na-test}
+is.na(scores)
+```
+
+A missing value has unknown content, so ordinary equality cannot determine
+whether it equals something.
+
+# 14. Missing values in summaries
+
+```{r summary-with-missing}
+mean(scores)
+sum(scores)
+```
+
+By default, missingness propagates.
+
+```{r remove-missing-summary}
+mean(scores, na.rm = TRUE)
+sum(scores, na.rm = TRUE)
+```
+
+The argument `na.rm = TRUE` removes missing values only for that calculation.
+
+## 14.1 Observed sample size
+
+```{r observed-sample-size}
+sum(!is.na(scores))
+```
+
+This count should often be reported because the effective sample size may differ
+from the total vector length.
+
+# 15. Infinite values
+
+```{r positive-infinity}
+1 / 0
+```
+
+```{r negative-infinity}
+-1 / 0
+```
+
+Test:
+
+```{r test-infinite}
+is.infinite(c(1, Inf, -Inf))
+```
+
+# 16. Undefined numerical values
+
+```{r nan-value}
+0 / 0
+```
+
+The result is `NaN`, meaning “not a number”.
+
+```{r test-nan}
+is.nan(0 / 0)
+```
+
+`NaN` is also treated as missing:
+
+```{r nan-is-na}
+is.na(NaN)
+```
+
+# 17. Finite values
+
+```{r finite-values}
+x <- c(10, NA, NaN, Inf, -Inf, 25)
+
+is.finite(x)
+```
+
+A finite value is an ordinary numerical value that is not missing or infinite.
+
+# 18. `NULL`
+
+`NULL` represents the absence of an object or component.
+
+```{r null-value}
+x <- NULL
+x
+is.null(x)
+length(x)
+```
+
+`NULL` differs from `NA`.
+
+- `NA` is a missing value occupying a position.
+- `NULL` often represents no value or no component.
+
+```{r null-versus-na}
+length(NA)
+length(NULL)
+```
+
+# 19. Special numerical constants
+
+```{r special-constants}
+pi
+Inf
+-Inf
+NaN
+```
+
+R also recognises:
+
+```{r boolean-shortcuts}
+T
+F
+```
+
+However, use `TRUE` and `FALSE` because `T` and `F` can be overwritten.
+
+```{r overwrite-t-example}
+T <- 100
+T
+TRUE
+```
+
+Avoid this practice.
+
+# 20. Type problems in imported data
+
+Import the rainfall dataset.
+
+```{r import-rainfall}
+rainfall <- read.csv(
+  "data/rainfall_records.csv",
+  stringsAsFactors = FALSE
+)
+
+str(rainfall)
+```
+
+Inspect variable classes:
+
+```{r rainfall-classes}
+vapply(
+  rainfall,
+  class,
+  FUN.VALUE = character(1)
+)
+```
+
+Check missing values:
+
+```{r rainfall-missing-counts}
+colSums(is.na(rainfall))
+```
+
+## 20.1 Character numbers from messy data
+
+```{r messy-character-numbers}
+messy_values <- c("10", "15", "missing", "21")
+```
+
+Convert carefully:
+
+```{r convert-messy-values, warning=TRUE}
+converted_values <- as.numeric(messy_values)
+converted_values
+```
+
+Identify failed conversions:
+
+```{r identify-failed-conversions}
+messy_values[
+  is.na(converted_values) &
+    !is.na(messy_values)
+]
+```
+
+# 21. Safer conversion workflow
+
+```{r safer-conversion-workflow}
+raw_values <- c("12", "18", "Twenty", "25")
+
+converted <- suppressWarnings(
+  as.numeric(raw_values)
+)
+
+conversion_failed <-
+  is.na(converted) &
+  !is.na(raw_values)
+
+data.frame(
+  raw_value = raw_values,
+  converted_value = converted,
+  failed = conversion_failed,
+  stringsAsFactors = FALSE
+)
+```
+
+Suppressing a warning is acceptable here because the failure is explicitly
+captured and inspected.
+
+# 22. Validating type and range
+
+```{r validate-numeric-scores}
+scores <- c(65, 72, 81, 59)
+
+is.numeric(scores)
+all(scores >= 0 & scores <= 100)
+anyNA(scores)
+```
+
+Create a reusable validation sequence:
+
+```{r validation-sequence}
+if (!is.numeric(scores)) {
+  stop("`scores` must be numeric.", call. = FALSE)
+}
+
+if (anyNA(scores)) {
+  stop("`scores` contains missing values.", call. = FALSE)
+}
+
+if (!all(scores >= 0 & scores <= 100)) {
+  stop("Scores must lie between 0 and 100.", call. = FALSE)
+}
+```
+
+# 23. Integrated example: clinic data types
+
+```{r import-clinic}
+clinic <- read.csv(
+  "data/clinic_visits.csv",
+  stringsAsFactors = FALSE
+)
+
+str(clinic)
+```
+
+Inspect types:
+
+```{r clinic-types}
+vapply(
+  clinic,
+  typeof,
+  FUN.VALUE = character(1)
+)
+```
+
+Inspect classes:
+
+```{r clinic-classes}
+vapply(
+  clinic,
+  class,
+  FUN.VALUE = character(1)
+)
+```
+
+Check waiting time:
+
+```{r clinic-waiting-validation}
+is.numeric(clinic$waiting_time)
+anyNA(clinic$waiting_time)
+all(
+  clinic$waiting_time >= 0,
+  na.rm = TRUE
+)
+```
+
+Calculate observed mean:
+
+```{r clinic-observed-mean}
+mean(
+  clinic$waiting_time,
+  na.rm = TRUE
+)
+```
+
+# 24. Guided practice
+
+## 24.1 Education
+
+```{r guided-education-types}
+student_id <- "00041"
+age <- 21L
+score <- 74.5
+passed <- score >= 50
+
+typeof(student_id)
+typeof(age)
+typeof(score)
+typeof(passed)
+```
+
+## 24.2 Procurement
+
+```{r guided-procurement-types}
+supplier_code <- "SUP-014"
+delivery_days <- 5L
+invoice_value <- 18500.75
+delivered_on_time <- TRUE
+```
+
+Inspect each object's type and class.
+
+## 24.3 Missing-data context
+
+```{r guided-missing-data}
+waiting_times <- c(18, 25, NA, 32, 21)
+
+length(waiting_times)
+sum(is.na(waiting_times))
+sum(!is.na(waiting_times))
+mean(waiting_times, na.rm = TRUE)
+```
+
+# 25. Common mistakes
+
+## 25.1 Treating identifiers as numbers
+
+```r
+student_id <- 00125
+```
+
+Leading zeros are lost. Use:
+
+```r
+student_id <- "00125"
+```
+
+## 25.2 Assuming `as.integer()` rounds
+
+```{r integer-truncation}
+as.integer(4.9)
+```
+
+The result is 4, not 5.
+
+## 25.3 Ignoring failed conversion
+
+```{r failed-conversion-warning, warning=TRUE}
+as.numeric("forty")
+```
+
+## 25.4 Confusing `NULL` and `NA`
+
+They represent different concepts and have different lengths.
+
+## 25.5 Removing missing values without explanation
+
+`na.rm = TRUE` is a computational instruction, not a complete missing-data
+strategy.
+
+# 26. Independent exercises
+
+1. Create one object of each principal atomic type and inspect it.
+2. Demonstrate the difference between `25` and `25L`.
+3. Create an identifier that preserves leading zeros.
+4. Demonstrate logical-to-numeric coercion.
+5. Demonstrate numeric-to-character coercion.
+6. Convert character numbers to numeric and identify an invalid value.
+7. Create a vector containing `NA`, `NaN`, `Inf`, `-Inf` and ordinary values.
+8. Test each special value with appropriate functions.
+9. Explain the difference between `NULL` and `NA`.
+10. Import `rainfall_records.csv` and report missing values by column.
+11. Calculate observed rainfall summaries.
+12. Write a validation routine for a percentage variable ranging from 0 to 100.
+
+# 27. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. defines and explains each atomic type;
+2. demonstrates implicit coercion;
+3. demonstrates explicit conversion;
+4. includes one invalid conversion and interprets the warning;
+5. distinguishes `NA`, `NaN`, `Inf`, `-Inf` and `NULL`;
+6. imports `rainfall_records.csv`;
+7. inspects variable types;
+8. reports missingness;
+9. calculates observed summaries; and
+10. validates at least one numeric variable.
+
+# 28. Completion checklist
+
+Confirm that you can:
+
+- distinguish double and integer;
+- create character and logical values;
+- identify complex and raw values;
+- inspect type and class;
+- use type-testing functions;
+- explain coercion;
+- convert types explicitly;
+- identify failed conversion;
+- distinguish special values;
+- detect missing values;
+- calculate summaries with missing data;
+- identify finite values;
+- explain `NULL`;
+- inspect imported variable types; and
+- validate a variable before analysis.
+
+# Lesson conclusion
+
+Data type is not a minor technical detail. It determines which operations are
+valid and how R interprets a value. Reliable analysis therefore begins with
+inspection and validation.
+
+The recommended sequence is:
+
+\[
+\boxed{
+\text{inspect type}
+\rightarrow
+\text{identify special values}
+\rightarrow
+\text{convert deliberately}
+\rightarrow
+\text{validate}
+\rightarrow
+\text{analyse}
+}
+\]

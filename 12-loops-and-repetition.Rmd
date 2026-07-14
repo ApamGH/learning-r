@@ -1,0 +1,986 @@
+---
+title: "Lesson 12: Repetition with for, while and repeat Loops"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Repetition is necessary when the same operation must be performed several
+times. An analyst may need to:
+
+- calculate a statistic for several variables;
+- inspect every file in a folder;
+- apply a rule to several programmes;
+- generate repeated simulation results;
+- create several plots;
+- validate multiple datasets; or
+- continue a process until a condition is met.
+
+R supports repetition through vectorised operations, the apply family and
+explicit loops. This lesson focuses on `for`, `while` and `repeat` loops while
+also explaining when a loop is unnecessary.
+
+The purpose is not merely to make code repeat. The learner must also understand
+loop state, indexing, preallocation, stopping conditions, result storage and
+error prevention.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. explain why repetition is used in programming;
+2. distinguish vectorisation from explicit loops;
+3. write a valid `for` loop;
+4. iterate over positions, values and names;
+5. store loop results safely;
+6. preallocate output objects;
+7. use nested loops;
+8. use `next` and `break`;
+9. write a valid `while` loop;
+10. prevent infinite loops;
+11. use `repeat` with an explicit stopping condition;
+12. process files and data columns iteratively;
+13. understand loop-created state;
+14. compare loops with `lapply()`, `sapply()` and `vapply()`; and
+15. debug repetitive code systematically.
+
+# 1. Why repetition is needed
+
+Suppose a learner has five scores:
+
+```{r create-loop-scores}
+scores <- c(
+  65,
+  72,
+  81,
+  59,
+  90
+)
+
+scores
+```
+
+The square of each score could be written manually:
+
+```{r manual-repetition}
+scores[1] ^ 2
+scores[2] ^ 2
+scores[3] ^ 2
+scores[4] ^ 2
+scores[5] ^ 2
+```
+
+This is repetitive and difficult to maintain.
+
+A vectorised solution is:
+
+```{r vectorised-square}
+scores ^ 2
+```
+
+A loop solution is:
+
+```{r loop-square-display}
+for (score in scores) {
+  print(
+    score ^ 2
+  )
+}
+```
+
+The vectorised form is preferable for this simple task. The loop is useful for
+learning control flow and for more complex operations.
+
+# 2. General structure of a `for` loop
+
+```text
+for (variable in sequence) {
+  code_to_repeat
+}
+```
+
+Example:
+
+```{r basic-for-loop}
+for (number in 1:5) {
+  print(number)
+}
+```
+
+During each iteration:
+
+1. `number` receives the next value;
+2. the body executes;
+3. the process continues until the sequence is exhausted.
+
+# 3. Iterating over values
+
+```{r iterate-over-values}
+programmes <- c(
+  "Statistics",
+  "Procurement",
+  "Hospitality"
+)
+
+for (programme in programmes) {
+  print(
+    programme
+  )
+}
+```
+
+The loop variable contains the actual value.
+
+# 4. Iterating over positions
+
+```{r iterate-over-positions}
+for (i in seq_along(scores)) {
+  print(
+    scores[i]
+  )
+}
+```
+
+`seq_along(scores)` safely creates positions from 1 through the vector length.
+
+## 4.1 Why `seq_along()` is preferred
+
+```{r empty-vector-sequence}
+empty_vector <- numeric(0)
+
+1:length(empty_vector)
+seq_along(empty_vector)
+```
+
+`1:length(empty_vector)` produces an unintended sequence when the vector is
+empty. `seq_along()` correctly returns an empty integer vector.
+
+# 5. Iterating over names
+
+```{r named-vector-loop}
+programme_counts <- c(
+  Statistics = 35,
+  Procurement = 42,
+  Hospitality = 28
+)
+
+for (programme_name in names(programme_counts)) {
+  current_count <-
+    programme_counts[
+      programme_name
+    ]
+
+  print(
+    paste(
+      programme_name,
+      current_count
+    )
+  )
+}
+```
+
+# 6. Storing loop results
+
+Printing inside a loop does not create a reusable result object.
+
+Preallocate a vector:
+
+```{r preallocate-loop-result}
+squared_scores <- numeric(
+  length(scores)
+)
+
+squared_scores
+```
+
+Fill it:
+
+```{r store-loop-results}
+for (i in seq_along(scores)) {
+  squared_scores[i] <-
+    scores[i] ^ 2
+}
+
+squared_scores
+```
+
+# 7. Why preallocation matters
+
+A weak pattern repeatedly grows an object:
+
+```{r growing-vector-example}
+growing_result <- numeric(0)
+
+for (score in scores) {
+  growing_result <- c(
+    growing_result,
+    score ^ 2
+  )
+}
+
+growing_result
+```
+
+This works, but repeated growth can be inefficient for large loops.
+
+Preferred:
+
+```{r preallocated-result-example}
+efficient_result <- numeric(
+  length(scores)
+)
+
+for (i in seq_along(scores)) {
+  efficient_result[i] <-
+    scores[i] ^ 2
+}
+
+efficient_result
+```
+
+# 8. Preallocating character and logical results
+
+```{r character-preallocation}
+result_labels <- character(
+  length(scores)
+)
+
+for (i in seq_along(scores)) {
+  result_labels[i] <- if (
+    scores[i] >= 50
+  ) {
+    "Pass"
+  } else {
+    "Fail"
+  }
+}
+
+result_labels
+```
+
+Logical output:
+
+```{r logical-preallocation}
+distinction_status <- logical(
+  length(scores)
+)
+
+for (i in seq_along(scores)) {
+  distinction_status[i] <-
+    scores[i] >= 80
+}
+
+distinction_status
+```
+
+# 9. Looping over data-frame columns
+
+Import student data:
+
+```{r import-student-loop-data}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+```
+
+Identify numeric columns:
+
+```{r identify-numeric-columns}
+numeric_status <- vapply(
+  student_data,
+  is.numeric,
+  FUN.VALUE = logical(1)
+)
+
+numeric_names <- names(
+  student_data
+)[
+  numeric_status
+]
+
+numeric_names
+```
+
+Calculate means using a loop:
+
+```{r loop-column-means}
+column_means <- numeric(
+  length(numeric_names)
+)
+
+names(column_means) <-
+  numeric_names
+
+for (variable_name in numeric_names) {
+  column_means[
+    variable_name
+  ] <- mean(
+    student_data[[
+      variable_name
+    ]],
+    na.rm = TRUE
+  )
+}
+
+column_means
+```
+
+# 10. Looping over rows
+
+```{r row-loop-example}
+student_totals <- numeric(
+  nrow(student_data)
+)
+
+for (i in seq_len(
+  nrow(student_data)
+)) {
+  student_totals[i] <-
+    student_data$coursework_score[i] +
+    student_data$examination_score[i]
+}
+
+student_totals
+```
+
+Compare with the stored final score:
+
+```{r validate-row-loop}
+all(
+  student_totals ==
+    student_data$final_score
+)
+```
+
+# 11. `seq_len()` for row iteration
+
+```{r seq-len-example}
+seq_len(
+  nrow(student_data)
+)
+```
+
+`seq_len(n)` safely creates integers from 1 through `n`.
+
+# 12. Conditional logic inside loops
+
+```{r conditional-inside-loop}
+performance_label <- character(
+  length(scores)
+)
+
+for (i in seq_along(scores)) {
+  if (scores[i] >= 80) {
+    performance_label[i] <-
+      "Distinction"
+  } else if (scores[i] >= 50) {
+    performance_label[i] <-
+      "Pass"
+  } else {
+    performance_label[i] <-
+      "Fail"
+  }
+}
+
+performance_label
+```
+
+# 13. Using `next`
+
+`next` skips the remainder of the current iteration.
+
+```{r next-example}
+values <- c(
+  10,
+  NA,
+  20,
+  30
+)
+
+observed_doubled <- numeric(0)
+
+for (value in values) {
+  if (is.na(value)) {
+    next
+  }
+
+  observed_doubled <- c(
+    observed_doubled,
+    value * 2
+  )
+}
+
+observed_doubled
+```
+
+# 14. Using `break`
+
+`break` stops the loop completely.
+
+```{r break-example}
+for (value in c(
+  10,
+  20,
+  -5,
+  30
+)) {
+  if (value < 0) {
+    print(
+      "Negative value found. Stopping."
+    )
+
+    break
+  }
+
+  print(value)
+}
+```
+
+# 15. Nested loops
+
+```{r nested-loop-example}
+rows <- 1:3
+columns <- 1:2
+
+for (row_index in rows) {
+  for (column_index in columns) {
+    print(
+      paste(
+        "Row",
+        row_index,
+        "Column",
+        column_index
+      )
+    )
+  }
+}
+```
+
+Nested loops should be used carefully because the number of iterations grows
+quickly.
+
+# 16. Building a multiplication table
+
+```{r multiplication-table-loop}
+multiplication_table <- matrix(
+  0,
+  nrow = 5,
+  ncol = 5
+)
+
+for (i in 1:5) {
+  for (j in 1:5) {
+    multiplication_table[
+      i,
+      j
+    ] <- i * j
+  }
+}
+
+multiplication_table
+```
+
+# 17. The `while` loop
+
+General structure:
+
+```text
+while (condition) {
+  repeated_code
+}
+```
+
+Example:
+
+```{r basic-while-loop}
+counter <- 1
+
+while (counter <= 5) {
+  print(counter)
+
+  counter <- counter + 1
+}
+```
+
+The condition is tested before each iteration.
+
+# 18. Avoiding infinite `while` loops
+
+Incorrect:
+
+```r
+counter <- 1
+
+while (counter <= 5) {
+  print(counter)
+}
+```
+
+The counter never changes, so the condition remains true.
+
+Correct:
+
+```{r safe-while-loop}
+counter <- 1
+
+while (counter <= 5) {
+  print(counter)
+
+  counter <- counter + 1
+}
+```
+
+# 19. Accumulation with `while`
+
+```{r while-accumulation}
+total <- 0
+current_value <- 1
+
+while (current_value <= 10) {
+  total <- total + current_value
+
+  current_value <-
+    current_value + 1
+}
+
+total
+```
+
+# 20. Convergence-style loop
+
+```{r while-convergence}
+estimate <- 100
+target <- 10
+iteration <- 0
+maximum_iterations <- 100
+
+while (
+  abs(estimate - target) > 0.01 &&
+  iteration < maximum_iterations
+) {
+  estimate <-
+    (estimate + target) / 2
+
+  iteration <-
+    iteration + 1
+}
+
+estimate
+iteration
+```
+
+A maximum-iteration safeguard helps prevent unintended infinite loops.
+
+# 21. The `repeat` loop
+
+`repeat` has no condition in its header.
+
+```{r basic-repeat-loop}
+counter <- 1
+
+repeat {
+  print(counter)
+
+  counter <- counter + 1
+
+  if (counter > 5) {
+    break
+  }
+}
+```
+
+The loop must contain an explicit stopping condition.
+
+# 22. Input-validation pattern with `repeat`
+
+```{r repeat-validation-pattern}
+values_to_check <- c(
+  -2,
+  0,
+  5
+)
+
+position <- 1
+
+repeat {
+  current_value <-
+    values_to_check[
+      position
+    ]
+
+  if (current_value > 0) {
+    valid_value <- current_value
+
+    break
+  }
+
+  position <- position + 1
+}
+
+valid_value
+```
+
+# 23. Processing several files
+
+List CSV files:
+
+```{r list-csv-files-loop}
+csv_files <- list.files(
+  path = "data",
+  pattern = "\\.csv$",
+  full.names = TRUE
+)
+
+csv_files
+```
+
+Store dimensions:
+
+```{r loop-file-dimensions}
+file_dimensions <- vector(
+  mode = "list",
+  length = length(csv_files)
+)
+
+names(file_dimensions) <-
+  basename(csv_files)
+
+for (i in seq_along(csv_files)) {
+  current_data <- read.csv(
+    csv_files[i],
+    stringsAsFactors = FALSE
+  )
+
+  file_dimensions[[i]] <-
+    dim(current_data)
+}
+
+file_dimensions
+```
+
+# 24. Error handling inside loops
+
+Use `tryCatch()` when one failure should not terminate every iteration.
+
+```{r trycatch-loop-example}
+file_results <- vector(
+  mode = "list",
+  length = length(csv_files)
+)
+
+names(file_results) <-
+  basename(csv_files)
+
+for (i in seq_along(csv_files)) {
+  file_results[[i]] <- tryCatch(
+    {
+      current_data <- read.csv(
+        csv_files[i],
+        stringsAsFactors = FALSE
+      )
+
+      list(
+        success = TRUE,
+        rows = nrow(current_data),
+        columns = ncol(current_data)
+      )
+    },
+    error = function(error_object) {
+      list(
+        success = FALSE,
+        message = conditionMessage(
+          error_object
+        )
+      )
+    }
+  )
+}
+
+file_results
+```
+
+# 25. Looping over programmes
+
+```{r programme-loop}
+programme_names <- unique(
+  student_data$programme
+)
+
+programme_summary <- data.frame(
+  programme = programme_names,
+  number_of_students = integer(
+    length(programme_names)
+  ),
+  mean_final_score = numeric(
+    length(programme_names)
+  ),
+  stringsAsFactors = FALSE
+)
+
+for (i in seq_along(
+  programme_names
+)) {
+  current_programme <-
+    programme_names[i]
+
+  current_subset <- student_data[
+    student_data$programme ==
+      current_programme,
+  ]
+
+  programme_summary$number_of_students[i] <-
+    nrow(current_subset)
+
+  programme_summary$mean_final_score[i] <-
+    mean(
+      current_subset$final_score
+    )
+}
+
+programme_summary
+```
+
+# 26. Vectorisation versus loops
+
+Vectorised:
+
+```{r vectorised-total}
+coursework <-
+  student_data$coursework_score
+
+examination <-
+  student_data$examination_score
+
+vectorised_total <-
+  coursework + examination
+```
+
+Loop:
+
+```{r loop-total}
+loop_total <- numeric(
+  nrow(student_data)
+)
+
+for (i in seq_len(
+  nrow(student_data)
+)) {
+  loop_total[i] <-
+    coursework[i] +
+    examination[i]
+}
+```
+
+Compare:
+
+```{r compare-vector-loop}
+identical(
+  vectorised_total,
+  loop_total
+)
+```
+
+Use vectorisation when it is clear and natural. Use loops when the operation
+requires sequential state, complex branching or side effects.
+
+# 27. Apply-family alternatives
+
+```{r lapply-alternative}
+lapply(
+  student_data[
+    numeric_names
+  ],
+  mean,
+  na.rm = TRUE
+)
+```
+
+```{r sapply-alternative}
+sapply(
+  student_data[
+    numeric_names
+  ],
+  mean,
+  na.rm = TRUE
+)
+```
+
+```{r vapply-alternative}
+vapply(
+  student_data[
+    numeric_names
+  ],
+  mean,
+  na.rm = TRUE,
+  FUN.VALUE = numeric(1)
+)
+```
+
+# 28. Simulation loop
+
+```{r simulation-loop}
+number_of_simulations <- 100
+simulated_means <- numeric(
+  number_of_simulations
+)
+
+for (i in seq_len(
+  number_of_simulations
+)) {
+  simulated_sample <- rnorm(
+    n = 30,
+    mean = 70,
+    sd = 10
+  )
+
+  simulated_means[i] <-
+    mean(simulated_sample)
+}
+
+summary(simulated_means)
+```
+
+# 29. Progress messages
+
+```{r progress-message-loop}
+for (i in 1:5) {
+  message(
+    "Processing iteration ",
+    i,
+    " of 5"
+  )
+}
+```
+
+For large loops, progress messages should not be printed excessively.
+
+# 30. Common mistakes
+
+- forgetting to preallocate;
+- growing objects repeatedly;
+- using `1:length(x)` for possibly empty vectors;
+- failing to update a `while` condition;
+- omitting `break` from `repeat`;
+- confusing values and positions;
+- overwriting loop results;
+- using `print()` instead of storing output;
+- nesting loops unnecessarily;
+- hiding errors inside loops without recording them;
+- using a loop where vectorisation is clearer.
+
+# 31. Independent exercises
+
+1. Print the numbers 1 through 10 with a `for` loop.
+2. Iterate over programme names.
+3. square a vector and store the result using preallocation.
+4. classify scores with conditional logic inside a loop.
+5. skip missing values using `next`.
+6. stop when an invalid value is found using `break`.
+7. create a nested-loop multiplication table.
+8. write a safe `while` loop.
+9. use `repeat` with a stopping condition.
+10. calculate means for all numeric columns in a data frame.
+11. process every CSV file in the data folder.
+12. create programme summaries using a loop.
+13. compare a loop with vectorised code.
+14. simulate 500 sample means.
+
+# 32. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. demonstrates a basic `for` loop;
+2. iterates over positions and names;
+3. preallocates and stores results;
+4. uses conditional logic in a loop;
+5. demonstrates `next` and `break`;
+6. creates a nested loop;
+7. uses a safe `while` loop;
+8. uses `repeat`;
+9. processes all supplied CSV files;
+10. creates a grouped summary with a loop;
+11. compares loop and vectorised results; and
+12. includes a simulation loop.
+
+# 33. Completion checklist
+
+Confirm that you can:
+
+- write a `for` loop;
+- iterate over values and positions;
+- use `seq_along()` and `seq_len()`;
+- preallocate results;
+- store character and logical outputs;
+- loop over rows and columns;
+- use `next` and `break`;
+- write nested loops;
+- write safe `while` loops;
+- use `repeat`;
+- process files iteratively;
+- handle loop errors;
+- compare loops and vectorisation;
+- use apply-family alternatives; and
+- run a simulation loop.
+
+# Lesson conclusion
+
+Repetition is reliable only when the sequence, state, stopping condition and
+result storage are all clear.
+
+\[
+\boxed{
+\text{define sequence}
+\rightarrow
+\text{preallocate}
+\rightarrow
+\text{iterate}
+\rightarrow
+\text{store}
+\rightarrow
+\text{validate}
+}
+\]

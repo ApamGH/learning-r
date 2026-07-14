@@ -1,0 +1,1646 @@
+---
+title: "Lesson 3: The First R Session and Systematic Command Execution"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260713)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+# Lesson overview
+
+The first active session in R is where the learner begins to convert written
+questions into executable instructions. At this stage, it is tempting to treat
+the Console as a calculator and to judge success only by whether a number is
+printed. That approach is too narrow.
+
+A disciplined R session involves several connected activities:
+
+1. reading the prompt correctly;
+2. writing syntactically complete expressions;
+3. executing code from the appropriate source;
+4. distinguishing printed output from stored results;
+5. inspecting the structure of objects;
+6. checking warnings and errors;
+7. preserving code in a script or R Markdown document; and
+8. rerunning the work from a clean session.
+
+This lesson develops these habits through detailed examples. The commands are
+elementary, but the working practices are professional. A learner who develops
+these practices early will find later work in data cleaning, statistical
+modelling and automation much easier.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. interpret the ordinary R prompt and the continuation prompt;
+2. distinguish the Console, Source pane and rendered document;
+3. execute one line, several lines and a complete script;
+4. explain how R parses and evaluates an expression;
+5. use arithmetic, comparison and logical operators;
+6. apply operator precedence correctly;
+7. call functions with positional and named arguments;
+8. create sequences and repeated patterns;
+9. understand vectorised command execution;
+10. distinguish automatic printing from assignment;
+11. inspect objects using several complementary functions;
+12. use the R help system;
+13. identify incomplete expressions and common syntax errors;
+14. diagnose unexpected output systematically;
+15. write a clearly structured first R script; and
+16. conduct a short analysis from a clean R session.
+
+# 1. Beginning an R session
+
+An R session begins when the R engine starts. In RStudio, the Console normally
+displays an opening message followed by the ordinary prompt:
+
+```text
+>
+```
+
+The prompt indicates that R is ready to receive an instruction.
+
+A session has a current state. This state may include:
+
+- objects stored in the global environment;
+- packages attached to the search path;
+- options that have been changed;
+- the current working directory;
+- open graphics devices; and
+- random-number-generator state.
+
+The state changes as commands are executed.
+
+## 1.1 Confirming that R is responsive
+
+Enter a simple expression:
+
+```{r confirm-r-responsive}
+1 + 1
+```
+
+R returns:
+
+```text
+#> [1] 2
+```
+
+This confirms that the expression was parsed and evaluated.
+
+The `[1]` indicates that the first value printed on that line is the first
+element of the result. It does not form part of the numerical answer.
+
+## 1.2 Inspecting the current session
+
+```{r inspect-current-session}
+R.version.string
+getwd()
+search()
+```
+
+These commands report:
+
+- the current R version;
+- the current working directory; and
+- the current search path.
+
+They describe different aspects of the session.
+
+# 2. Console, Source pane and rendered output
+
+## 2.1 The Console
+
+The Console executes commands immediately. It is suitable for:
+
+- testing a short expression;
+- inspecting an object;
+- checking a function argument;
+- experimenting with an unfamiliar command; and
+- reading an error message.
+
+It is not the best place to keep important analytical work because Console
+commands may not remain organised or reproducible.
+
+## 2.2 The Source pane
+
+The Source pane contains saved `.R` or `.Rmd` files.
+
+Code written in a source file can be:
+
+- saved;
+- reviewed;
+- corrected;
+- shared;
+- version controlled; and
+- rerun from the beginning.
+
+A professional workflow uses the Source pane as the permanent analytical
+record and the Console as an execution and diagnostic area.
+
+## 2.3 Rendered output
+
+When an R Markdown document is knitted, the code chunks are executed in order
+and the results are inserted into the output document.
+
+Rendered output may contain:
+
+- explanatory prose;
+- code;
+- printed results;
+- tables;
+- figures;
+- equations; and
+- automatically generated values.
+
+The rendered document is a report. The `.Rmd` file remains the source.
+
+# 3. The ordinary prompt and continuation prompt
+
+## 3.1 Ordinary prompt
+
+```text
+>
+```
+
+The ordinary prompt means that R is ready for a new expression.
+
+## 3.2 Continuation prompt
+
+```text
++
+```
+
+The continuation prompt means that the previous expression is incomplete.
+
+For example, this command has no closing parenthesis:
+
+```r
+mean(c(10, 20, 30)
+```
+
+R waits because it cannot determine whether the expression has ended.
+
+Other causes include:
+
+- an unclosed quotation mark;
+- an unclosed bracket;
+- an unfinished function call;
+- a trailing arithmetic operator; and
+- an incomplete block of code.
+
+## 3.3 Completing an expression
+
+The incomplete command:
+
+```r
+mean(c(10, 20, 30)
+```
+
+can be completed by entering:
+
+```r
+)
+```
+
+However, beginners should generally cancel and rewrite the complete command
+clearly.
+
+In RStudio, press:
+
+```text
+Esc
+```
+
+to cancel the unfinished expression.
+
+## 3.4 Unclosed quotation example
+
+```r
+programme <- "Statistics
+```
+
+R waits because the text has not been closed with another quotation mark.
+
+Correct:
+
+```{r complete-character-expression}
+programme <- "Statistics"
+programme
+```
+
+# 4. Expressions and evaluation
+
+An expression is something R can evaluate.
+
+Examples include:
+
+```{r expression-examples}
+25
+4 + 7
+sqrt(81)
+c(10, 20, 30)
+```
+
+R evaluates each expression and returns a result.
+
+## 4.1 Literal values
+
+```{r literal-values}
+42
+3.5
+"Bolgatanga"
+TRUE
+```
+
+These are literal values because they are written directly.
+
+## 4.2 Compound expression
+
+```{r compound-expression}
+(12 + 8) / 4
+```
+
+R evaluates the parenthesised addition first and then divides the result.
+
+\[
+\frac{12+8}{4}
+=
+\frac{20}{4}
+=
+5.
+\]
+
+## 4.3 Function call as an expression
+
+```{r function-call-expression}
+mean(c(12, 15, 18, 21))
+```
+
+The inner function `c()` creates a vector. The outer function `mean()`
+calculates its arithmetic mean.
+
+# 5. Running code from the Source pane
+
+## 5.1 Running one line
+
+Place the cursor on a line and press:
+
+```text
+Ctrl + Enter
+```
+
+RStudio sends the current line to the Console.
+
+## 5.2 Running selected lines
+
+Highlight several lines and press:
+
+```text
+Ctrl + Enter
+```
+
+Only the selected code is executed.
+
+## 5.3 Running a complete chunk
+
+Inside an R Markdown document, use the green Run button on the code chunk or
+the relevant keyboard shortcut.
+
+## 5.4 Running all earlier chunks
+
+RStudio provides commands to run all chunks above the current position. This is
+useful when a later chunk depends on objects created earlier.
+
+However, a well-designed lesson should also knit successfully from the
+beginning without requiring manual intervention.
+
+## 5.5 Running a complete R script
+
+```{r source-complete-script, eval=FALSE}
+source("my_analysis.R")
+```
+
+`source()` reads and executes the commands in the specified `.R` file.
+
+# 6. Arithmetic operators in practical contexts
+
+## 6.1 Addition
+
+Suppose a training programme has 48 participants in the morning session and 37
+in the afternoon session.
+
+```{r arithmetic-addition-context}
+morning_participants <- 48
+afternoon_participants <- 37
+
+total_participants <- morning_participants + afternoon_participants
+total_participants
+```
+
+\[
+48+37=85.
+\]
+
+## 6.2 Subtraction
+
+If 6 participants leave before completion:
+
+```{r arithmetic-subtraction-context}
+completed_participants <- total_participants - 6
+completed_participants
+```
+
+## 6.3 Multiplication
+
+Suppose each completed participant receives a GH₵25 meal allowance.
+
+```{r arithmetic-multiplication-context}
+meal_allowance_per_person <- 25
+
+total_meal_allowance <-
+  completed_participants * meal_allowance_per_person
+
+total_meal_allowance
+```
+
+## 6.4 Division
+
+Share the total allowance equally across five budget lines:
+
+```{r arithmetic-division-context}
+number_of_budget_lines <- 5
+
+allowance_per_budget_line <-
+  total_meal_allowance / number_of_budget_lines
+
+allowance_per_budget_line
+```
+
+## 6.5 Exponentiation
+
+Suppose a rectangular plot is 8 metres long and 8 metres wide.
+
+```{r exponentiation-context}
+plot_side <- 8
+plot_area <- plot_side ^ 2
+
+plot_area
+```
+
+## 6.6 Integer division
+
+Suppose 103 questionnaires are packed into bundles of 20.
+
+```{r integer-division-context}
+questionnaires <- 103
+bundle_size <- 20
+
+complete_bundles <- questionnaires %/% bundle_size
+complete_bundles
+```
+
+## 6.7 Remainder
+
+```{r remainder-context}
+unbundled_questionnaires <- questionnaires %% bundle_size
+unbundled_questionnaires
+```
+
+The relationship is:
+
+\[
+103=(5\times20)+3.
+\]
+
+# 7. Operator precedence
+
+R follows an order of operations.
+
+A simplified order is:
+
+1. parentheses;
+2. exponentiation;
+3. multiplication and division;
+4. addition and subtraction;
+5. comparisons;
+6. logical operations.
+
+## 7.1 Multiplication before addition
+
+```{r precedence-multiplication-before-addition}
+10 + 4 * 3
+```
+
+\[
+10 + (4\times3)=22.
+\]
+
+## 7.2 Parentheses change the result
+
+```{r precedence-parentheses}
+(10 + 4) * 3
+```
+
+\[
+(10+4)\times3=42.
+\]
+
+## 7.3 Exponentiation
+
+```{r precedence-exponentiation}
+2 + 3 ^ 2
+```
+
+\[
+2+3^2=2+9=11.
+\]
+
+## 7.4 Clearer code with parentheses
+
+Even when parentheses are not mathematically required, they may improve
+readability:
+
+```{r precedence-readable-expression}
+weighted_result <-
+  (0.40 * 75) +
+  (0.60 * 68)
+
+weighted_result
+```
+
+# 8. Comparison operators
+
+Comparison operators return logical values.
+
+| Operator | Meaning |
+|---|---|
+| `>` | greater than |
+| `<` | less than |
+| `>=` | greater than or equal to |
+| `<=` | less than or equal to |
+| `==` | equal to |
+| `!=` | not equal to |
+
+## 8.1 Single comparisons
+
+```{r single-comparisons}
+75 > 50
+45 >= 50
+10 == 10
+10 != 8
+```
+
+## 8.2 Pass-status context
+
+```{r pass-status-context}
+final_score <- 64
+pass_mark <- 50
+
+final_score >= pass_mark
+```
+
+## 8.3 Exact equality
+
+Use:
+
+```r
+==
+```
+
+to test equality.
+
+```{r equality-comparison}
+recorded_total <- 82
+calculated_total <- 32 + 50
+
+recorded_total == calculated_total
+```
+
+A single equals sign is not the standard comparison operator.
+
+# 9. Logical operators
+
+Logical operators combine or reverse logical conditions.
+
+| Operator | Meaning |
+|---|---|
+| `&` | both conditions are true |
+| `|` | at least one condition is true |
+| `!` | reverse a logical value |
+
+## 9.1 Both conditions
+
+A student qualifies for a scholarship when:
+
+- the final score is at least 80; and
+- attendance is at least 90 per cent.
+
+```{r logical-and-context}
+score <- 84
+attendance_rate <- 0.94
+
+scholarship_eligible <-
+  (score >= 80) &
+  (attendance_rate >= 0.90)
+
+scholarship_eligible
+```
+
+## 9.2 At least one condition
+
+A student requires academic counselling when the score is below 50 or
+attendance is below 75 per cent.
+
+```{r logical-or-context}
+requires_counselling <-
+  (score < 50) |
+  (attendance_rate < 0.75)
+
+requires_counselling
+```
+
+## 9.3 Negation
+
+```{r logical-negation-context}
+!scholarship_eligible
+```
+
+# 10. Functions and their arguments
+
+A function performs a defined operation.
+
+## 10.1 One argument
+
+```{r one-argument-function}
+sqrt(144)
+```
+
+## 10.2 Several positional arguments
+
+```{r positional-arguments}
+round(3.14159265, 3)
+```
+
+The second argument is interpreted according to its position.
+
+## 10.3 Named arguments
+
+```{r named-arguments}
+round(
+  x = 3.14159265,
+  digits = 3
+)
+```
+
+Named arguments make the instruction clearer.
+
+## 10.4 Default arguments
+
+```{r default-argument-behaviour}
+round(3.14159265)
+```
+
+When `digits` is omitted, the function uses its default.
+
+## 10.5 Inspecting arguments
+
+```{r inspect-function-arguments}
+args(round)
+args(seq)
+args(mean)
+```
+
+## 10.6 Nested functions
+
+```{r nested-function-context}
+round(
+  mean(
+    c(65, 72, 81, 76, 89)
+  ),
+  digits = 1
+)
+```
+
+Read nested calls from the inside outward.
+
+# 11. Frequently used mathematical functions
+
+## 11.1 Absolute value
+
+```{r absolute-value-function}
+abs(-15)
+```
+
+## 11.2 Square root
+
+```{r square-root-function}
+sqrt(225)
+```
+
+## 11.3 Natural logarithm
+
+```{r natural-logarithm-function}
+log(10)
+```
+
+## 11.4 Base-10 logarithm
+
+```{r base-ten-logarithm-function}
+log10(1000)
+```
+
+## 11.5 Exponential function
+
+```{r exponential-function}
+exp(1)
+```
+
+## 11.6 Ceiling and floor
+
+```{r ceiling-floor-functions}
+ceiling(4.2)
+floor(4.8)
+```
+
+`ceiling()` rounds upward to the next integer. `floor()` rounds downward.
+
+## 11.7 Sign
+
+```{r sign-function}
+sign(-10)
+sign(0)
+sign(24)
+```
+
+# 12. Creating sequences
+
+## 12.1 Colon operator
+
+```{r colon-sequence}
+1:10
+```
+
+This creates consecutive integers.
+
+A descending sequence is also possible:
+
+```{r descending-colon-sequence}
+10:1
+```
+
+## 12.2 `seq()` with an interval
+
+```{r seq-by-interval}
+seq(
+  from = 0,
+  to = 100,
+  by = 10
+)
+```
+
+## 12.3 `seq()` with a required length
+
+```{r seq-by-length}
+seq(
+  from = 0,
+  to = 1,
+  length.out = 6
+)
+```
+
+## 12.4 Monthly identifiers
+
+```{r month-identifiers}
+month_number <- seq(
+  from = 1,
+  to = 12,
+  by = 1
+)
+
+month_number
+```
+
+# 13. Repeating values
+
+## 13.1 Repeat one value
+
+```{r repeat-one-value}
+rep(
+  "Control",
+  times = 5
+)
+```
+
+## 13.2 Repeat a pattern
+
+```{r repeat-pattern}
+rep(
+  c("Control", "Treatment"),
+  times = 3
+)
+```
+
+## 13.3 Repeat each element
+
+```{r repeat-each-element}
+rep(
+  c("Control", "Treatment"),
+  each = 3
+)
+```
+
+The difference between `times` and `each` is important.
+
+## 13.4 Experimental group context
+
+```{r experimental-groups}
+plot_id <- 1:8
+
+treatment <- rep(
+  c("A", "B"),
+  each = 4
+)
+
+plot_id
+treatment
+```
+
+# 14. Combining values
+
+The `c()` function combines values.
+
+```{r combine-numeric-values}
+scores <- c(
+  68,
+  74,
+  81,
+  59,
+  90
+)
+
+scores
+```
+
+## 14.1 Length
+
+```{r vector-length}
+length(scores)
+```
+
+## 14.2 Total
+
+```{r vector-total}
+sum(scores)
+```
+
+## 14.3 Mean
+
+```{r vector-mean}
+mean(scores)
+```
+
+## 14.4 Minimum and maximum
+
+```{r vector-minimum-maximum}
+min(scores)
+max(scores)
+```
+
+## 14.5 Summary
+
+```{r vector-summary}
+summary(scores)
+```
+
+# 15. Vectorised execution
+
+R ordinarily applies operations element by element.
+
+## 15.1 Add two vectors
+
+```{r vectorised-addition}
+coursework <- c(28, 32, 25, 36)
+examination <- c(45, 50, 39, 52)
+
+final_scores <- coursework + examination
+final_scores
+```
+
+The operation is:
+
+\[
+(28+45,\ 32+50,\ 25+39,\ 36+52).
+\]
+
+## 15.2 Multiply a vector by a constant
+
+```{r vectorised-multiplication}
+proportions <- c(0.45, 0.62, 0.80, 0.91)
+percentages <- proportions * 100
+
+percentages
+```
+
+## 15.3 Compare all elements
+
+```{r vectorised-comparison}
+final_scores >= 50
+```
+
+## 15.4 Count logical results
+
+```{r count-logical-results}
+sum(final_scores >= 50)
+```
+
+## 15.5 Proportion satisfying a condition
+
+```{r proportion-logical-results}
+mean(final_scores >= 50)
+```
+
+# 16. Recycling
+
+When vectors differ in length, R may repeat the shorter vector.
+
+```{r exact-recycling}
+c(10, 20, 30, 40) + c(1, 2)
+```
+
+The shorter vector is treated as:
+
+\[
+(1,2,1,2).
+\]
+
+## 16.1 Recycling warning
+
+```{r recycling-warning, warning=TRUE}
+c(10, 20, 30, 40, 50) + c(1, 2)
+```
+
+Because 5 is not an exact multiple of 2, R warns that the lengths are not
+compatible.
+
+A warning does not necessarily stop execution. It signals that the result
+should be examined.
+
+# 17. Automatic printing and invisible results
+
+## 17.1 Automatic printing
+
+```{r automatic-printing}
+scores
+```
+
+Entering an object name at the top level prints its value.
+
+## 17.2 Assignment suppresses printing
+
+```{r assignment-no-print}
+mean_score <- mean(scores)
+```
+
+The result is stored but not automatically printed.
+
+```{r print-assigned-result}
+mean_score
+```
+
+## 17.3 Explicit printing
+
+```{r explicit-print-function}
+print(mean_score)
+```
+
+Explicit printing becomes important inside loops and functions.
+
+## 17.4 Parenthesised assignment
+
+```{r parenthesised-assignment}
+(rounded_mean <- round(mean_score, digits = 1))
+```
+
+Parentheses cause the assigned result to be printed.
+
+# 18. Inspecting objects systematically
+
+No single inspection function answers every question.
+
+## 18.1 Class
+
+```{r inspect-class}
+class(scores)
+```
+
+## 18.2 Internal type
+
+```{r inspect-typeof}
+typeof(scores)
+```
+
+## 18.3 Length
+
+```{r inspect-length}
+length(scores)
+```
+
+## 18.4 Structure
+
+```{r inspect-structure}
+str(scores)
+```
+
+## 18.5 Attributes
+
+```{r inspect-attributes}
+attributes(scores)
+```
+
+A simple unnamed numeric vector may have no additional attributes.
+
+## 18.6 First and last values
+
+```{r inspect-head-tail}
+head(scores)
+tail(scores)
+```
+
+# 19. Commands that inspect the environment
+
+## 19.1 List objects
+
+```{r inspect-ls}
+ls()
+```
+
+## 19.2 Check existence
+
+```{r inspect-exists}
+exists("scores")
+exists("unknown_object")
+```
+
+## 19.3 Remove an object
+
+```{r remove-object}
+temporary_result <- 999
+rm(temporary_result)
+```
+
+## 19.4 Confirm removal
+
+```{r confirm-object-removal}
+exists("temporary_result")
+```
+
+# 20. The R help system
+
+## 20.1 Direct help
+
+```{r direct-help, eval=FALSE}
+?mean
+```
+
+Equivalent:
+
+```{r help-function, eval=FALSE}
+help(mean)
+```
+
+## 20.2 Search help
+
+```{r search-help, eval=FALSE}
+help.search("standard deviation")
+```
+
+## 20.3 View examples
+
+```{r view-examples, eval=FALSE}
+example(mean)
+```
+
+## 20.4 Inspect function arguments
+
+```{r inspect-mean-args}
+args(mean)
+```
+
+## 20.5 Search the web from R help
+
+```{r rsite-search, eval=FALSE}
+RSiteSearch("vector recycling")
+```
+
+# 21. Syntax errors
+
+A syntax error means that R cannot parse the instruction.
+
+## 21.1 Missing parenthesis
+
+```r
+mean(c(10, 20, 30)
+```
+
+## 21.2 Missing comma
+
+```r
+round(3.14159 digits = 2)
+```
+
+## 21.3 Unclosed quotation
+
+```r
+institution <- "Bolgatanga Technical University
+```
+
+## 21.4 Invalid object name
+
+```r
+2nd_score <- 80
+```
+
+## 21.5 Correct forms
+
+```{r corrected-syntax-examples}
+mean(c(10, 20, 30))
+
+round(
+  3.14159,
+  digits = 2
+)
+
+institution <-
+  "Bolgatanga Technical University"
+
+second_score <- 80
+```
+
+# 22. Runtime errors
+
+A runtime error occurs after parsing, while R attempts to evaluate the
+expression.
+
+## 22.1 Object not found
+
+```{r object-not-found-demo, error=TRUE}
+mean(nonexistent_scores)
+```
+
+## 22.2 Inappropriate type
+
+```{r inappropriate-type-demo, error=TRUE}
+sqrt("sixteen")
+```
+
+## 22.3 Missing file
+
+```{r missing-file-demo, error=TRUE}
+read.csv("data/file_that_does_not_exist.csv")
+```
+
+# 23. Warnings
+
+A warning indicates a potential problem but often allows execution to continue.
+
+## 23.1 Mean of non-numeric text
+
+```{r warning-nonnumeric-mean, warning=TRUE}
+mean(c("High", "Medium", "Low"))
+```
+
+## 23.2 Recycling warning
+
+```{r warning-recycling-repeat, warning=TRUE}
+1:5 + 1:2
+```
+
+Warnings must be read and interpreted. They should not be suppressed merely to
+make output look cleaner.
+
+# 24. Messages
+
+Some functions provide messages rather than warnings or errors.
+
+Package attachment often produces messages about:
+
+- attached packages;
+- masked functions;
+- startup notes.
+
+In a teaching document, messages may be hidden with:
+
+```r
+message = FALSE
+```
+
+only when the underlying information is already understood.
+
+# 25. Debugging unexpected output
+
+Not every problem produces an error.
+
+Suppose the intention is to calculate a percentage:
+
+```{r unexpected-proportion}
+passed <- 18
+total <- 25
+
+passed / total
+```
+
+The result is a proportion, 0.72.
+
+To express it as a percentage:
+
+```{r expected-percentage}
+(passed / total) * 100
+```
+
+The first result was not erroneous. It simply answered the question on a
+different scale.
+
+## 25.1 Diagnostic questions
+
+When output is unexpected, ask:
+
+1. Did I use the correct object?
+2. Does the object contain the values I expect?
+3. Is the object of the correct type?
+4. Are missing values present?
+5. Did operator precedence change the calculation?
+6. Did vector recycling occur?
+7. Is the result a proportion rather than a percentage?
+8. Was the correct function used?
+9. Did a previous object remain in memory?
+10. Does the result have plausible units?
+
+# 26. A structured first script
+
+A clear script can contain the following sections:
+
+```r
+# ==============================================================================
+# Project information
+# ==============================================================================
+
+# ==============================================================================
+# Import data
+# ==============================================================================
+
+# ==============================================================================
+# Validate data
+# ==============================================================================
+
+# ==============================================================================
+# Analyse data
+# ==============================================================================
+
+# ==============================================================================
+# Export results
+# ==============================================================================
+```
+
+## 26.1 Worked script
+
+```{r structured-script-example}
+# Import the supplied student dataset.
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+# Validate that final scores lie within 0 and 100.
+scores_are_valid <- all(
+  student_data$final_score >= 0 &
+    student_data$final_score <= 100
+)
+
+# Calculate summaries.
+number_of_students <- nrow(student_data)
+mean_final_score <- mean(student_data$final_score)
+median_final_score <- median(student_data$final_score)
+pass_percentage <-
+  mean(student_data$final_score >= 50) * 100
+
+# Display results.
+scores_are_valid
+number_of_students
+mean_final_score
+median_final_score
+pass_percentage
+```
+
+# 27. Running code from a clean session
+
+A clean-session test is performed as follows:
+
+1. save the source file;
+2. restart R;
+3. open the project;
+4. run the file from the first line;
+5. inspect warnings and errors;
+6. confirm that all outputs are recreated.
+
+This test helps identify:
+
+- objects created manually but not documented;
+- packages loaded earlier but not declared;
+- incorrect working-directory assumptions;
+- missing input files; and
+- code executed in the wrong order.
+
+# 28. Integrated analysis: clinic waiting times
+
+## 28.1 Import the data
+
+```{r integrated-clinic-import}
+clinic <- read.csv(
+  "data/clinic_visits.csv",
+  stringsAsFactors = FALSE
+)
+```
+
+## 28.2 Inspect the data
+
+```{r integrated-clinic-inspect}
+head(clinic)
+str(clinic)
+dim(clinic)
+names(clinic)
+```
+
+## 28.3 Calculate summary statistics
+
+```{r integrated-clinic-summary}
+mean_waiting_time <- mean(
+  clinic$waiting_time,
+  na.rm = TRUE
+)
+
+median_waiting_time <- median(
+  clinic$waiting_time,
+  na.rm = TRUE
+)
+
+maximum_waiting_time <- max(
+  clinic$waiting_time,
+  na.rm = TRUE
+)
+
+mean_waiting_time
+median_waiting_time
+maximum_waiting_time
+```
+
+## 28.4 Evaluate a service target
+
+Assume that the service target is 30 minutes.
+
+```{r integrated-clinic-target}
+waiting_target <- 30
+
+target_met <- clinic$waiting_time <= waiting_target
+target_met
+```
+
+## 28.5 Count and percentage
+
+```{r integrated-clinic-target-summary}
+number_meeting_target <- sum(
+  target_met,
+  na.rm = TRUE
+)
+
+percentage_meeting_target <- mean(
+  target_met,
+  na.rm = TRUE
+) * 100
+
+number_meeting_target
+percentage_meeting_target
+```
+
+## 28.6 Interpretation
+
+The mean summarises the arithmetic centre of waiting times. The median
+identifies the middle waiting time and may be less sensitive to unusually long
+waits. The target percentage reports the share of observed visits completed
+within 30 minutes.
+
+# 29. Guided practice
+
+## 29.1 Education
+
+```{r guided-education}
+scores <- c(48, 55, 62, 71, 39, 84, 66)
+
+mean(scores)
+median(scores)
+sum(scores >= 50)
+mean(scores >= 50) * 100
+```
+
+Explain each output.
+
+## 29.2 Agriculture
+
+```{r guided-agriculture}
+plot_yield <- c(2.4, 2.9, 3.1, 2.7, 3.5, 2.2)
+
+mean(plot_yield)
+min(plot_yield)
+max(plot_yield)
+plot_yield >= 3
+```
+
+## 29.3 Procurement
+
+```{r guided-procurement}
+delivery_days <- c(4, 7, 5, 3, 9, 6)
+agreed_days <- 5
+
+delivery_days <= agreed_days
+sum(delivery_days <= agreed_days)
+mean(delivery_days <= agreed_days) * 100
+```
+
+## 29.4 Business
+
+```{r guided-business}
+monthly_revenue <- c(
+  12500,
+  13800,
+  14250,
+  13100,
+  15500,
+  16000
+)
+
+sum(monthly_revenue)
+mean(monthly_revenue)
+monthly_revenue > 14000
+```
+
+# 30. Independent exercises
+
+## Exercise 1
+
+Explain the difference among the Console, Source pane and rendered output.
+
+## Exercise 2
+
+Give three examples of incomplete expressions that cause the continuation
+prompt.
+
+## Exercise 3
+
+Calculate the total cost of 45 items costing GH₵18.50 each. Store each input
+and the result in clearly named objects.
+
+## Exercise 4
+
+Use `%/%` and `%%` to express 289 minutes as complete hours and remaining
+minutes.
+
+## Exercise 5
+
+Demonstrate the difference between:
+
+```r
+8 + 2 * 5
+```
+
+and:
+
+```r
+(8 + 2) * 5
+```
+
+Explain the result.
+
+## Exercise 6
+
+Create a sequence from 5 to 50 in intervals of 5.
+
+## Exercise 7
+
+Use `rep()` to create:
+
+```text
+A A A B B B C C C
+```
+
+## Exercise 8
+
+Create coursework and examination vectors for six students. Add them
+element-wise and calculate the pass percentage.
+
+## Exercise 9
+
+Create one example each of:
+
+- a syntax error;
+- a runtime error;
+- a warning; and
+- unexpected but valid output.
+
+Explain the difference.
+
+## Exercise 10
+
+Import `rainfall_records.csv`, inspect its structure and calculate the observed
+mean rainfall after accounting for missing values.
+
+## Exercise 11
+
+Write a complete R script that imports `monthly_sales.csv`, validates positive
+revenue, calculates total revenue and reports the percentage of records with
+revenue above the mean.
+
+## Exercise 12
+
+Restart R and run the complete script from Exercise 11. Record any dependency
+that was missing and correct it.
+
+# 31. Lesson assessment
+
+## Part A: Conceptual questions
+
+1. What does the ordinary R prompt mean?
+2. What causes the continuation prompt?
+3. Why is the Console not sufficient as the permanent analytical record?
+4. What is an expression?
+5. How does assignment affect automatic printing?
+6. What is operator precedence?
+7. What is the difference between `==` and `<-`?
+8. What do `&`, `|` and `!` mean?
+9. What is a positional argument?
+10. What is a named argument?
+11. What is vectorisation?
+12. What is recycling?
+13. Why can recycling be dangerous?
+14. What is the difference between an error and a warning?
+15. What is hidden session state?
+16. Why should a script be tested after restarting R?
+17. What information does `str()` provide?
+18. Why should several inspection functions be used?
+19. What is the role of `source()`?
+20. Why can valid code still produce an inappropriate answer?
+
+## Part B: Practical assessment
+
+Create a standalone R Markdown report that:
+
+1. imports `clinic_visits.csv`;
+2. inspects the data;
+3. calculates mean, median, minimum and maximum waiting time;
+4. determines the number and percentage meeting a 30-minute target;
+5. demonstrates one arithmetic operator of each major type;
+6. demonstrates one comparison and one combined logical condition;
+7. creates one sequence and one repeated pattern;
+8. contains one intentionally displayed warning with an explanation;
+9. contains no unresolved error;
+10. explains every result in complete sentences; and
+11. knits successfully from a clean R session.
+
+# 32. Key terms
+
+**Automatic printing:** Display of an expression's value when it is evaluated
+at the top level without assignment.
+
+**Console:** The interface through which R receives commands directly.
+
+**Continuation prompt:** The `+` prompt displayed when an expression is
+incomplete.
+
+**Evaluation:** The process by which R calculates the meaning and result of an
+expression.
+
+**Expression:** Code that R can parse and evaluate.
+
+**Logical operator:** An operator that combines or reverses logical conditions.
+
+**Named argument:** A function input supplied using its argument name.
+
+**Operator precedence:** Rules determining the order in which parts of an
+expression are evaluated.
+
+**Positional argument:** A function input interpreted according to its
+position.
+
+**Recycling:** Repetition of a shorter vector during an operation involving
+vectors of unequal length.
+
+**Runtime error:** An error arising while R evaluates syntactically valid code.
+
+**Source file:** A saved file containing R or R Markdown code.
+
+**Syntax error:** An error preventing R from parsing an expression.
+
+**Vectorisation:** Element-by-element application of an operation across a
+vector.
+
+**Warning:** A message indicating a possible problem while often allowing the
+operation to continue.
+
+# 33. Completion checklist
+
+Before proceeding, confirm that you can:
+
+- identify the ordinary prompt;
+- identify and cancel the continuation prompt;
+- execute one line and several selected lines;
+- explain expressions and evaluation;
+- use arithmetic operators;
+- apply operator precedence;
+- use comparison operators;
+- combine logical conditions;
+- call functions with named arguments;
+- inspect function arguments;
+- create sequences;
+- repeat patterns;
+- combine values into vectors;
+- explain vectorisation;
+- recognise recycling;
+- distinguish assignment from automatic printing;
+- inspect objects with `class()`, `typeof()`, `length()` and `str()`;
+- use the help system;
+- identify syntax errors;
+- identify runtime errors;
+- interpret warnings;
+- debug unexpected output;
+- structure an R script;
+- run code from a clean session; and
+- conduct a small contextual analysis.
+
+# Lesson conclusion
+
+The first R session should not be approached as a sequence of unrelated
+commands. It should be treated as a disciplined computational process.
+
+The learner writes an expression, R parses and evaluates it, and the learner
+then inspects, validates and interprets the result. Important code is preserved
+in a source file and tested from a clean session.
+
+The working sequence is:
+
+\[
+\boxed{
+\text{write}
+\rightarrow
+\text{execute}
+\rightarrow
+\text{inspect}
+\rightarrow
+\text{validate}
+\rightarrow
+\text{interpret}
+\rightarrow
+\text{save}
+}
+\]
+
+The next lesson develops the object system in greater depth, including
+assignment, naming conventions, object inspection, copying, updating,
+attributes, coercion, deletion and safe object-management practices.

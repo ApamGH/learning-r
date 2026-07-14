@@ -1,0 +1,804 @@
+---
+title: "Lesson 37: Multiple Linear Regression"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Multiple linear regression models a numerical outcome using two or more
+explanatory variables.
+
+The general model is:
+
+\[
+Y_i
+=
+\beta_0
++
+\beta_1X_{1i}
++
+\beta_2X_{2i}
++
+\cdots
++
+\beta_kX_{ki}
++
+\varepsilon_i.
+\]
+
+Each coefficient is interpreted while holding the other model variables
+constant.
+
+This lesson develops adjusted interpretation, categorical predictors,
+interactions, model comparison and multicollinearity assessment.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. explain multiple linear regression;
+2. specify a model with several predictors;
+3. interpret adjusted coefficients;
+4. include categorical predictors;
+5. choose reference categories;
+6. create interaction terms;
+7. compare nested models;
+8. interpret \(R^2\) and adjusted \(R^2\);
+9. assess multicollinearity;
+10. calculate variance inflation factors;
+11. generate adjusted predictions;
+12. distinguish confounding, mediation and interaction conceptually;
+13. create reusable multiple-regression reports; and
+14. report model results accurately.
+
+# 1. Importing data
+
+```{r import-multiple-regression-data}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+student_data$programme <- factor(
+  student_data$programme
+)
+
+str(student_data)
+```
+
+# 2. Basic multiple regression
+
+Model final score using coursework and examination scores.
+
+```{r fit-basic-multiple-regression}
+multiple_model <- lm(
+  final_score ~
+    coursework_score +
+    examination_score,
+  data = student_data
+)
+
+summary(
+  multiple_model
+)
+```
+
+Because final score is the arithmetic sum of the two components in this
+teaching dataset, this model demonstrates exact structural dependence and
+should not be treated as a substantive predictive model.
+
+# 3. A more suitable teaching model
+
+Use examination score as the outcome and include coursework score and
+programme.
+
+```{r fit-adjusted-regression}
+adjusted_model <- lm(
+  examination_score ~
+    coursework_score +
+    programme,
+  data = student_data
+)
+
+summary(
+  adjusted_model
+)
+```
+
+# 4. Design matrix
+
+```{r inspect-design-matrix}
+head(
+  model.matrix(
+    adjusted_model
+  )
+)
+```
+
+Categorical predictors are represented through indicator variables.
+
+# 5. Reference category
+
+```{r multiple-reference-category}
+levels(
+  student_data$programme
+)
+```
+
+The first factor level is the default reference category under treatment
+coding.
+
+# 6. Changing the reference category
+
+```{r relevel-programme}
+student_data$programme_statistics_reference <- relevel(
+  student_data$programme,
+  ref = "Statistics"
+)
+
+reference_model <- lm(
+  examination_score ~
+    coursework_score +
+    programme_statistics_reference,
+  data = student_data
+)
+
+summary(
+  reference_model
+)
+```
+
+Changing the reference category changes coefficient interpretation but not
+fitted values or overall fit.
+
+# 7. Adjusted coefficient interpretation
+
+The coursework coefficient estimates the expected examination-score change for
+a one-unit coursework increase, comparing students with the same programme.
+
+Programme coefficients estimate adjusted differences relative to the reference
+programme.
+
+# 8. Confidence intervals
+
+```{r multiple-confidence-intervals}
+confint(
+  reference_model
+)
+```
+
+# 9. Overall model test
+
+```{r multiple-overall-test}
+anova(
+  reference_model
+)
+```
+
+```{r multiple-model-summary}
+reference_summary <- summary(
+  reference_model
+)
+
+reference_summary$r.squared
+reference_summary$adj.r.squared
+```
+
+# 10. Adjusted R-squared
+
+Adjusted \(R^2\) penalises model complexity and may decline when unhelpful
+predictors are added.
+
+# 11. Nested model comparison
+
+```{r nested-models}
+reduced_model <- lm(
+  examination_score ~
+    coursework_score,
+  data = student_data
+)
+
+full_model <- lm(
+  examination_score ~
+    coursework_score +
+    programme_statistics_reference,
+  data = student_data
+)
+
+anova(
+  reduced_model,
+  full_model
+)
+```
+
+This compares whether programme terms jointly improve model fit.
+
+# 12. Interaction model
+
+```{r fit-interaction-model}
+interaction_model <- lm(
+  examination_score ~
+    coursework_score *
+    programme_statistics_reference,
+  data = student_data
+)
+
+summary(
+  interaction_model
+)
+```
+
+The `*` expands to:
+
+- both main effects;
+- plus their interaction.
+
+# 13. Interaction interpretation
+
+An interaction indicates that the coursework slope differs by programme.
+
+Main effects in an interaction model are conditional:
+
+- the coursework main effect applies to the reference programme;
+- programme main effects apply when coursework score equals zero.
+
+# 14. Centring a continuous predictor
+
+```{r centre-coursework}
+student_data$coursework_centred <-
+  student_data$coursework_score -
+  mean(
+    student_data$coursework_score
+  )
+
+centred_interaction_model <- lm(
+  examination_score ~
+    coursework_centred *
+    programme_statistics_reference,
+  data = student_data
+)
+
+summary(
+  centred_interaction_model
+)
+```
+
+Centring makes programme main effects apply at the mean coursework score.
+
+# 15. Comparing interaction and additive models
+
+```{r compare-interaction-model}
+anova(
+  full_model,
+  interaction_model
+)
+```
+
+# 16. Predictions from the additive model
+
+```{r adjusted-prediction-grid}
+prediction_grid <- expand.grid(
+  coursework_score = c(
+    20,
+    30,
+    40
+  ),
+  programme_statistics_reference =
+    levels(
+      student_data$programme_statistics_reference
+    )
+)
+
+prediction_grid$predicted_examination <- predict(
+  reference_model,
+  newdata = prediction_grid
+)
+
+prediction_grid
+```
+
+# 17. Prediction intervals
+
+```{r multiple-prediction-intervals}
+prediction_output <- predict(
+  reference_model,
+  newdata = prediction_grid,
+  interval = "prediction"
+)
+
+cbind(
+  prediction_grid,
+  prediction_output
+)
+```
+
+# 18. Coefficient table extraction
+
+```{r multiple-coefficient-table}
+multiple_coefficient_table <- summary(
+  reference_model
+)$coefficients
+
+multiple_coefficient_table
+```
+
+# 19. Standardised coefficients
+
+```{r standardised-regression}
+standardised_data <- student_data
+
+standardised_data$coursework_z <- as.numeric(
+  scale(
+    standardised_data$coursework_score
+  )
+)
+
+standardised_data$examination_z <- as.numeric(
+  scale(
+    standardised_data$examination_score
+  )
+)
+
+standardised_model <- lm(
+  examination_z ~ coursework_z,
+  data = standardised_data
+)
+
+summary(
+  standardised_model
+)
+```
+
+Standardised coefficients express changes in standard-deviation units.
+
+# 20. Multicollinearity
+
+Multicollinearity occurs when predictors contain overlapping information.
+
+Consequences may include:
+
+- unstable coefficients;
+- inflated standard errors;
+- sign changes;
+- and difficult interpretation.
+
+# 21. Manual variance inflation factors
+
+```{r manual-vif-function}
+calculate_vif <- function(
+  model
+) {
+  design <- model.matrix(
+    model
+  )
+
+  design <- design[
+    ,
+    colnames(design) !=
+      "(Intercept)",
+    drop = FALSE
+  ]
+
+  if (ncol(design) < 2L) {
+    return(
+      setNames(
+        1,
+        colnames(design)
+      )
+    )
+  }
+
+  vif_values <- vapply(
+    seq_len(
+      ncol(design)
+    ),
+    function(column_index) {
+      response <- design[
+        ,
+        column_index
+      ]
+
+      predictors <- design[
+        ,
+        -column_index,
+        drop = FALSE
+      ]
+
+      auxiliary_model <- lm(
+        response ~ predictors
+      )
+
+      1 / (
+        1 -
+          summary(
+            auxiliary_model
+          )$r.squared
+      )
+    },
+    FUN.VALUE = numeric(1)
+  )
+
+  names(vif_values) <- colnames(
+    design
+  )
+
+  vif_values
+}
+
+calculate_vif(
+  reference_model
+)
+```
+
+For multi-level factors, ordinary dummy-variable VIFs require cautious
+interpretation.
+
+# 22. Correlation among numerical predictors
+
+```{r predictor-correlation}
+numeric_predictors <- student_data[
+  c(
+    "coursework_score",
+    "examination_score"
+  )
+]
+
+cor(
+  numeric_predictors,
+  use = "complete.obs"
+)
+```
+
+# 23. Confounding concept
+
+A variable may confound an association when it is associated with both the
+predictor and outcome and is not a consequence of the predictor.
+
+Regression adjustment alone does not prove confounding control is sufficient.
+
+# 24. Mediation concept
+
+A mediator lies on a causal pathway between exposure and outcome.
+
+Including a mediator changes the meaning of coefficients and requires a clear
+causal framework.
+
+# 25. Interaction concept
+
+An interaction means the association between one predictor and outcome depends
+on another predictor.
+
+It concerns effect modification, not merely statistical significance in
+subgroups.
+
+# 26. Model comparison criteria
+
+```{r multiple-model-comparison}
+data.frame(
+  model = c(
+    "Reduced",
+    "Additive full",
+    "Interaction"
+  ),
+  residual_degrees_of_freedom = c(
+    df.residual(
+      reduced_model
+    ),
+    df.residual(
+      full_model
+    ),
+    df.residual(
+      interaction_model
+    )
+  ),
+  r_squared = c(
+    summary(
+      reduced_model
+    )$r.squared,
+    summary(
+      full_model
+    )$r.squared,
+    summary(
+      interaction_model
+    )$r.squared
+  ),
+  adjusted_r_squared = c(
+    summary(
+      reduced_model
+    )$adj.r.squared,
+    summary(
+      full_model
+    )$adj.r.squared,
+    summary(
+      interaction_model
+    )$adj.r.squared
+  ),
+  AIC = c(
+    AIC(reduced_model),
+    AIC(full_model),
+    AIC(interaction_model)
+  )
+)
+```
+
+AIC is useful for relative model comparison under a consistent likelihood
+framework.
+
+# 27. Reusable coefficient-reporting function
+
+```{r multiple-report-function}
+report_multiple_regression <- function(
+  model
+) {
+  if (!inherits(
+    model,
+    "lm"
+  )) {
+    stop(
+      "`model` must be an lm object.",
+      call. = FALSE
+    )
+  }
+
+  model_summary <- summary(
+    model
+  )
+
+  coefficient_table <- as.data.frame(
+    model_summary$coefficients
+  )
+
+  coefficient_table$term <- rownames(
+    coefficient_table
+  )
+
+  rownames(
+    coefficient_table
+  ) <- NULL
+
+  confidence_intervals <- as.data.frame(
+    confint(model)
+  )
+
+  confidence_intervals$term <- rownames(
+    confidence_intervals
+  )
+
+  rownames(
+    confidence_intervals
+  ) <- NULL
+
+  names(
+    confidence_intervals
+  )[1:2] <- c(
+    "confidence_lower",
+    "confidence_upper"
+  )
+
+  merged <- merge(
+    coefficient_table,
+    confidence_intervals,
+    by = "term",
+    sort = FALSE
+  )
+
+  names(merged)[
+    names(merged) ==
+      "Estimate"
+  ] <- "estimate"
+
+  names(merged)[
+    names(merged) ==
+      "Std. Error"
+  ] <- "standard_error"
+
+  names(merged)[
+    names(merged) ==
+      "t value"
+  ] <- "t"
+
+  names(merged)[
+    names(merged) ==
+      "Pr(>|t|)"
+  ] <- "p_value"
+
+  merged
+}
+
+report_multiple_regression(
+  reference_model
+)
+```
+
+# 28. Reusable model-fit summary
+
+```{r multiple-fit-summary-function}
+summarise_model_fit <- function(
+  model
+) {
+  model_summary <- summary(
+    model
+  )
+
+  f_statistic <- model_summary$fstatistic
+
+  data.frame(
+    n = nobs(model),
+    predictors =
+      length(
+        coef(model)
+      ) - 1,
+    r_squared =
+      model_summary$r.squared,
+    adjusted_r_squared =
+      model_summary$adj.r.squared,
+    residual_standard_error =
+      model_summary$sigma,
+    f =
+      unname(
+        f_statistic[
+          "value"
+        ]
+      ),
+    df_model =
+      unname(
+        f_statistic[
+          "numdf"
+        ]
+      ),
+    df_residual =
+      unname(
+        f_statistic[
+          "dendf"
+        ]
+      ),
+    p_value = pf(
+      f_statistic[
+        "value"
+      ],
+      f_statistic[
+        "numdf"
+      ],
+      f_statistic[
+        "dendf"
+      ],
+      lower.tail = FALSE
+    ),
+    AIC = AIC(model),
+    BIC = BIC(model)
+  )
+}
+
+summarise_model_fit(
+  reference_model
+)
+```
+
+# 29. Common mistakes
+
+- interpreting adjusted coefficients as unadjusted differences;
+- using arbitrary control variables without a conceptual basis;
+- interpreting factor coefficients without stating the reference category;
+- omitting main effects from an interaction model;
+- interpreting main effects in interactions without conditioning;
+- using \(R^2\) alone for model selection;
+- treating high VIF as proof that a predictor is invalid;
+- changing model specifications only to obtain significance;
+- confusing adjustment with causal identification;
+- presenting coefficients without uncertainty.
+
+# 30. Independent exercises
+
+1. fit a model with two numerical predictors.
+2. explain exact structural dependence in the teaching data.
+3. fit a model with a categorical predictor.
+4. change the reference category.
+5. interpret adjusted coefficients.
+6. compare nested models.
+7. fit and interpret an interaction.
+8. centre a continuous predictor.
+9. create adjusted predictions.
+10. calculate manual VIFs.
+11. compare model-fit criteria.
+12. explain confounding, mediation and interaction.
+13. create reusable reporting functions.
+14. write a complete model interpretation.
+
+# 31. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. states a multivariable research question;
+2. fits an additive regression model;
+3. includes a categorical predictor;
+4. states the reference category;
+5. reports adjusted coefficients and intervals;
+6. compares nested models;
+7. assesses an interaction;
+8. centres a continuous variable;
+9. assesses multicollinearity;
+10. produces adjusted predictions;
+11. uses reusable reporting functions; and
+12. explains why the results do or do not support causal interpretation.
+
+# 32. Completion checklist
+
+Confirm that you can:
+
+- fit multiple regression models;
+- interpret adjusted coefficients;
+- include categorical variables;
+- select reference categories;
+- fit interaction terms;
+- centre predictors;
+- compare nested models;
+- interpret adjusted \(R^2\);
+- calculate VIFs;
+- generate adjusted predictions;
+- distinguish confounding, mediation and interaction; and
+- report multiple-regression results.
+
+# Lesson conclusion
+
+Multiple regression estimates conditional associations among several variables.
+Good modelling requires clear variable roles, careful interpretation, model
+comparison and awareness that adjustment alone does not establish causality.
+
+\[
+\boxed{
+\text{conceptual model}
+\rightarrow
+\text{specification}
+\rightarrow
+\text{adjusted estimates}
+\rightarrow
+\text{interaction and comparison}
+\rightarrow
+\text{diagnostics}
+\rightarrow
+\text{interpretation}
+}
+\]

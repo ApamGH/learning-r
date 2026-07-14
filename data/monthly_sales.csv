@@ -1,0 +1,13 @@
+month,branch,product_category,units_sold,revenue_ghs
+2026-01,Bolgatanga,Laptops,18,126000
+2026-01,Navrongo,Phones,42,84000
+2026-01,Bawku,Accessories,75,22500
+2026-02,Bolgatanga,Phones,48,96000
+2026-02,Navrongo,Accessories,68,20400
+2026-02,Bawku,Laptops,12,84000
+2026-03,Bolgatanga,Accessories,92,27600
+2026-03,Navrongo,Laptops,16,112000
+2026-03,Bawku,Phones,37,74000
+2026-04,Bolgatanga,Laptops,21,147000
+2026-04,Navrongo,Phones,45,90000
+2026-04,Bawku,Accessories,81,24300

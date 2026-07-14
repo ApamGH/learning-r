@@ -1,0 +1,1012 @@
+---
+title: "Lesson 14: Function Scope, Environments and Argument Behaviour"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Functions do not evaluate code in an empty space. They operate within
+environments that determine where names are found and where assignments are
+stored.
+
+Understanding scope helps explain why:
+
+- a function can use an object defined outside it;
+- an object created inside a function may disappear afterwards;
+- a local variable can hide a global variable;
+- default arguments may depend on earlier arguments;
+- `...` can pass arguments to another function;
+- modifying an object inside a function usually does not alter the original;
+- closures can remember values; and
+- careless use of global assignment creates hidden state.
+
+This lesson introduces lexical scoping, local and global environments, lazy
+argument evaluation, closures and safe state management.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. explain an environment in R;
+2. distinguish local and global scope;
+3. understand lexical scoping;
+4. inspect function environments;
+5. explain name masking;
+6. understand ordinary assignment inside functions;
+7. recognise the risks of superassignment;
+8. understand argument matching;
+9. understand lazy evaluation;
+10. define defaults based on earlier arguments;
+11. use `missing()` and `match.arg()`;
+12. create closures;
+13. understand copy-on-modify behaviour conceptually;
+14. avoid hidden global dependencies; and
+15. design functions with predictable scope.
+
+# 1. What is an environment?
+
+An environment is a structure that stores bindings between names and objects
+and has a reference to a parent environment.
+
+The global environment is:
+
+```{r global-environment}
+globalenv()
+```
+
+List its current names:
+
+```{r global-environment-names}
+ls(
+  envir = globalenv()
+)
+```
+
+# 2. Function-local objects
+
+```{r local-object-function}
+create_local_value <- function() {
+  local_value <- 25
+
+  local_value
+}
+
+create_local_value()
+```
+
+After the function returns:
+
+```{r local-object-does-not-exist}
+exists(
+  "local_value",
+  envir = globalenv()
+)
+```
+
+The local object is not created in the global environment.
+
+# 3. Local and global names
+
+```{r create-global-name}
+value <- 100
+```
+
+Create a local name with the same spelling:
+
+```{r local-name-masking}
+use_local_value <- function() {
+  value <- 25
+
+  value
+}
+
+use_local_value()
+value
+```
+
+The local assignment masks the global value inside the function.
+
+# 4. Lexical scoping
+
+```{r lexical-scope-example}
+tax_rate <- 0.15
+
+calculate_total_with_tax <- function(
+  subtotal
+) {
+  subtotal +
+    subtotal * tax_rate
+}
+
+calculate_total_with_tax(
+  1000
+)
+```
+
+The function finds `tax_rate` in the environment where the function was
+defined.
+
+This works, but it creates an external dependency.
+
+Preferred:
+
+```{r explicit-tax-argument}
+calculate_total_with_tax <- function(
+  subtotal,
+  tax_rate = 0.15
+) {
+  subtotal +
+    subtotal * tax_rate
+}
+
+calculate_total_with_tax(
+  1000
+)
+```
+
+The dependency is explicit.
+
+# 5. Inspecting a function environment
+
+```{r inspect-function-environment}
+environment(
+  calculate_total_with_tax
+)
+```
+
+Most functions created at the Console or top level of a document are associated
+with the global environment.
+
+# 6. Environment search
+
+```{r environment-parent}
+parent.env(
+  globalenv()
+)
+```
+
+Inspect the search path:
+
+```{r scope-search-path}
+search()
+```
+
+R searches for names according to environment relationships and attached
+packages.
+
+# 7. Ordinary assignment inside functions
+
+```{r ordinary-local-assignment}
+global_counter <- 0
+
+increment_locally <- function() {
+  global_counter <- 1
+
+  global_counter
+}
+
+increment_locally()
+global_counter
+```
+
+The function creates a local `global_counter`; the global object remains zero.
+
+# 8. Superassignment
+
+```{r superassignment-example}
+global_counter <- 0
+
+increment_globally <- function() {
+  global_counter <<-
+    global_counter + 1
+}
+
+increment_globally()
+global_counter
+```
+
+`<<-` searches parent environments and modifies an existing binding or creates
+one outside the local function.
+
+This creates side effects and should be used sparingly.
+
+# 9. Why superassignment is risky
+
+```{r superassignment-hidden-state}
+analysis_total <- 0
+
+add_to_analysis_total <- function(
+  value
+) {
+  analysis_total <<-
+    analysis_total + value
+}
+
+add_to_analysis_total(10)
+add_to_analysis_total(25)
+
+analysis_total
+```
+
+The result depends on previous calls and hidden external state.
+
+Preferred pure form:
+
+```{r pure-accumulation-function}
+add_values <- function(
+  current_total,
+  value
+) {
+  current_total + value
+}
+
+analysis_total <- 0
+analysis_total <- add_values(
+  analysis_total,
+  10
+)
+analysis_total <- add_values(
+  analysis_total,
+  25
+)
+
+analysis_total
+```
+
+# 10. Argument matching
+
+R can match arguments by:
+
+- exact name;
+- partial name;
+- position.
+
+```{r exact-argument-matching}
+round(
+  x = 3.14159,
+  digits = 2
+)
+```
+
+Positional:
+
+```{r positional-argument-matching}
+round(
+  3.14159,
+  2
+)
+```
+
+Partial matching may work:
+
+```{r partial-argument-matching}
+round(
+  3.14159,
+  dig = 2
+)
+```
+
+Avoid relying on partial matching because it can be ambiguous or fragile.
+
+# 11. Required and optional arguments
+
+```{r required-optional-function}
+calculate_growth <- function(
+  initial_value,
+  final_value,
+  periods = 1
+) {
+  (
+    final_value /
+      initial_value
+  ) ^ (
+    1 / periods
+  ) - 1
+}
+
+calculate_growth(
+  initial_value = 100,
+  final_value = 121,
+  periods = 2
+)
+```
+
+# 12. Defaults depending on earlier arguments
+
+```{r dependent-default-argument}
+centre_values <- function(
+  x,
+  centre = mean(
+    x,
+    na.rm = TRUE
+  )
+) {
+  x - centre
+}
+
+centre_values(
+  c(
+    10,
+    20,
+    30
+  )
+)
+```
+
+The default `centre` is calculated from `x`.
+
+# 13. Lazy evaluation
+
+Arguments are generally evaluated only when used.
+
+```{r lazy-evaluation-example}
+ignore_second_argument <- function(
+  x,
+  y
+) {
+  x
+}
+
+ignore_second_argument(
+  x = 10,
+  y = stop(
+    "This argument was evaluated."
+  )
+)
+```
+
+No error occurs because `y` is never used.
+
+# 14. Forcing evaluation
+
+```{r force-argument-example}
+force_argument <- function(
+  x
+) {
+  force(x)
+
+  function() {
+    x
+  }
+}
+
+remembered_value <-
+  force_argument(25)
+
+remembered_value()
+```
+
+`force()` ensures evaluation at a specific point.
+
+# 15. Detecting omitted arguments
+
+```{r missing-argument-function}
+describe_input <- function(
+  x
+) {
+  if (missing(x)) {
+    return(
+      "No input supplied."
+    )
+  }
+
+  paste(
+    "Input:",
+    x
+  )
+}
+
+describe_input()
+describe_input(25)
+```
+
+# 16. Matching choices with `match.arg()`
+
+```{r match-arg-function}
+summarise_value <- function(
+  x,
+  statistic = c(
+    "mean",
+    "median",
+    "sum"
+  )
+) {
+  statistic <- match.arg(
+    statistic
+  )
+
+  switch(
+    statistic,
+    mean = mean(
+      x,
+      na.rm = TRUE
+    ),
+    median = median(
+      x,
+      na.rm = TRUE
+    ),
+    sum = sum(
+      x,
+      na.rm = TRUE
+    )
+  )
+}
+
+summarise_value(
+  c(
+    10,
+    20,
+    30
+  ),
+  statistic = "median"
+)
+```
+
+`match.arg()` validates and standardises a character choice.
+
+# 17. The `...` argument and forwarding
+
+```{r forwarding-dots}
+calculate_summary <- function(
+  x,
+  summary_function,
+  ...
+) {
+  summary_function(
+    x,
+    ...
+  )
+}
+
+calculate_summary(
+  c(
+    10,
+    NA,
+    20
+  ),
+  summary_function = mean,
+  na.rm = TRUE
+)
+```
+
+# 18. Capturing `...`
+
+```{r capture-dots}
+inspect_dots <- function(
+  ...
+) {
+  list(
+    ...
+  )
+}
+
+inspect_dots(
+  first = 10,
+  second = "A",
+  third = TRUE
+)
+```
+
+# 19. Function factories and closures
+
+A function can create another function.
+
+```{r multiplier-factory}
+create_multiplier <- function(
+  multiplier
+) {
+  function(x) {
+    x * multiplier
+  }
+}
+
+double_value <-
+  create_multiplier(2)
+
+triple_value <-
+  create_multiplier(3)
+
+double_value(10)
+triple_value(10)
+```
+
+The returned functions remember `multiplier`. This remembered environment is a
+closure.
+
+# 20. Threshold-classification factory
+
+```{r threshold-function-factory}
+create_threshold_classifier <- function(
+  threshold,
+  yes_label = "Meets threshold",
+  no_label = "Below threshold"
+) {
+  function(x) {
+    ifelse(
+      x >= threshold,
+      yes_label,
+      no_label
+    )
+  }
+}
+
+classify_pass <-
+  create_threshold_classifier(
+    threshold = 50,
+    yes_label = "Pass",
+    no_label = "Fail"
+  )
+
+classify_distinction <-
+  create_threshold_classifier(
+    threshold = 80,
+    yes_label = "Distinction",
+    no_label = "Not distinction"
+  )
+
+classify_pass(
+  c(
+    45,
+    58,
+    84
+  )
+)
+
+classify_distinction(
+  c(
+    45,
+    58,
+    84
+  )
+)
+```
+
+# 21. Modifying function inputs
+
+```{r modify-input-copy}
+modify_first_value <- function(
+  x
+) {
+  x[1] <- 999
+
+  x
+}
+
+original_values <- c(
+  10,
+  20,
+  30
+)
+
+modified_values <-
+  modify_first_value(
+    original_values
+  )
+
+original_values
+modified_values
+```
+
+The original vector remains unchanged in ordinary use.
+
+# 22. Data-frame input modification
+
+```{r modify-data-frame-input}
+add_total_score <- function(
+  data
+) {
+  data$total_score <-
+    data$coursework_score +
+    data$examination_score
+
+  data
+}
+
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+student_with_total <-
+  add_total_score(
+    student_data
+  )
+
+"total_score" %in%
+  names(student_data)
+
+"total_score" %in%
+  names(student_with_total)
+```
+
+# 23. Hidden global dependency
+
+Poor design:
+
+```{r hidden-global-dependency}
+pass_mark <- 50
+
+calculate_pass_status <- function(
+  scores
+) {
+  scores >= pass_mark
+}
+
+calculate_pass_status(
+  c(
+    45,
+    58,
+    72
+  )
+)
+```
+
+Preferred:
+
+```{r explicit-function-dependency}
+calculate_pass_status <- function(
+  scores,
+  pass_mark = 50
+) {
+  scores >= pass_mark
+}
+
+calculate_pass_status(
+  c(
+    45,
+    58,
+    72
+  )
+)
+```
+
+# 24. Name masking inside functions
+
+```{r function-name-masking}
+mean <- 100
+
+calculate_average <- function(
+  x
+) {
+  base::mean(x)
+}
+
+calculate_average(
+  c(
+    10,
+    20,
+    30
+  )
+)
+```
+
+Using `base::mean()` avoids confusion caused by an object named `mean`.
+
+Remove the masking object:
+
+```{r remove-masking-object}
+rm(mean)
+```
+
+# 25. Local helper functions
+
+```{r local-helper-function}
+summarise_scores <- function(
+  scores
+) {
+  validate_input <- function(
+    x
+  ) {
+    if (!is.numeric(x)) {
+      stop(
+        "`scores` must be numeric.",
+        call. = FALSE
+      )
+    }
+
+    TRUE
+  }
+
+  validate_input(scores)
+
+  c(
+    Mean = mean(
+      scores,
+      na.rm = TRUE
+    ),
+    Median = median(
+      scores,
+      na.rm = TRUE
+    )
+  )
+}
+
+summarise_scores(
+  c(
+    65,
+    72,
+    81
+  )
+)
+```
+
+The helper function exists only during the outer function call.
+
+# 26. Environment-based state
+
+```{r environment-state-example}
+counter_environment <-
+  new.env(
+    parent = emptyenv()
+  )
+
+counter_environment$count <- 0
+
+increment_environment_counter <- function() {
+  counter_environment$count <-
+    counter_environment$count + 1
+
+  counter_environment$count
+}
+
+increment_environment_counter()
+increment_environment_counter()
+```
+
+Environment-based mutable state is advanced and should be used deliberately.
+
+# 27. Reproducible random functions
+
+```{r random-function}
+simulate_scores <- function(
+  n,
+  mean_score = 70,
+  standard_deviation = 10,
+  seed = NULL
+) {
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
+
+  rnorm(
+    n = n,
+    mean = mean_score,
+    sd = standard_deviation
+  )
+}
+
+first_simulation <- simulate_scores(
+  n = 5,
+  seed = 123
+)
+
+second_simulation <- simulate_scores(
+  n = 5,
+  seed = 123
+)
+
+first_simulation
+second_simulation
+
+identical(
+  first_simulation,
+  second_simulation
+)
+```
+
+The seed argument makes reproducibility explicit.
+
+# 28. Integrated example: configurable summary function
+
+```{r configurable-summary-function}
+summarise_data_variable <- function(
+  data,
+  variable,
+  statistic = c(
+    "mean",
+    "median",
+    "sum"
+  ),
+  na_rm = TRUE
+) {
+  statistic <- match.arg(
+    statistic
+  )
+
+  if (!is.data.frame(data)) {
+    stop(
+      "`data` must be a data frame.",
+      call. = FALSE
+    )
+  }
+
+  if (!variable %in%
+      names(data)) {
+    stop(
+      paste(
+        "Variable not found:",
+        variable
+      ),
+      call. = FALSE
+    )
+  }
+
+  values <-
+    data[[
+      variable
+    ]]
+
+  if (!is.numeric(values)) {
+    stop(
+      paste(
+        variable,
+        "must be numeric."
+      ),
+      call. = FALSE
+    )
+  }
+
+  switch(
+    statistic,
+    mean = mean(
+      values,
+      na.rm = na_rm
+    ),
+    median = median(
+      values,
+      na.rm = na_rm
+    ),
+    sum = sum(
+      values,
+      na.rm = na_rm
+    )
+  )
+}
+```
+
+Use:
+
+```{r use-configurable-summary}
+summarise_data_variable(
+  student_data,
+  variable = "final_score",
+  statistic = "mean"
+)
+
+summarise_data_variable(
+  student_data,
+  variable = "final_score",
+  statistic = "median"
+)
+```
+
+# 29. Common mistakes
+
+- depending on undeclared global objects;
+- using `<<-` unnecessarily;
+- relying on partial argument matching;
+- forgetting that arguments are lazily evaluated;
+- using `...` without validation;
+- creating accidental name masking;
+- assuming local assignments modify global objects;
+- assuming input objects are modified in place;
+- failing to make randomness reproducible;
+- creating stateful functions without documenting state.
+
+# 30. Independent exercises
+
+1. demonstrate local and global scope.
+2. show lexical scoping with an external object.
+3. rewrite the function to use an explicit argument.
+4. demonstrate ordinary assignment and superassignment.
+5. demonstrate positional, exact and partial matching.
+6. create a default depending on an earlier argument.
+7. demonstrate lazy evaluation.
+8. use `missing()`.
+9. use `match.arg()`.
+10. forward arguments with `...`.
+11. create a closure.
+12. show that modifying a function input does not alter the original.
+13. remove a hidden global dependency.
+14. create a reproducible simulation function.
+
+# 31. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. demonstrates local and global objects;
+2. explains lexical scoping;
+3. compares `<-` and `<<-`;
+4. demonstrates argument matching;
+5. demonstrates lazy evaluation;
+6. uses `missing()` and `match.arg()`;
+7. forwards arguments with `...`;
+8. creates a closure;
+9. demonstrates safe input modification;
+10. removes a global dependency;
+11. creates a reproducible random function; and
+12. explains all scope decisions.
+
+# 32. Completion checklist
+
+Confirm that you can:
+
+- explain environments;
+- distinguish local and global scope;
+- explain lexical scoping;
+- inspect a function environment;
+- recognise name masking;
+- explain ordinary local assignment;
+- explain superassignment risks;
+- understand argument matching;
+- explain lazy evaluation;
+- define dependent defaults;
+- detect omitted arguments;
+- validate choices with `match.arg()`;
+- forward and capture `...`;
+- create closures;
+- understand ordinary copy-on-modify behaviour;
+- avoid hidden dependencies; and
+- design reproducible random functions.
+
+# Lesson conclusion
+
+Function behaviour depends not only on the code inside the body but also on the
+environment in which names are resolved and arguments are evaluated.
+
+\[
+\boxed{
+\text{make dependencies explicit}
+\rightarrow
+\text{limit side effects}
+\rightarrow
+\text{validate arguments}
+\rightarrow
+\text{return predictably}
+\rightarrow
+\text{test scope}
+}
+\]

@@ -1,0 +1,891 @@
+---
+title: "Lesson 39: Reproducible Statistical Analysis with R Markdown, Projects and Version Control"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Reproducibility means that another analyst, or the same analyst at a later
+date, can repeat the analytical workflow and obtain the same results from the
+same data and code.
+
+A reproducible statistical project should clearly separate:
+
+- raw data;
+- cleaned data;
+- analytical code;
+- functions;
+- outputs;
+- documentation;
+- and version history.
+
+This lesson develops a disciplined R workflow using R projects, R Markdown,
+relative paths, code organisation, dependency recording, session information
+and Git-based version control.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. explain reproducibility and replicability;
+2. organise a statistical project;
+3. use an RStudio project;
+4. use relative paths;
+5. separate raw and processed data;
+6. create analysis scripts and reusable functions;
+7. structure R Markdown documents;
+8. control chunk behaviour;
+9. parameterise reports;
+10. record package and session information;
+11. create project metadata;
+12. use Git for version control;
+13. write useful commit messages;
+14. create a suitable `.gitignore`;
+15. create a reproducibility checklist; and
+16. package a project for handover.
+
+# 1. Reproducibility and replicability
+
+**Reproducibility** means obtaining the same result using the same data and
+analysis workflow.
+
+**Replicability** means obtaining substantively similar findings using new data
+or an independently repeated study.
+
+Both depend on transparency, but they are not the same.
+
+# 2. Recommended project structure
+
+A useful structure is:
+
+```text
+learning-r-project/
+├── data/
+│   ├── raw/
+│   └── processed/
+├── R/
+├── reports/
+├── outputs/
+│   ├── figures/
+│   └── tables/
+├── scripts/
+├── README.md
+├── .gitignore
+└── learning-r-project.Rproj
+```
+
+# 3. Why use an R project?
+
+An R project provides a stable working context.
+
+Benefits include:
+
+- predictable relative paths;
+- project-specific history;
+- project-specific settings;
+- easier version control;
+- and reduced dependence on `setwd()`.
+
+# 4. Avoiding hard-coded working directories
+
+Avoid:
+
+```r
+setwd("C:/Users/Name/Documents/Project")
+```
+
+Prefer relative paths from the project root.
+
+```{r inspect-current-directory}
+getwd()
+```
+
+# 5. Relative paths
+
+```{r relative-path-example}
+student_path <- file.path(
+  "data",
+  "student_scores.csv"
+)
+
+file.exists(
+  student_path
+)
+```
+
+# 6. Importing with a relative path
+
+```{r reproducible-import}
+student_data <- read.csv(
+  student_path,
+  stringsAsFactors = FALSE
+)
+
+head(student_data)
+```
+
+# 7. Creating output folders safely
+
+```{r create-output-folders}
+output_directories <- c(
+  file.path(
+    "outputs",
+    "figures"
+  ),
+  file.path(
+    "outputs",
+    "tables"
+  )
+)
+
+for (directory in output_directories) {
+  if (!dir.exists(directory)) {
+    dir.create(
+      directory,
+      recursive = TRUE
+    )
+  }
+}
+
+directory_status <- logical(
+  length(
+    output_directories
+  )
+)
+
+names(
+  directory_status
+) <- output_directories
+
+for (index in seq_along(
+  output_directories
+)) {
+  directory_status[index] <- dir.exists(
+    output_directories[index]
+  )
+}
+
+directory_status
+```
+
+# 8. Separating raw and processed data
+
+Raw data should normally remain unchanged.
+
+```{r raw-and-processed}
+raw_student_data <- student_data
+
+processed_student_data <- raw_student_data
+
+processed_student_data$programme <- trimws(
+  processed_student_data$programme
+)
+
+processed_student_data$passed <-
+  processed_student_data$final_score >= 50
+
+head(processed_student_data)
+```
+
+# 9. Recording transformation decisions
+
+```{r transformation-log}
+transformation_log <- data.frame(
+  step = c(
+    1,
+    2
+  ),
+  variable = c(
+    "programme",
+    "passed"
+  ),
+  action = c(
+    "Trim surrounding whitespace",
+    "Create binary pass indicator"
+  ),
+  rule = c(
+    "trimws(programme)",
+    "final_score >= 50"
+  ),
+  stringsAsFactors = FALSE
+)
+
+transformation_log
+```
+
+# 10. Saving processed data
+
+```{r save-processed-data}
+processed_output_path <- file.path(
+  "outputs",
+  "tables",
+  "processed_student_data.csv"
+)
+
+write.csv(
+  processed_student_data,
+  processed_output_path,
+  row.names = FALSE
+)
+
+file.exists(
+  processed_output_path
+)
+```
+
+# 11. Script separation
+
+A well-organised project may use:
+
+- `01-import.R`;
+- `02-clean.R`;
+- `03-describe.R`;
+- `04-model.R`;
+- `05-report.R`.
+
+The numerical prefixes make the intended order visible.
+
+# 12. Reusable functions
+
+```{r reproducible-summary-function}
+summarise_numeric <- function(
+  x
+) {
+  observed <- x[
+    !is.na(x)
+  ]
+
+  data.frame(
+    n = length(observed),
+    missing = sum(
+      is.na(x)
+    ),
+    mean = mean(observed),
+    median = median(observed),
+    standard_deviation = sd(observed),
+    minimum = min(observed),
+    maximum = max(observed)
+  )
+}
+
+summarise_numeric(
+  processed_student_data$final_score
+)
+```
+
+Functions should be stored in the `R/` folder when they are reused across
+scripts or reports.
+
+# 13. Sourcing function files
+
+```{r source-functions-template, eval=FALSE}
+source(
+  file.path(
+    "R",
+    "summary_functions.R"
+  )
+)
+```
+
+# 14. R Markdown structure
+
+A reproducible R Markdown report usually contains:
+
+1. title and metadata;
+2. research question;
+3. data source;
+4. data preparation;
+5. descriptive analysis;
+6. inferential analysis;
+7. diagnostics;
+8. results;
+9. limitations;
+10. reproducibility information.
+
+# 15. Chunk options
+
+Common chunk options include:
+
+- `echo`;
+- `eval`;
+- `include`;
+- `message`;
+- `warning`;
+- `fig.width`;
+- `fig.height`;
+- `cache`.
+
+Example:
+
+````text
+```{r example, echo=TRUE, warning=FALSE, message=FALSE}
+summary(student_data)
+```
+````
+
+# 16. Hiding setup code
+
+The setup chunk often uses:
+
+````text
+```{r project-setup-example, include=FALSE, eval=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+```
+````
+
+# 17. Inline R code
+
+Inline code keeps prose and results synchronised.
+
+For example:
+
+```text
+The mean score was `r round(mean(student_data$final_score), 2)`.
+```
+
+# 18. Captions and figure files
+
+```{r reproducible-figure}
+figure_path <- file.path(
+  "outputs",
+  "figures",
+  "final_score_histogram.png"
+)
+
+png(
+  figure_path,
+  width = 1200,
+  height = 800,
+  res = 150
+)
+
+hist(
+  processed_student_data$final_score,
+  main = "Distribution of Final Scores",
+  xlab = "Final score",
+  ylab = "Frequency"
+)
+
+dev.off()
+
+file.exists(
+  figure_path
+)
+```
+
+# 19. Exporting analysis tables
+
+```{r export-summary-table}
+summary_table <- summarise_numeric(
+  processed_student_data$final_score
+)
+
+summary_output_path <- file.path(
+  "outputs",
+  "tables",
+  "final_score_summary.csv"
+)
+
+write.csv(
+  summary_table,
+  summary_output_path,
+  row.names = FALSE
+)
+
+summary_table
+```
+
+# 20. Parameterised reports
+
+Parameters allow the same report to be rendered for different groups or
+settings.
+
+Example YAML:
+
+```yaml
+params:
+  selected_programme: "Statistics"
+```
+
+Access the value with:
+
+```r
+params$selected_programme
+```
+
+# 21. Parameterised analysis example
+
+```{r parameterised-analysis-example}
+selected_programme <- "Statistics"
+
+selected_data <- processed_student_data[
+  processed_student_data$programme ==
+    selected_programme,
+]
+
+summarise_numeric(
+  selected_data$final_score
+)
+```
+
+# 22. Recording package versions
+
+```{r session-information}
+sessionInfo()
+```
+
+Session information records:
+
+- R version;
+- operating system;
+- attached packages;
+- loaded namespaces;
+- and package versions.
+
+# 23. Package dependency inventory
+
+```{r package-dependency-inventory}
+required_packages <- c(
+  "knitr",
+  "rmarkdown",
+  "ggplot2"
+)
+
+package_installed <- logical(
+  length(
+    required_packages
+  )
+)
+
+package_version <- rep(
+  NA_character_,
+  length(
+    required_packages
+  )
+)
+
+for (index in seq_along(
+  required_packages
+)) {
+  package_name <- required_packages[index]
+
+  package_installed[index] <- base::requireNamespace(
+    package_name,
+    quietly = TRUE
+  )
+
+  if (package_installed[index]) {
+    package_version[index] <- as.character(
+      utils::packageVersion(
+        package_name
+      )
+    )
+  }
+}
+
+dependency_status <- data.frame(
+  package =
+    required_packages,
+  installed =
+    package_installed,
+  version =
+    package_version,
+  stringsAsFactors = FALSE
+)
+
+dependency_status
+```
+
+# 24. Random seeds
+
+```{r reproducible-randomness}
+set.seed(20260714)
+
+first_draw <- rnorm(5)
+
+set.seed(20260714)
+
+second_draw <- rnorm(5)
+
+identical(
+  first_draw,
+  second_draw
+)
+```
+
+A seed makes pseudo-random results reproducible.
+
+# 25. Deterministic versus non-deterministic operations
+
+Deterministic operations return the same output for the same input.
+
+Random sampling, model initialisation and simulation require explicit control
+of randomness.
+
+# 26. Project README
+
+A useful README should state:
+
+- project purpose;
+- required software;
+- folder structure;
+- data sources;
+- execution order;
+- expected outputs;
+- contact or ownership information;
+- and known limitations.
+
+# 27. Basic README generator
+
+```{r readme-template}
+readme_lines <- c(
+  "# Statistical Analysis Project",
+  "",
+  "## Purpose",
+  "This project demonstrates a reproducible student-score analysis.",
+  "",
+  "## Main steps",
+  "1. Import data",
+  "2. Clean and validate data",
+  "3. Produce descriptive statistics",
+  "4. Fit statistical models",
+  "5. Render the report",
+  "",
+  "## Main input",
+  "- data/student_scores.csv",
+  "",
+  "## Main outputs",
+  "- outputs/tables/",
+  "- outputs/figures/"
+)
+
+readme_lines
+```
+
+# 28. Version control with Git
+
+Git records changes to project files over time.
+
+A basic workflow is:
+
+```bash
+git status
+git add .
+git commit -m "Add descriptive analysis"
+git push
+```
+
+# 29. Useful commit messages
+
+Good commit messages are:
+
+- specific;
+- concise;
+- action-oriented;
+- and connected to one logical change.
+
+Examples:
+
+```text
+Add missing-value validation
+Correct programme recoding rule
+Create regression diagnostics report
+Update README execution steps
+```
+
+Avoid:
+
+```text
+Update
+Changes
+Work
+Final final
+```
+
+# 30. `.gitignore`
+
+A suitable `.gitignore` may contain:
+
+```text
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+*.html
+*.pdf
+outputs/temp/
+```
+
+Do not ignore files that are essential for reproducibility.
+
+# 31. Files that should not enter version control
+
+Examples may include:
+
+- passwords;
+- API keys;
+- confidential raw data;
+- personal identifiers;
+- very large temporary files;
+- local cache folders.
+
+# 32. Data confidentiality
+
+Reproducibility does not require public release of confidential data.
+
+Alternatives include:
+
+- synthetic data;
+- de-identified extracts;
+- controlled-access repositories;
+- data dictionaries;
+- reproducible code that runs in a secure environment.
+
+# 33. Handover package
+
+A professional handover package should include:
+
+- project files;
+- code;
+- data dictionary;
+- README;
+- dependency information;
+- output examples;
+- licence information;
+- and execution instructions.
+
+# 34. Reproducibility audit function
+
+```{r reproducibility-audit-function}
+audit_project_paths <- function(
+  required_paths
+) {
+  data.frame(
+    path = required_paths,
+    exists = file.exists(
+      required_paths
+    ) |
+      dir.exists(
+        required_paths
+      ),
+    type = {
+      path_type <- rep(
+        "missing",
+        length(
+          required_paths
+        )
+      )
+
+      for (index in seq_along(
+        required_paths
+      )) {
+        current_path <- required_paths[index]
+
+        if (dir.exists(
+          current_path
+        )) {
+          path_type[index] <- "directory"
+        } else if (file.exists(
+          current_path
+        )) {
+          path_type[index] <- "file"
+        }
+      }
+
+      path_type
+    },
+    stringsAsFactors = FALSE
+  )
+}
+
+required_project_paths <- c(
+  "data",
+  "outputs",
+  file.path(
+    "data",
+    "student_scores.csv"
+  ),
+  "learning-r.Rproj"
+)
+
+audit_project_paths(
+  required_project_paths
+)
+```
+
+# 35. Reproducibility checklist
+
+```{r reproducibility-checklist}
+reproducibility_checklist <- data.frame(
+  item = c(
+    "Uses relative paths",
+    "Raw data preserved",
+    "Transformations documented",
+    "Random seed recorded",
+    "Package versions recorded",
+    "README available",
+    "Outputs generated by code",
+    "Confidential files excluded",
+    "Version history maintained"
+  ),
+  status = c(
+    TRUE,
+    TRUE,
+    TRUE,
+    TRUE,
+    TRUE,
+    FALSE,
+    TRUE,
+    TRUE,
+    FALSE
+  ),
+  stringsAsFactors = FALSE
+)
+
+reproducibility_checklist
+```
+
+# 36. Cleaning temporary outputs
+
+```{r cleanup-reproducibility-output}
+unlink(
+  "outputs",
+  recursive = TRUE,
+  force = TRUE
+)
+```
+
+# 37. Common mistakes
+
+- using absolute paths;
+- editing raw data manually;
+- copying results into reports by hand;
+- omitting package versions;
+- forgetting random seeds;
+- storing passwords in scripts;
+- committing confidential data;
+- using vague commit messages;
+- relying on one undocumented script;
+- creating outputs that cannot be regenerated.
+
+# 38. Independent exercises
+
+1. create a project folder structure.
+2. use relative paths.
+3. import data from the project root.
+4. preserve raw data.
+5. document transformations.
+6. export processed data.
+7. create reusable functions.
+8. structure an R Markdown report.
+9. use inline code.
+10. create a parameterised analysis.
+11. record package versions.
+12. record session information.
+13. set and verify random seeds.
+14. write a README.
+15. write a `.gitignore`.
+16. create a reproducibility audit.
+
+# 39. Lesson assessment
+
+Create a reproducible project that:
+
+1. uses an R project;
+2. follows a clear folder structure;
+3. uses relative paths;
+4. preserves raw data;
+5. records data-processing decisions;
+6. stores reusable functions separately;
+7. produces a rendered R Markdown report;
+8. records session information;
+9. includes a README;
+10. includes a `.gitignore`;
+11. uses Git commits; and
+12. passes a reproducibility checklist.
+
+# 40. Completion checklist
+
+Confirm that you can:
+
+- explain reproducibility;
+- organise an R project;
+- use relative paths;
+- preserve raw data;
+- separate scripts and functions;
+- create R Markdown reports;
+- use parameters;
+- record dependencies;
+- control randomness;
+- write README files;
+- use Git;
+- write useful commits;
+- protect confidential data; and
+- package a project for handover.
+
+# Lesson conclusion
+
+Reproducibility is not an optional formatting step. It is part of statistical
+quality. A transparent project allows another analyst to understand, repeat and
+audit the work.
+
+\[
+\boxed{
+\text{organise}
+\rightarrow
+\text{document}
+\rightarrow
+\text{automate}
+\rightarrow
+\text{version}
+\rightarrow
+\text{reproduce}
+}
+\]

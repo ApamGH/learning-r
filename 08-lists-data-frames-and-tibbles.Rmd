@@ -1,0 +1,742 @@
+---
+title: "Lesson 8: Lists, Data Frames and Tibbles"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(digits = 4, scipen = 999, width = 90)
+set.seed(20260713)
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Lists and data frames allow R to organise heterogeneous information. A list can
+contain objects of entirely different forms. A data frame is a list of
+equal-length columns and is the principal structure for rectangular datasets.
+
+Tibbles are modern data-frame variants supplied by the `tibble` package. This
+lesson begins with base R lists and data frames, then introduces tibbles as an
+optional extension.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. create and inspect lists;
+2. extract list components;
+3. modify lists;
+4. understand nested lists;
+5. create data frames;
+6. inspect rows, columns and dimensions;
+7. add, remove and transform columns;
+8. append rows carefully;
+9. understand recycling in data-frame creation;
+10. distinguish matrices and data frames;
+11. import CSV data as a data frame;
+12. understand tibble behaviour; and
+13. validate rectangular data structures.
+
+# 1. Creating a list
+
+```{r create-list}
+student_record <- list(
+  name = "Ama",
+  age = 22L,
+  programme = "Statistics",
+  scores = c(68, 74, 81),
+  registered = TRUE
+)
+
+student_record
+```
+
+A list can contain different object types and lengths.
+
+# 2. Inspecting a list
+
+```{r inspect-list}
+class(student_record)
+typeof(student_record)
+length(student_record)
+names(student_record)
+str(student_record)
+```
+
+# 3. Extracting list components
+
+## 3.1 `$`
+
+```{r list-dollar-extraction}
+student_record$name
+student_record$scores
+```
+
+## 3.2 Double brackets
+
+```{r list-double-bracket}
+student_record[["programme"]]
+student_record[[4]]
+```
+
+Double brackets extract the component itself.
+
+## 3.3 Single brackets
+
+```{r list-single-bracket}
+student_record["programme"]
+student_record[4]
+```
+
+Single brackets return a smaller list.
+
+# 4. Modifying lists
+
+```{r modify-list-component}
+student_record$age <- 23L
+student_record
+```
+
+Add a component:
+
+```{r add-list-component}
+student_record$email <-
+  "ama@example.com"
+
+student_record
+```
+
+Remove a component:
+
+```{r remove-list-component}
+student_record$email <- NULL
+student_record
+```
+
+# 5. Nested lists
+
+```{r nested-list}
+course <- list(
+  title = "Learning R",
+  lecturer = list(
+    name = "Dr. Apam",
+    role = "Lecturer"
+  ),
+  lessons = c(
+    "Foundations",
+    "Data structures",
+    "Analysis"
+  )
+)
+
+course
+```
+
+Extract nested values:
+
+```{r extract-nested-list}
+course$lecturer$name
+course[["lecturer"]][["role"]]
+```
+
+# 6. Lists as function results
+
+Many R functions return lists.
+
+```{r list-function-result}
+model_information <- list(
+  coefficients = c(
+    intercept = 2.5,
+    slope = 1.2
+  ),
+  residual_sd = 0.8,
+  converged = TRUE
+)
+
+model_information$coefficients
+```
+
+Later, fitted statistical models will use list-like structures.
+
+# 7. Creating a data frame
+
+```{r create-data-frame}
+students <- data.frame(
+  student_id = c(
+    "S001",
+    "S002",
+    "S003",
+    "S004"
+  ),
+  programme = c(
+    "Statistics",
+    "Procurement",
+    "Hospitality",
+    "Agriculture"
+  ),
+  age = c(21L, 23L, 22L, 24L),
+  final_score = c(72, 68, 81, 75),
+  passed = c(TRUE, TRUE, TRUE, TRUE),
+  stringsAsFactors = FALSE
+)
+
+students
+```
+
+# 8. Inspecting a data frame
+
+```{r inspect-data-frame}
+class(students)
+typeof(students)
+dim(students)
+nrow(students)
+ncol(students)
+names(students)
+str(students)
+summary(students)
+```
+
+A data frame is internally a list of equal-length columns.
+
+```{r data-frame-is-list}
+is.list(students)
+```
+
+# 9. Extracting columns
+
+```{r data-frame-dollar}
+students$final_score
+```
+
+```{r data-frame-double-bracket}
+students[["final_score"]]
+```
+
+```{r data-frame-single-bracket}
+students["final_score"]
+```
+
+The first two return a vector. The third returns a one-column data frame.
+
+# 10. Extracting rows and cells
+
+```{r data-frame-cell}
+students[2, 4]
+```
+
+```{r data-frame-row}
+students[2, ]
+```
+
+```{r data-frame-multiple-rows}
+students[c(1, 3), ]
+```
+
+# 11. Selecting columns
+
+```{r select-columns-name}
+students[
+  c(
+    "student_id",
+    "programme",
+    "final_score"
+  )
+]
+```
+
+```{r select-columns-position}
+students[, c(1, 2, 4)]
+```
+
+Preserve data-frame structure:
+
+```{r preserve-data-frame-column}
+students[
+  ,
+  "final_score",
+  drop = FALSE
+]
+```
+
+# 12. Adding columns
+
+```{r add-grade-column}
+students$grade <- c(
+  "B",
+  "B",
+  "A",
+  "B"
+)
+
+students
+```
+
+Calculate from existing columns:
+
+```{r add-distinction-column}
+students$distinction <-
+  students$final_score >= 80
+
+students
+```
+
+# 13. Updating columns
+
+```{r update-programme-column}
+students$programme[
+  students$student_id == "S004"
+] <- "Ecological Agriculture"
+
+students
+```
+
+# 14. Removing columns
+
+```{r remove-column-null}
+students$grade <- NULL
+students
+```
+
+Alternative:
+
+```{r remove-column-subset}
+students_without_distinction <-
+  students[
+    ,
+    names(students) != "distinction"
+  ]
+
+students_without_distinction
+```
+
+# 15. Adding rows
+
+```{r add-row-rbind}
+new_student <- data.frame(
+  student_id = "S005",
+  programme = "Statistics",
+  age = 20L,
+  final_score = 77,
+  passed = TRUE,
+  distinction = FALSE,
+  stringsAsFactors = FALSE
+)
+
+students <- rbind(
+  students,
+  new_student
+)
+
+students
+```
+
+Column names and compatible types should match.
+
+# 16. Data-frame length rules
+
+All columns must have equal lengths or be recyclable.
+
+```{r invalid-data-frame-length, error=TRUE}
+data.frame(
+  x = 1:3,
+  y = 1:2
+)
+```
+
+A length-one value can be recycled:
+
+```{r data-frame-length-one-recycling}
+data.frame(
+  student_id = c("S1", "S2", "S3"),
+  institution = "BTU",
+  stringsAsFactors = FALSE
+)
+```
+
+# 17. Matrices versus data frames
+
+A matrix has one atomic type.
+
+```{r mixed-matrix}
+mixed_matrix <- matrix(
+  c(1, 2, "A", "B"),
+  nrow = 2
+)
+
+typeof(mixed_matrix)
+```
+
+Everything becomes character.
+
+A data frame can preserve different column types.
+
+```{r mixed-data-frame}
+mixed_data_frame <- data.frame(
+  number = c(1, 2),
+  category = c("A", "B"),
+  stringsAsFactors = FALSE
+)
+
+str(mixed_data_frame)
+```
+
+# 18. Importing CSV data
+
+```{r import-student-data-frame}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+head(student_data)
+str(student_data)
+```
+
+# 19. Validating a data frame
+
+```{r validate-data-frame}
+is.data.frame(student_data)
+nrow(student_data) > 0
+ncol(student_data) > 0
+```
+
+Required columns:
+
+```{r validate-required-columns}
+required_columns <- c(
+  "student_id",
+  "programme",
+  "coursework_score",
+  "examination_score",
+  "final_score"
+)
+
+all(
+  required_columns %in%
+    names(student_data)
+)
+```
+
+Unique identifiers:
+
+```{r validate-unique-identifiers}
+!anyDuplicated(
+  student_data$student_id
+)
+```
+
+Score arithmetic:
+
+```{r validate-score-arithmetic}
+all(
+  student_data$final_score ==
+    student_data$coursework_score +
+    student_data$examination_score
+)
+```
+
+# 20. Column-wise summaries
+
+```{r data-frame-column-summary}
+mean(student_data$final_score)
+median(student_data$final_score)
+table(student_data$programme)
+```
+
+Apply over numeric columns:
+
+```{r numeric-columns}
+numeric_columns <- vapply(
+  student_data,
+  is.numeric,
+  FUN.VALUE = logical(1)
+)
+
+numeric_columns
+```
+
+```{r summarise-numeric-columns}
+vapply(
+  student_data[numeric_columns],
+  mean,
+  na.rm = TRUE,
+  FUN.VALUE = numeric(1)
+)
+```
+
+# 21. `lapply()`, `sapply()` and `vapply()`
+
+## 21.1 `lapply()`
+
+```{r lapply-data-frame}
+lapply(
+  student_data,
+  class
+)
+```
+
+Always returns a list.
+
+## 21.2 `sapply()`
+
+```{r sapply-data-frame}
+sapply(
+  student_data,
+  class
+)
+```
+
+Attempts to simplify.
+
+## 21.3 `vapply()`
+
+```{r vapply-data-frame}
+vapply(
+  student_data,
+  class,
+  FUN.VALUE = character(1)
+)
+```
+
+Requires an expected output type and is safer in programming.
+
+# 22. Tibbles
+
+A tibble is a modern data-frame variant.
+
+Check package availability:
+
+```{r check-tibble-package}
+requireNamespace(
+  "tibble",
+  quietly = TRUE
+)
+```
+
+Create a tibble if installed:
+
+```{r create-tibble, eval=FALSE}
+student_tibble <- tibble::tibble(
+  student_id = c("S001", "S002"),
+  score = c(72, 81)
+)
+
+student_tibble
+```
+
+## 22.1 Tibble printing
+
+Tibbles print a limited number of rows and show column types.
+
+## 22.2 Tibble extraction
+
+In a tibble:
+
+```r
+student_tibble["score"]
+```
+
+returns a tibble, while:
+
+```r
+student_tibble[["score"]]
+```
+
+returns the vector.
+
+## 22.3 Convert between forms
+
+```{r convert-data-frame-tibble, eval=FALSE}
+student_tibble <-
+  tibble::as_tibble(student_data)
+
+base_data_frame <-
+  as.data.frame(student_tibble)
+```
+
+# 23. Nested data structures
+
+A list can store several data frames.
+
+```{r list-of-data-frames}
+department_data <- list(
+  statistics = student_data[
+    student_data$programme == "Statistics",
+  ],
+  procurement = student_data[
+    student_data$programme == "Procurement",
+  ]
+)
+
+names(department_data)
+```
+
+Inspect:
+
+```{r inspect-list-data-frames}
+lapply(
+  department_data,
+  dim
+)
+```
+
+# 24. Integrated example: clinic data frame
+
+```{r import-clinic-data-frame}
+clinic <- read.csv(
+  "data/clinic_visits.csv",
+  stringsAsFactors = FALSE
+)
+
+head(clinic)
+str(clinic)
+```
+
+Validate required columns:
+
+```{r clinic-required-columns}
+clinic_required <- c(
+  "visit_id",
+  "sex",
+  "age",
+  "visit_type",
+  "waiting_minutes",
+  "consultation_minutes"
+)
+
+all(
+  clinic_required %in%
+    names(clinic)
+)
+```
+
+Add target status:
+
+```{r clinic-target-column}
+clinic$target_met <-
+  clinic$waiting_minutes <= 30
+
+clinic
+```
+
+Create summary list:
+
+```{r clinic-summary-list}
+clinic_summary <- list(
+  number_of_visits = nrow(clinic),
+  mean_waiting_time = mean(
+    clinic$waiting_minutes,
+    na.rm = TRUE
+  ),
+  median_waiting_time = median(
+    clinic$waiting_minutes,
+    na.rm = TRUE
+  ),
+  target_percentage = mean(
+    clinic$target_met,
+    na.rm = TRUE
+  ) * 100
+)
+
+clinic_summary
+```
+
+# 25. Common mistakes
+
+- using single brackets when a vector is required;
+- using double brackets when a one-column data frame is required;
+- adding rows with incompatible columns;
+- assuming matrices and data frames behave identically;
+- relying on silent recycling;
+- overwriting a column unintentionally;
+- failing to validate identifiers;
+- assuming tibbles are base R objects without installing `tibble`.
+
+# 26. Independent exercises
+
+1. Create a list containing mixed objects.
+2. Extract components with `$`, `[[` and `[`.
+3. Add and remove list components.
+4. Create a nested list.
+5. Create a data frame with mixed column types.
+6. Inspect dimensions, names and structure.
+7. Add calculated columns.
+8. Remove columns.
+9. Add a compatible row.
+10. Compare matrix and data-frame coercion.
+11. Import and validate student data.
+12. Use `lapply()`, `sapply()` and `vapply()`.
+13. Create a tibble if the package is installed.
+14. Create a list of programme-specific data frames.
+
+# 27. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+- creates and modifies a list;
+- demonstrates three extraction methods;
+- creates a data frame;
+- adds and removes columns;
+- appends a row;
+- validates required columns and unique identifiers;
+- compares matrix and data-frame behaviour;
+- summarises numeric columns;
+- demonstrates `lapply()`, `sapply()` and `vapply()`; and
+- optionally creates a tibble.
+
+# 28. Completion checklist
+
+Confirm that you can:
+
+- create lists;
+- inspect and extract list components;
+- modify and nest lists;
+- create data frames;
+- inspect rows, columns and structure;
+- extract columns correctly;
+- add and remove columns;
+- append compatible rows;
+- explain data-frame length rules;
+- distinguish matrices and data frames;
+- import CSV data;
+- validate data frames;
+- apply functions across columns;
+- explain tibbles; and
+- convert between tibbles and data frames.
+
+# Lesson conclusion
+
+Lists provide flexible heterogeneous storage. Data frames organise equal-length
+vectors into rectangular datasets. Together, they form the structural basis of
+most practical R analysis.

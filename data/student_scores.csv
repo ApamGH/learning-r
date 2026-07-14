@@ -1,0 +1,13 @@
+student_id,programme,sex,age,coursework_score,examination_score,final_score
+ST001,Statistics,Female,20,32,51,83
+ST002,Statistics,Male,22,28,44,72
+ST003,Procurement,Female,21,35,48,83
+ST004,Hospitality,Female,19,30,42,72
+ST005,Engineering,Male,23,24,39,63
+ST006,Agriculture,Male,25,31,45,76
+ST007,Computing,Female,20,36,54,90
+ST008,Procurement,Male,24,22,35,57
+ST009,Hospitality,Male,21,27,41,68
+ST010,Engineering,Female,22,33,50,83
+ST011,Agriculture,Female,26,29,46,75
+ST012,Computing,Male,19,38,57,95

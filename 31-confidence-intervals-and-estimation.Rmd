@@ -1,0 +1,825 @@
+---
+title: "Lesson 31: Confidence Intervals and Estimation"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Estimation uses sample data to approximate unknown population parameters.
+
+A point estimate gives one value.
+
+An interval estimate gives a range of plausible values, together with a stated
+confidence level.
+
+Confidence intervals combine:
+
+- an estimate;
+- a standard error;
+- a critical value;
+- and a margin of error.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. distinguish point and interval estimation;
+2. explain confidence level and margin of error;
+3. construct a confidence interval for a mean;
+4. use z and t critical values appropriately;
+5. construct a confidence interval for a proportion;
+6. calculate confidence intervals with built-in functions;
+7. explain the repeated-sampling interpretation;
+8. examine the effect of sample size and confidence level;
+9. simulate confidence-interval coverage;
+10. create bootstrap percentile intervals;
+11. report estimates and intervals clearly;
+12. create reusable confidence-interval functions; and
+13. avoid common interpretation errors.
+
+# 1. Importing data
+
+```{r import-confidence-data}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+final_scores <- student_data$final_score
+```
+
+# 2. Point estimate of a mean
+
+```{r point-estimate-mean}
+sample_mean <- mean(
+  final_scores,
+  na.rm = TRUE
+)
+
+sample_mean
+```
+
+# 3. Standard error from sample data
+
+```{r sample-standard-error}
+observed_scores <- final_scores[
+  !is.na(final_scores)
+]
+
+sample_size <- length(
+  observed_scores
+)
+
+sample_sd <- sd(
+  observed_scores
+)
+
+standard_error <-
+  sample_sd /
+  sqrt(sample_size)
+
+standard_error
+```
+
+# 4. Confidence interval with the t distribution
+
+For an unknown population standard deviation:
+
+\[
+\bar{x}
+\pm
+t_{\alpha/2,n-1}
+\frac{s}{\sqrt{n}}.
+\]
+
+```{r manual-mean-confidence-interval}
+confidence_level <- 0.95
+
+alpha <- 1 -
+  confidence_level
+
+critical_t <- qt(
+  1 -
+    alpha / 2,
+  df =
+    sample_size - 1
+)
+
+margin_of_error <-
+  critical_t *
+  standard_error
+
+confidence_interval <- c(
+  lower =
+    sample_mean -
+    margin_of_error,
+  upper =
+    sample_mean +
+    margin_of_error
+)
+
+confidence_interval
+```
+
+# 5. Using `t.test()`
+
+```{r t-test-confidence-interval}
+mean_interval_test <- t.test(
+  observed_scores,
+  conf.level = 0.95
+)
+
+mean_interval_test
+```
+
+Extract:
+
+```{r extract-mean-interval}
+data.frame(
+  estimate =
+    unname(
+      mean_interval_test$estimate
+    ),
+  lower =
+    mean_interval_test$conf.int[1],
+  upper =
+    mean_interval_test$conf.int[2],
+  confidence_level =
+    attr(
+      mean_interval_test$conf.int,
+      "conf.level"
+    )
+)
+```
+
+# 6. Confidence-level comparison
+
+```{r compare-confidence-levels}
+confidence_levels <- c(
+  0.90,
+  0.95,
+  0.99
+)
+
+intervals_by_level <- lapply(
+  confidence_levels,
+  function(level) {
+    test_result <- t.test(
+      observed_scores,
+      conf.level = level
+    )
+
+    data.frame(
+      confidence_level = level,
+      lower =
+        test_result$conf.int[1],
+      upper =
+        test_result$conf.int[2],
+      width =
+        diff(
+          test_result$conf.int
+        )
+    )
+  }
+)
+
+do.call(
+  rbind,
+  intervals_by_level
+)
+```
+
+Higher confidence produces a wider interval.
+
+# 7. Effect of sample size
+
+```{r confidence-sample-size-effect}
+population <- rnorm(
+  100000,
+  mean = 70,
+  sd = 12
+)
+
+sample_sizes <- c(
+  20,
+  50,
+  200
+)
+
+interval_widths <- lapply(
+  sample_sizes,
+  function(current_size) {
+    selected_sample <- sample(
+      population,
+      size = current_size
+    )
+
+    test_result <- t.test(
+      selected_sample
+    )
+
+    data.frame(
+      sample_size =
+        current_size,
+      estimate =
+        mean(
+          selected_sample
+        ),
+      lower =
+        test_result$conf.int[1],
+      upper =
+        test_result$conf.int[2],
+      width =
+        diff(
+          test_result$conf.int
+        )
+    )
+  }
+)
+
+do.call(
+  rbind,
+  interval_widths
+)
+```
+
+# 8. Confidence interval for a proportion
+
+```{r create-pass-proportion}
+pass_status <-
+  student_data$final_score >= 50
+
+number_passing <- sum(
+  pass_status,
+  na.rm = TRUE
+)
+
+number_observed <- sum(
+  !is.na(
+    pass_status
+  )
+)
+
+sample_proportion <-
+  number_passing /
+  number_observed
+
+sample_proportion
+```
+
+# 9. Approximate Wald interval
+
+\[
+\hat{p}
+\pm
+z_{\alpha/2}
+\sqrt{
+\frac{
+\hat{p}(1-\hat{p})
+}{
+n
+}
+}.
+\]
+
+```{r wald-proportion-interval}
+critical_z <- qnorm(
+  0.975
+)
+
+proportion_se <- sqrt(
+  sample_proportion *
+    (
+      1 -
+      sample_proportion
+    ) /
+    number_observed
+)
+
+wald_interval <- c(
+  lower =
+    sample_proportion -
+    critical_z *
+    proportion_se,
+  upper =
+    sample_proportion +
+    critical_z *
+    proportion_se
+)
+
+wald_interval
+```
+
+The Wald interval can perform poorly with small samples or proportions near 0
+or 1.
+
+# 10. `prop.test()`
+
+```{r proportion-test-interval}
+proportion_test <- prop.test(
+  x = number_passing,
+  n = number_observed,
+  conf.level = 0.95,
+  correct = FALSE
+)
+
+proportion_test
+```
+
+# 11. `binom.test()`
+
+```{r exact-binomial-interval}
+exact_proportion_test <- binom.test(
+  x = number_passing,
+  n = number_observed,
+  conf.level = 0.95
+)
+
+exact_proportion_test
+```
+
+# 12. Confidence interval for a difference in means
+
+```{r two-group-confidence-interval}
+selected_programmes <- student_data[
+  student_data$programme %in%
+    c(
+      "Statistics",
+      "Procurement"
+    ),
+]
+
+two_group_test <- t.test(
+  final_score ~ programme,
+  data =
+    selected_programmes,
+  var.equal = FALSE,
+  conf.level = 0.95
+)
+
+two_group_test
+```
+
+The interval concerns the difference between group means.
+
+# 13. Paired confidence interval
+
+```{r paired-confidence-example}
+before_scores <- c(
+  60,
+  65,
+  70,
+  72,
+  68,
+  75
+)
+
+after_scores <- c(
+  64,
+  67,
+  74,
+  73,
+  72,
+  80
+)
+
+paired_interval <- t.test(
+  after_scores,
+  before_scores,
+  paired = TRUE,
+  conf.level = 0.95
+)
+
+paired_interval
+```
+
+# 14. Repeated-sampling interpretation
+
+A 95 per cent confidence procedure is designed so that, over repeated sampling,
+approximately 95 per cent of intervals constructed by that procedure contain
+the true parameter.
+
+It does not mean that there is a 95 per cent probability that a fixed parameter
+lies in one already-calculated interval.
+
+# 15. Simulating confidence-interval coverage
+
+```{r confidence-coverage-simulation}
+population_mean <- 70
+population_sd <- 12
+sample_size <- 30
+replications <- 2000
+
+coverage_status <- replicate(
+  replications,
+  {
+    current_sample <- rnorm(
+      sample_size,
+      mean = population_mean,
+      sd = population_sd
+    )
+
+    interval <- t.test(
+      current_sample,
+      conf.level = 0.95
+    )$conf.int
+
+    interval[1] <=
+      population_mean &&
+      population_mean <=
+      interval[2]
+  }
+)
+
+mean(
+  coverage_status
+)
+```
+
+# 16. Visualising interval coverage
+
+```{r confidence-coverage-visual}
+number_to_plot <- 50
+
+interval_matrix <- replicate(
+  number_to_plot,
+  {
+    current_sample <- rnorm(
+      sample_size,
+      mean = population_mean,
+      sd = population_sd
+    )
+
+    test_result <- t.test(
+      current_sample
+    )
+
+    c(
+      estimate = mean(
+        current_sample
+      ),
+      lower =
+        test_result$conf.int[1],
+      upper =
+        test_result$conf.int[2]
+    )
+  }
+)
+
+interval_matrix <- t(
+  interval_matrix
+)
+
+plot(
+  interval_matrix[
+    ,
+    "estimate"
+  ],
+  seq_len(
+    number_to_plot
+  ),
+  xlim = range(
+    interval_matrix[
+      ,
+      c(
+        "lower",
+        "upper"
+      )
+    ]
+  ),
+  pch = 19,
+  xlab = "Mean and 95% confidence interval",
+  ylab = "Simulation",
+  main = "Repeated Confidence Intervals"
+)
+
+segments(
+  x0 =
+    interval_matrix[
+      ,
+      "lower"
+    ],
+  y0 =
+    seq_len(
+      number_to_plot
+    ),
+  x1 =
+    interval_matrix[
+      ,
+      "upper"
+    ],
+  y1 =
+    seq_len(
+      number_to_plot
+    )
+)
+
+abline(
+  v =
+    population_mean,
+  lwd = 2
+)
+```
+
+# 17. Bootstrap percentile interval
+
+```{r bootstrap-percentile-interval}
+set.seed(20260714)
+
+bootstrap_means <- replicate(
+  5000,
+  mean(
+    sample(
+      observed_scores,
+      size = length(
+        observed_scores
+      ),
+      replace = TRUE
+    )
+  )
+)
+
+bootstrap_interval <- quantile(
+  bootstrap_means,
+  probs = c(
+    0.025,
+    0.975
+  )
+)
+
+bootstrap_interval
+```
+
+# 18. Comparing t and bootstrap intervals
+
+```{r compare-interval-methods}
+data.frame(
+  method = c(
+    "t interval",
+    "Bootstrap percentile"
+  ),
+  lower = c(
+    mean_interval_test$conf.int[1],
+    bootstrap_interval[1]
+  ),
+  upper = c(
+    mean_interval_test$conf.int[2],
+    bootstrap_interval[2]
+  ),
+  stringsAsFactors = FALSE
+)
+```
+
+# 19. Reusable mean interval function
+
+```{r mean-confidence-function}
+mean_confidence_interval <- function(
+  x,
+  confidence_level = 0.95
+) {
+  if (!is.numeric(x)) {
+    stop(
+      "`x` must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  observed <- x[
+    !is.na(x)
+  ]
+
+  if (length(observed) < 2L) {
+    stop(
+      "At least two observed values are required.",
+      call. = FALSE
+    )
+  }
+
+  result <- t.test(
+    observed,
+    conf.level =
+      confidence_level
+  )
+
+  data.frame(
+    n = length(observed),
+    estimate =
+      mean(observed),
+    standard_error =
+      sd(observed) /
+      sqrt(
+        length(observed)
+      ),
+    lower =
+      result$conf.int[1],
+    upper =
+      result$conf.int[2],
+    confidence_level =
+      confidence_level
+  )
+}
+
+mean_confidence_interval(
+  final_scores
+)
+```
+
+# 20. Reusable proportion interval function
+
+```{r proportion-confidence-function}
+proportion_confidence_interval <- function(
+  successes,
+  trials,
+  confidence_level = 0.95,
+  method = c(
+    "exact",
+    "score"
+  )
+) {
+  method <- match.arg(
+    method
+  )
+
+  if (successes < 0 ||
+      trials <= 0 ||
+      successes > trials) {
+    stop(
+      "Counts are invalid.",
+      call. = FALSE
+    )
+  }
+
+  test_result <- if (
+    method == "exact"
+  ) {
+    binom.test(
+      successes,
+      trials,
+      conf.level =
+        confidence_level
+    )
+  } else {
+    prop.test(
+      successes,
+      trials,
+      conf.level =
+        confidence_level,
+      correct = FALSE
+    )
+  }
+
+  data.frame(
+    successes =
+      successes,
+    trials =
+      trials,
+    estimate =
+      successes /
+      trials,
+    lower =
+      test_result$conf.int[1],
+    upper =
+      test_result$conf.int[2],
+    confidence_level =
+      confidence_level,
+    method =
+      method
+  )
+}
+
+proportion_confidence_interval(
+  number_passing,
+  number_observed
+)
+```
+
+# 21. Reporting intervals
+
+A useful report states:
+
+- parameter estimated;
+- point estimate;
+- confidence level;
+- lower and upper limits;
+- sample size;
+- method;
+- and substantive interpretation.
+
+# 22. Common mistakes
+
+- interpreting confidence as probability for a fixed parameter;
+- reporting an interval without its confidence level;
+- ignoring the method used;
+- assuming narrow intervals are automatically unbiased;
+- confusing standard deviation and standard error;
+- using a Wald proportion interval with unsuitable data;
+- treating overlap of confidence intervals as a formal test;
+- rounding before calculation;
+- hiding the sample size;
+- reporting precision without considering design effects.
+
+# 23. Independent exercises
+
+1. calculate a point estimate.
+2. calculate a standard error.
+3. construct a manual t interval.
+4. verify it with `t.test()`.
+5. compare 90%, 95% and 99% intervals.
+6. assess the effect of sample size.
+7. construct proportion intervals.
+8. compare `prop.test()` and `binom.test()`.
+9. construct a difference-in-means interval.
+10. construct a paired interval.
+11. simulate confidence-interval coverage.
+12. create a bootstrap percentile interval.
+13. create reusable interval functions.
+14. write an accurate interpretation.
+
+# 24. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. distinguishes point and interval estimates;
+2. constructs manual and built-in mean intervals;
+3. compares confidence levels;
+4. examines sample-size effects;
+5. constructs proportion intervals;
+6. constructs independent and paired mean-difference intervals;
+7. simulates coverage;
+8. creates a bootstrap interval;
+9. uses reusable functions; and
+10. reports all estimates accurately.
+
+# 25. Completion checklist
+
+Confirm that you can:
+
+- distinguish point and interval estimates;
+- calculate standard errors;
+- construct t intervals;
+- construct proportion intervals;
+- use built-in interval functions;
+- compare confidence levels;
+- assess sample-size effects;
+- explain repeated-sampling coverage;
+- create bootstrap intervals;
+- report margins of error; and
+- create reusable interval functions.
+
+# Lesson conclusion
+
+Confidence intervals combine an estimate with its uncertainty. Their correct
+interpretation concerns the long-run performance of the interval procedure.
+
+\[
+\boxed{
+\text{estimate}
+\pm
+\text{critical value}
+\times
+\text{standard error}
+}
+\]

@@ -1,0 +1,817 @@
+---
+title: "Lesson 16: Importing Excel, SPSS, Stata and SAS Files"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Many institutions store data in Excel workbooks or statistical-software
+formats such as SPSS, Stata and SAS. These formats can preserve information
+that plain text files do not, including:
+
+- multiple worksheets;
+- variable labels;
+- value labels;
+- date formats;
+- missing-value definitions;
+- and software-specific metadata.
+
+Importing such files requires external packages. This lesson introduces
+`readxl`, `haven` and selected alternatives. Because package availability and
+file formats vary, the examples distinguish executable checks from template
+code.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. explain why proprietary and workbook formats require special tools;
+2. inspect package availability;
+3. import Excel worksheets with `readxl`;
+4. list sheets and choose ranges;
+5. control column names and types;
+6. import SPSS, Stata and SAS files with `haven`;
+7. understand labelled variables;
+8. convert labelled values appropriately;
+9. preserve or remove metadata deliberately;
+10. inspect imported dates and missing values;
+11. diagnose common cross-software import problems;
+12. validate imported proprietary data;
+13. export compatible files where supported; and
+14. document package and format dependencies.
+
+# 1. Package requirements
+
+Excel import commonly uses:
+
+```text
+readxl
+openxlsx
+writexl
+```
+
+SPSS, Stata and SAS import commonly uses:
+
+```text
+haven
+foreign
+```
+
+Check packages:
+
+```{r check-import-packages}
+packages <- c(
+  "readxl",
+  "haven",
+  "writexl",
+  "openxlsx"
+)
+
+package_status <- vapply(
+  packages,
+  requireNamespace,
+  quietly = TRUE,
+  FUN.VALUE = logical(1)
+)
+
+package_status
+```
+
+# 2. Installing packages
+
+Run once when needed:
+
+```{r install-import-packages, eval=FALSE}
+install.packages(
+  c(
+    "readxl",
+    "haven",
+    "writexl",
+    "openxlsx"
+  )
+)
+```
+
+Do not place package installation inside routine analysis scripts.
+
+# 3. Excel workbooks
+
+An Excel workbook may contain:
+
+- several worksheets;
+- title rows;
+- merged cells;
+- formulas;
+- formatting;
+- hidden rows or columns;
+- notes above the actual table.
+
+Import requires understanding the workbook structure.
+
+# 4. Listing Excel sheets
+
+```{r list-excel-sheets, eval=FALSE}
+readxl::excel_sheets(
+  "data/example_workbook.xlsx"
+)
+```
+
+This should be done before assuming the worksheet name.
+
+# 5. Importing the first worksheet
+
+```{r import-first-excel-sheet, eval=FALSE}
+excel_data <- readxl::read_excel(
+  "data/example_workbook.xlsx"
+)
+```
+
+# 6. Importing a named worksheet
+
+```{r import-named-excel-sheet, eval=FALSE}
+student_data <- readxl::read_excel(
+  "data/example_workbook.xlsx",
+  sheet = "Students"
+)
+```
+
+# 7. Importing by sheet position
+
+```{r import-excel-sheet-position, eval=FALSE}
+student_data <- readxl::read_excel(
+  "data/example_workbook.xlsx",
+  sheet = 2
+)
+```
+
+Named sheets are usually clearer than numeric positions.
+
+# 8. Skipping title rows
+
+```{r skip-excel-title-rows, eval=FALSE}
+student_data <- readxl::read_excel(
+  "data/example_workbook.xlsx",
+  sheet = "Students",
+  skip = 3
+)
+```
+
+# 9. Importing a range
+
+```{r import-excel-range, eval=FALSE}
+student_data <- readxl::read_excel(
+  "data/example_workbook.xlsx",
+  sheet = "Students",
+  range = "A4:F100"
+)
+```
+
+Ranges can reduce irrelevant content but may exclude later records if the
+workbook grows.
+
+# 10. Missing values in Excel
+
+```{r excel-missing-codes, eval=FALSE}
+student_data <- readxl::read_excel(
+  "data/example_workbook.xlsx",
+  na = c(
+    "",
+    "NA",
+    "N/A",
+    "."
+  )
+)
+```
+
+# 11. Column names in Excel
+
+```{r excel-column-names, eval=FALSE}
+student_data <- readxl::read_excel(
+  "data/example_workbook.xlsx",
+  col_names = c(
+    "student_id",
+    "programme",
+    "coursework_score",
+    "examination_score",
+    "final_score"
+  )
+)
+```
+
+Use only when the imported range does not include a header row.
+
+# 12. Excel column types
+
+```{r excel-column-types, eval=FALSE}
+student_data <- readxl::read_excel(
+  "data/example_workbook.xlsx",
+  col_types = c(
+    "text",
+    "text",
+    "numeric",
+    "numeric",
+    "numeric"
+  )
+)
+```
+
+Possible types include:
+
+```text
+skip
+guess
+logical
+numeric
+date
+text
+list
+```
+
+# 13. Mixed-type Excel columns
+
+A column containing numbers and text may be guessed incorrectly.
+
+Example:
+
+```text
+100
+125
+Missing
+140
+```
+
+The column may become character. Import deliberately or clean after import.
+
+# 14. Excel dates
+
+Excel dates are stored internally as serial numbers but are normally converted
+by `readxl` when detected.
+
+Inspect:
+
+```{r inspect-excel-date, eval=FALSE}
+class(
+  imported_data$visit_date
+)
+
+summary(
+  imported_data$visit_date
+)
+```
+
+Always verify date interpretation.
+
+# 15. Writing Excel files
+
+With `writexl`:
+
+```{r write-excel-writexl, eval=FALSE}
+writexl::write_xlsx(
+  list(
+    Students = student_data,
+    Summary = summary_table
+  ),
+  path = "output/student_analysis.xlsx"
+)
+```
+
+With `openxlsx`:
+
+```{r write-excel-openxlsx, eval=FALSE}
+openxlsx::write.xlsx(
+  student_data,
+  file = "output/student_data.xlsx",
+  overwrite = TRUE
+)
+```
+
+# 16. SPSS files
+
+SPSS files commonly use the `.sav` extension.
+
+```{r import-spss-haven, eval=FALSE}
+spss_data <- haven::read_sav(
+  "data/survey_data.sav"
+)
+```
+
+Compressed SPSS files may use `.zsav`.
+
+# 17. Stata files
+
+Stata files commonly use `.dta`.
+
+```{r import-stata-haven, eval=FALSE}
+stata_data <- haven::read_dta(
+  "data/survey_data.dta"
+)
+```
+
+# 18. SAS files
+
+SAS datasets commonly use `.sas7bdat`.
+
+```{r import-sas-haven, eval=FALSE}
+sas_data <- haven::read_sas(
+  "data/survey_data.sas7bdat"
+)
+```
+
+SAS transport files may use `.xpt`:
+
+```{r import-sas-transport, eval=FALSE}
+sas_transport <- haven::read_xpt(
+  "data/survey_data.xpt"
+)
+```
+
+# 19. Haven tibbles
+
+`haven` functions return tibbles.
+
+```{r inspect-haven-object, eval=FALSE}
+class(
+  spss_data
+)
+
+str(
+  spss_data
+)
+```
+
+Convert to base data frame:
+
+```{r convert-haven-data-frame, eval=FALSE}
+spss_base <- as.data.frame(
+  spss_data
+)
+```
+
+# 20. Variable labels
+
+```{r inspect-variable-label, eval=FALSE}
+attr(
+  spss_data$age,
+  "label"
+)
+```
+
+Inspect all labels:
+
+```{r inspect-all-variable-labels, eval=FALSE}
+vapply(
+  spss_data,
+  function(x) {
+    label <- attr(
+      x,
+      "label"
+    )
+
+    if (is.null(label)) {
+      ""
+    } else {
+      label
+    }
+  },
+  FUN.VALUE = character(1)
+)
+```
+
+# 21. Labelled values
+
+A labelled variable stores numeric codes with text labels.
+
+```{r labelled-variable-example}
+example_status <- haven::labelled(
+  c(
+    1,
+    2,
+    1,
+    9
+  ),
+  labels = c(
+    Yes = 1,
+    No = 2,
+    Missing = 9
+  )
+)
+
+example_status
+```
+
+This chunk requires `haven`.
+
+To keep the document knit-safe when `haven` is unavailable, use:
+
+```{r labelled-variable-safe}
+if (requireNamespace(
+  "haven",
+  quietly = TRUE
+)) {
+  example_status <- haven::labelled(
+    c(
+      1,
+      2,
+      1,
+      9
+    ),
+    labels = c(
+      Yes = 1,
+      No = 2,
+      Missing = 9
+    )
+  )
+
+  print(
+    example_status
+  )
+}
+```
+
+# 22. Converting labelled values to factors
+
+```{r labelled-to-factor, eval=FALSE}
+status_factor <- haven::as_factor(
+  spss_data$status
+)
+```
+
+For all labelled variables:
+
+```{r all-labelled-to-factor, eval=FALSE}
+factor_data <- haven::as_factor(
+  spss_data
+)
+```
+
+Do not convert labels automatically without considering whether numeric codes
+are analytically meaningful.
+
+# 23. Tagged missing values
+
+Haven supports tagged missing values used by Stata and SAS.
+
+```{r tagged-missing-example}
+if (requireNamespace(
+  "haven",
+  quietly = TRUE
+)) {
+  tagged_values <- c(
+    10,
+    haven::tagged_na("a"),
+    20,
+    haven::tagged_na("b")
+  )
+
+  print(
+    tagged_values
+  )
+
+  print(
+    haven::is_tagged_na(
+      tagged_values
+    )
+  )
+}
+```
+
+Tagged missing values may distinguish reasons such as refusal or not
+applicable.
+
+# 24. User-defined missing values in SPSS
+
+`read_sav()` may preserve user-defined missing-value metadata.
+
+```{r spss-user-na-example, eval=FALSE}
+spss_data <- haven::read_sav(
+  "data/survey_data.sav",
+  user_na = TRUE
+)
+```
+
+These values require deliberate treatment.
+
+# 25. Import with `foreign`
+
+Older workflows may use:
+
+```{r foreign-spss-example, eval=FALSE}
+foreign::read.spss(
+  "data/survey_data.sav",
+  to.data.frame = TRUE
+)
+```
+
+or:
+
+```{r foreign-stata-example, eval=FALSE}
+foreign::read.dta(
+  "data/survey_data.dta"
+)
+```
+
+`haven` is generally preferred for modern workflows because it preserves more
+metadata and supports newer formats.
+
+# 26. Writing Stata and SPSS files
+
+```{r write-stata-example, eval=FALSE}
+haven::write_dta(
+  student_data,
+  "output/student_data.dta"
+)
+```
+
+```{r write-spss-example, eval=FALSE}
+haven::write_sav(
+  student_data,
+  "output/student_data.sav"
+)
+```
+
+# 27. Writing SAS transport files
+
+```{r write-xpt-example, eval=FALSE}
+haven::write_xpt(
+  student_data,
+  "output/student_data.xpt"
+)
+```
+
+# 28. Metadata inspection
+
+A systematic metadata report:
+
+```{r metadata-report-template}
+inspect_metadata <- function(
+  data
+) {
+  data.frame(
+    variable = names(data),
+    class = vapply(
+      data,
+      function(x) {
+        paste(
+          class(x),
+          collapse = ", "
+        )
+      },
+      FUN.VALUE = character(1)
+    ),
+    type = vapply(
+      data,
+      typeof,
+      FUN.VALUE = character(1)
+    ),
+    missing = vapply(
+      data,
+      function(x) {
+        sum(
+          is.na(x)
+        )
+      },
+      FUN.VALUE = integer(1)
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
+inspect_metadata(
+  read.csv(
+    "data/student_scores.csv",
+    stringsAsFactors = FALSE
+  )
+)
+```
+
+# 29. Cross-software type problems
+
+Common issues include:
+
+- numeric identifiers imported as numbers;
+- dates imported as numbers or text;
+- labelled categories treated as continuous values;
+- missing codes preserved as ordinary values;
+- long variable names shortened;
+- text encoding altered;
+- value labels lost during export;
+- unsupported software-version features.
+
+# 30. Validation after proprietary import
+
+After import, check:
+
+```{r proprietary-validation-template, eval=FALSE}
+dim(imported_data)
+names(imported_data)
+str(imported_data)
+summary(imported_data)
+colSums(is.na(imported_data))
+```
+
+Check labels:
+
+```{r proprietary-label-check, eval=FALSE}
+lapply(
+  imported_data,
+  attributes
+)
+```
+
+Check key variables:
+
+```{r proprietary-key-check, eval=FALSE}
+!anyDuplicated(
+  imported_data$respondent_id
+)
+```
+
+# 31. Preserving raw imported data
+
+Recommended workflow:
+
+```r
+raw_spss_data <- haven::read_sav(
+  "data/survey_data.sav"
+)
+
+analysis_spss_data <- raw_spss_data
+```
+
+Do not overwrite the raw import with cleaned values.
+
+# 32. Package-version documentation
+
+```{r package-version-documentation}
+installed_packages <- c(
+  readxl = requireNamespace(
+    "readxl",
+    quietly = TRUE
+  ),
+  haven = requireNamespace(
+    "haven",
+    quietly = TRUE
+  ),
+  writexl = requireNamespace(
+    "writexl",
+    quietly = TRUE
+  )
+)
+
+installed_packages
+```
+
+When installed:
+
+```{r report-package-versions}
+available_packages <- names(
+  installed_packages
+)[
+  installed_packages
+]
+
+if (length(
+  available_packages
+) > 0L) {
+  vapply(
+    available_packages,
+    function(package_name) {
+      as.character(
+        packageVersion(
+          package_name
+        )
+      )
+    },
+    FUN.VALUE = character(1)
+  )
+}
+```
+
+# 33. Common mistakes
+
+- assuming the first Excel sheet is correct;
+- failing to inspect title rows and merged cells;
+- guessing column types incorrectly;
+- converting all labelled variables to factors automatically;
+- treating tagged missing values as ordinary values;
+- losing metadata during conversion or export;
+- overwriting the raw imported object;
+- using package functions without declaring the package;
+- failing to document package versions;
+- assuming all software versions are mutually compatible.
+
+# 34. Independent exercises
+
+1. check availability of `readxl`, `haven`, `writexl` and `openxlsx`.
+2. write template code to list Excel sheets.
+3. write template code to import a named sheet.
+4. demonstrate skipping rows and selecting a range.
+5. specify Excel missing values and column types.
+6. write template code for SPSS, Stata and SAS import.
+7. create a labelled variable with `haven`.
+8. convert labelled values to factors.
+9. demonstrate tagged missing values.
+10. create a metadata-inspection function.
+11. explain five cross-software type problems.
+12. write validation code for an imported proprietary dataset.
+13. demonstrate export code for Excel, Stata and SPSS.
+14. document package versions.
+
+# 35. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. explains workbook and proprietary formats;
+2. audits package availability;
+3. provides correct Excel import code;
+4. provides SPSS, Stata and SAS import code;
+5. explains labelled values;
+6. demonstrates tagged missing values where possible;
+7. creates a metadata report;
+8. describes post-import validation;
+9. demonstrates export templates; and
+10. documents package dependencies.
+
+# 36. Completion checklist
+
+Confirm that you can:
+
+- identify required packages;
+- list Excel sheets;
+- import named sheets;
+- skip rows and select ranges;
+- control Excel column types;
+- import SPSS, Stata and SAS data;
+- inspect labelled variables;
+- convert labels deliberately;
+- recognise tagged missing values;
+- preserve metadata;
+- validate proprietary imports;
+- preserve raw data;
+- export compatible formats; and
+- document package versions.
+
+# Lesson conclusion
+
+Proprietary formats may preserve valuable metadata, but they also introduce
+software-specific assumptions. Reliable import requires deliberate package
+selection, metadata inspection and post-import validation.
+
+\[
+\boxed{
+\text{identify format}
+\rightarrow
+\text{load suitable package}
+\rightarrow
+\text{import}
+\rightarrow
+\text{inspect metadata}
+\rightarrow
+\text{convert deliberately}
+\rightarrow
+\text{validate}
+}
+\]

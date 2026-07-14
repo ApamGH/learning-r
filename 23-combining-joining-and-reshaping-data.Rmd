@@ -1,0 +1,1060 @@
+---
+title: "Lesson 23: Combining, Joining and Reshaping Data"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Many analyses require information from more than one table. Data may be split
+by:
+
+- year;
+- institution;
+- department;
+- questionnaire section;
+- transaction type;
+- respondent and household;
+- or measurement occasion.
+
+Combining data correctly requires understanding the structure of each table and
+the keys that identify matching records.
+
+This lesson develops:
+
+- row binding;
+- column binding;
+- base R joins with `merge()`;
+- one-to-one, one-to-many and many-to-many relationships;
+- duplicate-key checks;
+- unmatched-record diagnostics;
+- wide-to-long and long-to-wide reshaping;
+- and optional `dplyr` and `tidyr` equivalents.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. distinguish row binding, column binding and relational joining;
+2. combine compatible rows with `rbind()`;
+3. combine aligned columns with `cbind()`;
+4. join tables using `merge()`;
+5. perform inner, left, right and full joins;
+6. validate key variables;
+7. identify unmatched records;
+8. detect one-to-many and many-to-many relationships;
+9. avoid accidental row multiplication;
+10. reshape data from wide to long;
+11. reshape data from long to wide;
+12. preserve identifiers during reshaping;
+13. use optional `dplyr` and `tidyr` joins; and
+14. audit combined datasets.
+
+# 1. Row binding
+
+Create two compatible tables:
+
+```{r create-row-bind-data}
+students_2025 <- data.frame(
+  student_id = c(
+    "S001",
+    "S002"
+  ),
+  programme = c(
+    "Statistics",
+    "Procurement"
+  ),
+  final_score = c(
+    72,
+    68
+  ),
+  year = 2025L,
+  stringsAsFactors = FALSE
+)
+
+students_2026 <- data.frame(
+  student_id = c(
+    "S003",
+    "S004"
+  ),
+  programme = c(
+    "Hospitality",
+    "Agriculture"
+  ),
+  final_score = c(
+    81,
+    75
+  ),
+  year = 2026L,
+  stringsAsFactors = FALSE
+)
+```
+
+Combine:
+
+```{r row-bind-data}
+all_students <- rbind(
+  students_2025,
+  students_2026
+)
+
+all_students
+```
+
+# 2. Requirements for `rbind()`
+
+Tables should have:
+
+- compatible column names;
+- compatible column types;
+- compatible meanings;
+- and equivalent units.
+
+Inspect:
+
+```{r inspect-row-bind-structure}
+str(
+  students_2025
+)
+
+str(
+  students_2026
+)
+```
+
+# 3. Incompatible columns
+
+```{r incompatible-rbind-example, error=TRUE}
+incomplete_students <- data.frame(
+  student_id = "S005",
+  final_score = 77,
+  stringsAsFactors = FALSE
+)
+
+rbind(
+  students_2025,
+  incomplete_students
+)
+```
+
+Align variables before binding.
+
+# 4. Column binding
+
+```{r create-column-bind-data}
+student_identity <- data.frame(
+  student_id = c(
+    "S001",
+    "S002",
+    "S003"
+  ),
+  programme = c(
+    "Statistics",
+    "Procurement",
+    "Hospitality"
+  ),
+  stringsAsFactors = FALSE
+)
+
+student_results <- data.frame(
+  coursework = c(
+    30,
+    28,
+    35
+  ),
+  examination = c(
+    48,
+    42,
+    51
+  )
+)
+
+combined_columns <- cbind(
+  student_identity,
+  student_results
+)
+
+combined_columns
+```
+
+# 5. Risk of `cbind()`
+
+`cbind()` assumes row alignment by position.
+
+```{r misaligned-cbind-risk}
+shuffled_results <- student_results[
+  c(
+    3,
+    1,
+    2
+  ),
+]
+
+cbind(
+  student_identity,
+  shuffled_results
+)
+```
+
+The result is structurally valid but analytically wrong.
+
+Use key-based joins when rows must be matched by identifiers.
+
+# 6. Relational keys
+
+A key is a variable or combination of variables that identifies records.
+
+```{r create-join-tables}
+student_master <- data.frame(
+  student_id = c(
+    "S001",
+    "S002",
+    "S003",
+    "S004"
+  ),
+  programme = c(
+    "Statistics",
+    "Procurement",
+    "Hospitality",
+    "Agriculture"
+  ),
+  stringsAsFactors = FALSE
+)
+
+score_table <- data.frame(
+  student_id = c(
+    "S001",
+    "S002",
+    "S003",
+    "S005"
+  ),
+  final_score = c(
+    72,
+    68,
+    81,
+    77
+  ),
+  stringsAsFactors = FALSE
+)
+```
+
+# 7. Key validation
+
+```{r validate-join-keys}
+anyDuplicated(
+  student_master$student_id
+)
+
+anyDuplicated(
+  score_table$student_id
+)
+```
+
+Both should be zero for a one-to-one join.
+
+# 8. Inner join with `merge()`
+
+```{r inner-merge}
+inner_joined <- merge(
+  student_master,
+  score_table,
+  by = "student_id"
+)
+
+inner_joined
+```
+
+Only matching identifiers are retained.
+
+# 9. Left join
+
+```{r left-merge}
+left_joined <- merge(
+  student_master,
+  score_table,
+  by = "student_id",
+  all.x = TRUE
+)
+
+left_joined
+```
+
+All rows from the left table are retained.
+
+# 10. Right join
+
+```{r right-merge}
+right_joined <- merge(
+  student_master,
+  score_table,
+  by = "student_id",
+  all.y = TRUE
+)
+
+right_joined
+```
+
+# 11. Full join
+
+```{r full-merge}
+full_joined <- merge(
+  student_master,
+  score_table,
+  by = "student_id",
+  all = TRUE
+)
+
+full_joined
+```
+
+# 12. Unmatched records
+
+Identifiers in master but not scores:
+
+```{r unmatched-left-keys}
+setdiff(
+  student_master$student_id,
+  score_table$student_id
+)
+```
+
+Identifiers in scores but not master:
+
+```{r unmatched-right-keys}
+setdiff(
+  score_table$student_id,
+  student_master$student_id
+)
+```
+
+# 13. Joining on differently named keys
+
+```{r differently-named-keys}
+identity_data <- data.frame(
+  student_code = c(
+    "S001",
+    "S002"
+  ),
+  programme = c(
+    "Statistics",
+    "Procurement"
+  ),
+  stringsAsFactors = FALSE
+)
+
+result_data <- data.frame(
+  student_id = c(
+    "S001",
+    "S002"
+  ),
+  final_score = c(
+    72,
+    68
+  ),
+  stringsAsFactors = FALSE
+)
+
+merge(
+  identity_data,
+  result_data,
+  by.x = "student_code",
+  by.y = "student_id"
+)
+```
+
+# 14. Composite keys
+
+```{r composite-key-tables}
+semester_records <- data.frame(
+  student_id = c(
+    "S001",
+    "S001",
+    "S002",
+    "S002"
+  ),
+  semester = c(
+    1,
+    2,
+    1,
+    2
+  ),
+  final_score = c(
+    70,
+    75,
+    68,
+    72
+  )
+)
+
+semester_status <- data.frame(
+  student_id = c(
+    "S001",
+    "S001",
+    "S002",
+    "S002"
+  ),
+  semester = c(
+    1,
+    2,
+    1,
+    2
+  ),
+  status = c(
+    "Completed",
+    "Completed",
+    "Completed",
+    "Completed"
+  ),
+  stringsAsFactors = FALSE
+)
+
+merge(
+  semester_records,
+  semester_status,
+  by = c(
+    "student_id",
+    "semester"
+  )
+)
+```
+
+# 15. One-to-many relationships
+
+```{r one-to-many-example}
+student_households <- data.frame(
+  household_id = c(
+    "H001",
+    "H002"
+  ),
+  district = c(
+    "Bolgatanga",
+    "Bawku West"
+  ),
+  stringsAsFactors = FALSE
+)
+
+household_members <- data.frame(
+  household_id = c(
+    "H001",
+    "H001",
+    "H002"
+  ),
+  member_name = c(
+    "Ama",
+    "Kojo",
+    "Esi"
+  ),
+  stringsAsFactors = FALSE
+)
+
+merge(
+  student_households,
+  household_members,
+  by = "household_id"
+)
+```
+
+One household appears in several member rows.
+
+# 16. Many-to-many risk
+
+```{r many-to-many-example}
+table_a <- data.frame(
+  key = c(
+    "A",
+    "A"
+  ),
+  value_a = c(
+    1,
+    2
+  )
+)
+
+table_b <- data.frame(
+  key = c(
+    "A",
+    "A",
+    "A"
+  ),
+  value_b = c(
+    10,
+    20,
+    30
+  )
+)
+
+merge(
+  table_a,
+  table_b,
+  by = "key"
+)
+```
+
+Two rows multiplied by three rows produce six combinations.
+
+# 17. Duplicate-key audit
+
+```{r duplicate-key-audit}
+audit_key <- function(
+  data,
+  key
+) {
+  key_values <- data[[
+    key
+  ]]
+
+  data.frame(
+    total_rows = nrow(data),
+    missing_keys = sum(
+      is.na(key_values) |
+        key_values == ""
+    ),
+    duplicated_rows = sum(
+      duplicated(key_values)
+    ),
+    unique_keys = length(
+      unique(key_values)
+    )
+  )
+}
+
+audit_key(
+  student_master,
+  "student_id"
+)
+```
+
+# 18. Join audit
+
+```{r join-audit-function}
+audit_join <- function(
+  left_data,
+  right_data,
+  key
+) {
+  left_keys <-
+    left_data[[
+      key
+    ]]
+
+  right_keys <-
+    right_data[[
+      key
+    ]]
+
+  list(
+    left_rows =
+      nrow(left_data),
+    right_rows =
+      nrow(right_data),
+    left_duplicate_keys =
+      sum(
+        duplicated(left_keys)
+      ),
+    right_duplicate_keys =
+      sum(
+        duplicated(right_keys)
+      ),
+    unmatched_left =
+      setdiff(
+        unique(left_keys),
+        unique(right_keys)
+      ),
+    unmatched_right =
+      setdiff(
+        unique(right_keys),
+        unique(left_keys)
+      )
+  )
+}
+
+audit_join(
+  student_master,
+  score_table,
+  "student_id"
+)
+```
+
+# 19. Suffixes for duplicate variable names
+
+```{r merge-suffixes}
+left_data <- data.frame(
+  student_id = c(
+    "S001",
+    "S002"
+  ),
+  status = c(
+    "Registered",
+    "Registered"
+  )
+)
+
+right_data <- data.frame(
+  student_id = c(
+    "S001",
+    "S002"
+  ),
+  status = c(
+    "Passed",
+    "Failed"
+  )
+)
+
+merge(
+  left_data,
+  right_data,
+  by = "student_id",
+  suffixes = c(
+    "_registration",
+    "_result"
+  )
+)
+```
+
+# 20. Wide data
+
+```{r create-wide-data}
+wide_scores <- data.frame(
+  student_id = c(
+    "S001",
+    "S002",
+    "S003"
+  ),
+  semester_1 = c(
+    65,
+    72,
+    81
+  ),
+  semester_2 = c(
+    68,
+    75,
+    84
+  ),
+  stringsAsFactors = FALSE
+)
+
+wide_scores
+```
+
+Each semester is stored in a separate column.
+
+# 21. Long data
+
+```{r create-long-data}
+long_scores <- data.frame(
+  student_id = rep(
+    wide_scores$student_id,
+    each = 2
+  ),
+  semester = rep(
+    c(
+      "semester_1",
+      "semester_2"
+    ),
+    times = nrow(
+      wide_scores
+    )
+  ),
+  score = as.vector(
+    t(
+      wide_scores[
+        c(
+          "semester_1",
+          "semester_2"
+        )
+      ]
+    )
+  ),
+  stringsAsFactors = FALSE
+)
+
+long_scores
+```
+
+# 22. Base R wide-to-long with `reshape()`
+
+```{r base-wide-to-long}
+wide_for_reshape <- wide_scores
+
+long_with_reshape <- reshape(
+  wide_for_reshape,
+  varying = c(
+    "semester_1",
+    "semester_2"
+  ),
+  v.names = "score",
+  timevar = "semester",
+  times = c(
+    1,
+    2
+  ),
+  direction = "long"
+)
+
+long_with_reshape
+```
+
+# 23. Base R long-to-wide
+
+```{r base-long-to-wide}
+wide_with_reshape <- reshape(
+  long_with_reshape,
+  idvar = "student_id",
+  timevar = "semester",
+  direction = "wide"
+)
+
+wide_with_reshape
+```
+
+# 24. Preserving identifiers during reshaping
+
+Every repeated row in long format should retain the unit identifier.
+
+```{r validate-long-identifiers}
+table(
+  long_scores$student_id
+)
+```
+
+Each student appears twice because there are two semesters.
+
+# 25. Duplicate long-format cells
+
+A long dataset should have one row per identifier-time combination when it is
+intended to reshape to wide.
+
+```{r duplicate-long-cell-check}
+long_key <- paste(
+  long_scores$student_id,
+  long_scores$semester,
+  sep = "::"
+)
+
+anyDuplicated(
+  long_key
+)
+```
+
+# 26. Optional `dplyr` joins
+
+```{r check-dplyr-join}
+requireNamespace(
+  "dplyr",
+  quietly = TRUE
+)
+```
+
+Templates:
+
+```{r dplyr-join-templates, eval=FALSE}
+dplyr::inner_join(
+  student_master,
+  score_table,
+  by = "student_id"
+)
+
+dplyr::left_join(
+  student_master,
+  score_table,
+  by = "student_id"
+)
+
+dplyr::right_join(
+  student_master,
+  score_table,
+  by = "student_id"
+)
+
+dplyr::full_join(
+  student_master,
+  score_table,
+  by = "student_id"
+)
+
+dplyr::anti_join(
+  student_master,
+  score_table,
+  by = "student_id"
+)
+```
+
+# 27. Optional `tidyr` reshaping
+
+```{r check-tidyr}
+requireNamespace(
+  "tidyr",
+  quietly = TRUE
+)
+```
+
+Wide to long:
+
+```{r pivot-longer-template, eval=FALSE}
+long_scores <- tidyr::pivot_longer(
+  wide_scores,
+  cols = c(
+    semester_1,
+    semester_2
+  ),
+  names_to = "semester",
+  values_to = "score"
+)
+```
+
+Long to wide:
+
+```{r pivot-wider-template, eval=FALSE}
+wide_scores <- tidyr::pivot_wider(
+  long_scores,
+  names_from = semester,
+  values_from = score
+)
+```
+
+# 28. Binding many files
+
+```{r bind-many-files-template}
+csv_files <- list.files(
+  path = "data",
+  pattern = "\\.csv$",
+  full.names = TRUE
+)
+
+file_data <- lapply(
+  csv_files,
+  read.csv,
+  stringsAsFactors = FALSE
+)
+
+names(file_data) <-
+  basename(csv_files)
+
+lapply(
+  file_data,
+  dim
+)
+```
+
+Do not row-bind unrelated datasets merely because they are all CSV files.
+
+# 29. Source-file tracking
+
+When binding similar files, create a source variable.
+
+```{r source-file-tracking}
+year_2025 <- students_2025
+year_2026 <- students_2026
+
+year_2025$source_file <-
+  "students_2025.csv"
+
+year_2026$source_file <-
+  "students_2026.csv"
+
+combined_with_source <- rbind(
+  year_2025,
+  year_2026
+)
+
+combined_with_source
+```
+
+# 30. Post-combination validation
+
+```{r post-combination-validation}
+nrow(
+  all_students
+)
+
+names(
+  all_students
+)
+
+str(
+  all_students
+)
+
+anyDuplicated(
+  paste(
+    all_students$student_id,
+    all_students$year,
+    sep = "::"
+  )
+)
+```
+
+# 31. Join-result row-count check
+
+```{r join-row-count-check}
+nrow(
+  student_master
+)
+
+nrow(
+  left_joined
+)
+```
+
+For a one-to-one left join, row counts should usually match. Extra rows may
+indicate duplicated keys in the right table.
+
+# 32. Combined-data audit log
+
+```{r combination-log}
+combination_log <- data.frame(
+  operation = c(
+    "Row bind",
+    "Left join",
+    "Wide-to-long"
+  ),
+  input_objects = c(
+    "students_2025; students_2026",
+    "student_master; score_table",
+    "wide_scores"
+  ),
+  key = c(
+    "student_id + year",
+    "student_id",
+    "student_id + semester"
+  ),
+  expected_rows = c(
+    nrow(students_2025) +
+      nrow(students_2026),
+    nrow(student_master),
+    nrow(wide_scores) * 2
+  ),
+  stringsAsFactors = FALSE
+)
+
+combination_log
+```
+
+# 33. Common mistakes
+
+- using `cbind()` for records that are not aligned;
+- row-binding incompatible variables;
+- joining without checking key uniqueness;
+- ignoring unmatched records;
+- accepting accidental many-to-many joins;
+- forgetting suffixes for duplicate variable names;
+- reshaping without preserving identifiers;
+- reshaping long data containing duplicate identifier-time cells;
+- binding unrelated files;
+- failing to record source files and row counts.
+
+# 34. Independent exercises
+
+1. row-bind two compatible datasets.
+2. demonstrate an incompatible row bind.
+3. column-bind aligned tables.
+4. explain the risk of positional alignment.
+5. perform inner, left, right and full joins.
+6. identify unmatched keys.
+7. join on differently named variables.
+8. join on a composite key.
+9. demonstrate one-to-many and many-to-many relationships.
+10. audit key uniqueness.
+11. reshape wide data to long.
+12. reshape long data to wide.
+13. validate identifier-time uniqueness.
+14. add source-file tracking.
+15. create a post-combination audit.
+
+# 35. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. demonstrates row and column binding;
+2. validates compatibility;
+3. performs four join types;
+4. audits unmatched and duplicate keys;
+5. explains relationship types;
+6. detects accidental row multiplication;
+7. reshapes wide to long;
+8. reshapes long to wide;
+9. preserves identifiers;
+10. tracks source files;
+11. validates row counts; and
+12. documents all combination operations.
+
+# 36. Completion checklist
+
+Confirm that you can:
+
+- row-bind tables;
+- column-bind aligned data;
+- explain relational keys;
+- perform inner joins;
+- perform left, right and full joins;
+- identify unmatched records;
+- join differently named keys;
+- use composite keys;
+- distinguish relationship types;
+- detect duplicate keys;
+- reshape wide to long;
+- reshape long to wide;
+- validate identifier-time cells;
+- track source files; and
+- audit combined data.
+
+# Lesson conclusion
+
+Combining data requires more than matching column names. The analyst must
+understand keys, relationships, unmatched records and expected row counts.
+
+\[
+\boxed{
+\text{inspect tables}
+\rightarrow
+\text{validate keys}
+\rightarrow
+\text{combine}
+\rightarrow
+\text{audit rows}
+\rightarrow
+\text{verify meaning}
+}
+\]

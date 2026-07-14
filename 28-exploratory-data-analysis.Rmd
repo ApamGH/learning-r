@@ -1,0 +1,766 @@
+---
+title: "Lesson 28: Distribution Assessment and Exploratory Data Analysis"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Exploratory data analysis is the systematic process of understanding data
+before formal modelling. It combines numerical summaries, visual displays and
+quality checks.
+
+Distribution assessment asks:
+
+- where the data are centred;
+- how widely values vary;
+- whether the distribution is symmetric;
+- whether there are multiple peaks;
+- whether extreme observations exist;
+- whether transformations may be useful;
+- and whether patterns differ across groups.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. explain exploratory data analysis;
+2. inspect numerical distributions;
+3. compare mean and median;
+4. assess skewness visually and numerically;
+5. assess possible outliers;
+6. use histograms, density plots and box plots;
+7. use quantile-quantile plots;
+8. perform normality tests cautiously;
+9. compare distributions across groups;
+10. assess transformations;
+11. identify data-quality concerns;
+12. create an EDA function;
+13. document exploratory findings; and
+14. distinguish exploration from confirmation.
+
+# 1. Importing data
+
+```{r import-eda-data}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+final_scores <- student_data$final_score
+```
+
+# 2. Initial summary
+
+```{r eda-initial-summary}
+summary(
+  final_scores
+)
+
+mean(
+  final_scores,
+  na.rm = TRUE
+)
+
+median(
+  final_scores,
+  na.rm = TRUE
+)
+
+sd(
+  final_scores,
+  na.rm = TRUE
+)
+
+IQR(
+  final_scores,
+  na.rm = TRUE
+)
+```
+
+# 3. Shape from mean and median
+
+```{r eda-mean-median}
+mean_score <- mean(
+  final_scores,
+  na.rm = TRUE
+)
+
+median_score <- median(
+  final_scores,
+  na.rm = TRUE
+)
+
+mean_score
+median_score
+mean_score - median_score
+```
+
+The difference offers only a preliminary indication of asymmetry.
+
+# 4. Histogram
+
+```{r eda-histogram}
+hist(
+  final_scores,
+  main = "Distribution of Final Scores",
+  xlab = "Final score",
+  ylab = "Frequency"
+)
+```
+
+# 5. Alternative histogram breaks
+
+```{r eda-histogram-breaks}
+hist(
+  final_scores,
+  breaks = 5,
+  main = "Final Scores: Five Bins",
+  xlab = "Final score"
+)
+
+hist(
+  final_scores,
+  breaks = 12,
+  main = "Final Scores: Twelve Bins",
+  xlab = "Final score"
+)
+```
+
+# 6. Density plot
+
+```{r eda-density-plot}
+plot(
+  density(
+    final_scores,
+    na.rm = TRUE
+  ),
+  main = "Density of Final Scores",
+  xlab = "Final score",
+  ylab = "Density"
+)
+```
+
+# 7. Box plot
+
+```{r eda-boxplot}
+boxplot(
+  final_scores,
+  main = "Box Plot of Final Scores",
+  ylab = "Final score"
+)
+```
+
+# 8. Box-plot statistics
+
+```{r eda-boxplot-stats}
+boxplot.stats(
+  final_scores
+)
+```
+
+# 9. IQR outlier rule
+
+```{r eda-iqr-outliers}
+q1 <- quantile(
+  final_scores,
+  0.25,
+  na.rm = TRUE
+)
+
+q3 <- quantile(
+  final_scores,
+  0.75,
+  na.rm = TRUE
+)
+
+iqr_value <- q3 - q1
+
+lower_fence <- q1 - 1.5 * iqr_value
+upper_fence <- q3 + 1.5 * iqr_value
+
+iqr_outlier <- final_scores < lower_fence |
+  final_scores > upper_fence
+
+student_data[
+  iqr_outlier,
+]
+```
+
+# 10. Z-score screening
+
+```{r eda-z-screen}
+z_scores <- as.numeric(
+  scale(
+    final_scores
+  )
+)
+
+extreme_z <- abs(
+  z_scores
+) > 3
+
+student_data[
+  extreme_z,
+]
+```
+
+# 11. Skewness function
+
+```{r eda-skewness-function}
+calculate_skewness <- function(
+  x
+) {
+  observed <- x[
+    !is.na(x)
+  ]
+
+  n <- length(observed)
+
+  if (n < 3L) {
+    return(NA_real_)
+  }
+
+  centre <- mean(observed)
+  spread <- sd(observed)
+
+  if (spread == 0) {
+    return(0)
+  }
+
+  mean(
+    (
+      (observed - centre) /
+        spread
+    ) ^ 3
+  )
+}
+
+calculate_skewness(
+  final_scores
+)
+```
+
+# 12. Kurtosis function
+
+```{r eda-kurtosis-function}
+calculate_excess_kurtosis <- function(
+  x
+) {
+  observed <- x[
+    !is.na(x)
+  ]
+
+  n <- length(observed)
+
+  if (n < 4L) {
+    return(NA_real_)
+  }
+
+  centre <- mean(observed)
+  spread <- sd(observed)
+
+  if (spread == 0) {
+    return(NA_real_)
+  }
+
+  mean(
+    (
+      (observed - centre) /
+        spread
+    ) ^ 4
+  ) - 3
+}
+
+calculate_excess_kurtosis(
+  final_scores
+)
+```
+
+# 13. Quantile-quantile plot
+
+```{r eda-qq-plot}
+qqnorm(
+  final_scores,
+  main = "Normal Q-Q Plot of Final Scores"
+)
+
+qqline(
+  final_scores
+)
+```
+
+Points close to the line are broadly consistent with normality.
+
+# 14. Shapiro-Wilk test
+
+```{r eda-shapiro-wilk}
+shapiro.test(
+  final_scores
+)
+```
+
+Interpretation:
+
+- null hypothesis: the data are normally distributed;
+- small p-values indicate evidence against normality;
+- large p-values do not prove normality.
+
+# 15. Normality tests and sample size
+
+Normality tests may:
+
+- have low power in small samples;
+- detect trivial deviations in very large samples;
+- be affected by ties and rounding.
+
+Use tests together with plots and contextual judgement.
+
+# 16. Grouped box plots
+
+```{r eda-grouped-boxplots}
+boxplot(
+  final_score ~ programme,
+  data = student_data,
+  main = "Final Scores by Programme",
+  xlab = "Programme",
+  ylab = "Final score",
+  las = 2
+)
+```
+
+# 17. Grouped histograms
+
+```{r eda-grouped-histograms}
+programme_names <- unique(
+  student_data$programme
+)
+
+old_parameters <- par(
+  mfrow = c(
+    2,
+    2
+  )
+)
+
+for (programme_name in programme_names) {
+  selected_scores <- student_data$final_score[
+    student_data$programme ==
+      programme_name
+  ]
+
+  hist(
+    selected_scores,
+    main = programme_name,
+    xlab = "Final score"
+  )
+}
+
+par(
+  old_parameters
+)
+```
+
+# 18. Group summaries
+
+```{r eda-group-summary}
+aggregate(
+  final_score ~ programme,
+  data = student_data,
+  FUN = function(x) {
+    c(
+      n = length(x),
+      mean = mean(x),
+      median = median(x),
+      sd = sd(x),
+      iqr = IQR(x),
+      skewness =
+        calculate_skewness(x)
+    )
+  }
+)
+```
+
+# 19. Transformation assessment
+
+Create positive skewed data:
+
+```{r eda-skewed-data}
+skewed_values <- rexp(
+  n = 200,
+  rate = 0.10
+)
+
+summary(
+  skewed_values
+)
+
+calculate_skewness(
+  skewed_values
+)
+```
+
+# 20. Log transformation
+
+```{r eda-log-transform}
+log_values <- log(
+  skewed_values
+)
+
+calculate_skewness(
+  log_values
+)
+```
+
+Compare histograms:
+
+```{r eda-transform-comparison}
+old_parameters <- par(
+  mfrow = c(
+    1,
+    2
+  )
+)
+
+hist(
+  skewed_values,
+  main = "Original Values",
+  xlab = "Value"
+)
+
+hist(
+  log_values,
+  main = "Log-Transformed Values",
+  xlab = "Log value"
+)
+
+par(
+  old_parameters
+)
+```
+
+# 21. Square-root transformation
+
+```{r eda-square-root-transform}
+square_root_values <- sqrt(
+  skewed_values
+)
+
+calculate_skewness(
+  square_root_values
+)
+```
+
+# 22. Transformation cautions
+
+A transformation should:
+
+- match the measurement scale;
+- preserve substantive meaning where possible;
+- be applied before modelling for a clear reason;
+- not be used merely to force a desired result;
+- be documented and interpreted on the correct scale.
+
+# 23. Missingness in EDA
+
+```{r eda-missingness}
+missing_summary <- data.frame(
+  variable = names(
+    student_data
+  ),
+  missing = vapply(
+    student_data,
+    function(x) {
+      sum(
+        is.na(x)
+      )
+    },
+    FUN.VALUE = integer(1)
+  ),
+  missing_percentage = vapply(
+    student_data,
+    function(x) {
+      mean(
+        is.na(x)
+      ) * 100
+    },
+    FUN.VALUE = numeric(1)
+  ),
+  stringsAsFactors = FALSE
+)
+
+missing_summary
+```
+
+# 24. Duplicate identifiers
+
+```{r eda-duplicate-identifiers}
+duplicated_student_ids <- duplicated(
+  student_data$student_id
+) |
+  duplicated(
+    student_data$student_id,
+    fromLast = TRUE
+  )
+
+student_data[
+  duplicated_student_ids,
+]
+```
+
+# 25. Range and consistency checks
+
+```{r eda-range-checks}
+range_checks <- list(
+  coursework_valid = all(
+    student_data$coursework_score >= 0 &
+      student_data$coursework_score <= 40
+  ),
+  examination_valid = all(
+    student_data$examination_score >= 0 &
+      student_data$examination_score <= 60
+  ),
+  final_valid = all(
+    student_data$final_score >= 0 &
+      student_data$final_score <= 100
+  ),
+  arithmetic_valid = all(
+    student_data$final_score ==
+      student_data$coursework_score +
+      student_data$examination_score
+  )
+)
+
+range_checks
+```
+
+# 26. Reusable EDA summary function
+
+```{r eda-summary-function}
+create_eda_summary <- function(
+  x,
+  variable_name = "x"
+) {
+  if (!is.numeric(x)) {
+    stop(
+      "`x` must be numeric.",
+      call. = FALSE
+    )
+  }
+
+  observed <- x[
+    !is.na(x)
+  ]
+
+  q <- quantile(
+    observed,
+    c(
+      0.25,
+      0.50,
+      0.75
+    )
+  )
+
+  data.frame(
+    variable = variable_name,
+    n = length(observed),
+    missing = sum(
+      is.na(x)
+    ),
+    mean = mean(observed),
+    median = median(observed),
+    standard_deviation = sd(observed),
+    minimum = min(observed),
+    first_quartile = q[1],
+    third_quartile = q[3],
+    maximum = max(observed),
+    skewness =
+      calculate_skewness(
+        observed
+      ),
+    excess_kurtosis =
+      calculate_excess_kurtosis(
+        observed
+      ),
+    stringsAsFactors = FALSE,
+    row.names = NULL
+  )
+}
+
+create_eda_summary(
+  final_scores,
+  "final_score"
+)
+```
+
+# 27. EDA report for several variables
+
+```{r eda-several-variables}
+numeric_variables <- names(
+  student_data
+)[
+  vapply(
+    student_data,
+    is.numeric,
+    FUN.VALUE = logical(1)
+  )
+]
+
+eda_tables <- lapply(
+  numeric_variables,
+  function(variable_name) {
+    create_eda_summary(
+      student_data[[
+        variable_name
+      ]],
+      variable_name
+    )
+  }
+)
+
+do.call(
+  rbind,
+  eda_tables
+)
+```
+
+# 28. Exploration versus confirmation
+
+Exploratory analysis:
+
+- discovers patterns;
+- generates questions;
+- checks assumptions;
+- identifies anomalies.
+
+Confirmatory analysis:
+
+- evaluates pre-specified hypotheses;
+- uses inferential procedures;
+- controls error rates;
+- requires planned interpretation.
+
+The same dataset can support both stages, but the distinction should be clear.
+
+# 29. Common mistakes
+
+- relying only on a normality test;
+- declaring data normal because p > 0.05;
+- treating all outliers as errors;
+- ignoring small group sizes;
+- applying transformations without justification;
+- using too many histogram bins;
+- interpreting exploratory patterns as confirmed effects;
+- overlooking missingness and duplication;
+- checking distribution only for the pooled sample;
+- failing to document exploratory decisions.
+
+# 30. Independent exercises
+
+1. create a complete numerical summary.
+2. compare mean and median.
+3. create histograms with different breaks.
+4. create density and box plots.
+5. screen outliers with IQR and z-scores.
+6. calculate skewness and kurtosis.
+7. create a Q-Q plot.
+8. conduct and interpret Shapiro-Wilk.
+9. compare distributions across groups.
+10. assess log and square-root transformations.
+11. audit missingness and duplicate identifiers.
+12. create an EDA function.
+13. distinguish exploratory and confirmatory findings.
+
+# 31. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. profiles all numerical variables;
+2. uses several distribution plots;
+3. assesses skewness and outliers;
+4. creates Q-Q plots;
+5. uses normality tests cautiously;
+6. compares groups;
+7. evaluates a transformation;
+8. includes data-quality checks;
+9. creates reusable EDA functions; and
+10. distinguishes exploration from confirmation.
+
+# 32. Completion checklist
+
+Confirm that you can:
+
+- conduct EDA;
+- assess centre and spread;
+- compare mean and median;
+- use histograms and densities;
+- use box plots;
+- screen outliers;
+- calculate skewness and kurtosis;
+- create Q-Q plots;
+- interpret normality tests;
+- compare group distributions;
+- assess transformations;
+- audit data quality; and
+- create reusable EDA summaries.
+
+# Lesson conclusion
+
+Exploratory analysis combines numerical, visual and structural evidence. Its
+purpose is to understand the data before formal conclusions are drawn.
+
+\[
+\boxed{
+\text{summarise}
+\rightarrow
+\text{visualise}
+\rightarrow
+\text{check quality}
+\rightarrow
+\text{compare groups}
+\rightarrow
+\text{document findings}
+}
+\]

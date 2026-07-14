@@ -1,0 +1,11 @@
+visit_id,sex,age,visit_type,waiting_minutes,consultation_minutes
+V001,Female,34,New,42,18
+V002,Male,51,Review,25,12
+V003,Female,27,New,55,22
+V004,Male,63,Review,18,10
+V005,Female,45,Review,31,15
+V006,Male,19,New,67,25
+V007,Female,72,Review,20,14
+V008,Male,38,New,49,19
+V009,Female,24,New,58,21
+V010,Male,56,Review,23,11

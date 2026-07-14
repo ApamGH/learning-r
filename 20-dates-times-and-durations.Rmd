@@ -1,0 +1,918 @@
+---
+title: "Lesson 20: Dates, Times and Durations"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Dates and times are not ordinary character strings. They have ordering,
+calendar rules, time zones and arithmetic behaviour. A reliable date-time
+workflow must distinguish:
+
+- calendar dates;
+- clock times;
+- date-times;
+- durations;
+- periods;
+- time zones;
+- and text representations.
+
+This lesson begins with base R `Date`, `POSIXct` and `difftime` objects, then
+introduces `lubridate` as an optional extension.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. create and inspect `Date` objects;
+2. convert text to dates;
+3. use explicit date formats;
+4. extract date components;
+5. compare and sort dates;
+6. perform date arithmetic;
+7. create date sequences;
+8. work with `POSIXct` date-times;
+9. specify and convert time zones;
+10. calculate elapsed time with `difftime`;
+11. distinguish durations and calendar periods conceptually;
+12. detect invalid or missing dates;
+13. validate chronological consistency;
+14. use `lubridate` when available; and
+15. create reproducible date-time cleaning functions.
+
+# 1. Creating dates
+
+```{r create-date}
+study_date <- as.Date(
+  "2026-07-14"
+)
+
+study_date
+class(study_date)
+typeof(study_date)
+```
+
+A `Date` is stored internally as the number of days since 1 January 1970.
+
+```{r inspect-date-storage}
+unclass(
+  study_date
+)
+```
+
+# 2. ISO date format
+
+The recommended unambiguous text format is:
+
+```text
+YYYY-MM-DD
+```
+
+Example:
+
+```text
+2026-07-14
+```
+
+This is clearer than:
+
+```text
+07/14/2026
+14/07/2026
+```
+
+because the latter forms depend on regional conventions.
+
+# 3. Parsing custom date formats
+
+Day-month-year:
+
+```{r parse-day-month-year}
+date_dmy <- as.Date(
+  "14/07/2026",
+  format = "%d/%m/%Y"
+)
+
+date_dmy
+```
+
+Month-day-year:
+
+```{r parse-month-day-year}
+date_mdy <- as.Date(
+  "07/14/2026",
+  format = "%m/%d/%Y"
+)
+
+date_mdy
+```
+
+Named month:
+
+```{r parse-named-month}
+date_named <- as.Date(
+  "14 July 2026",
+  format = "%d %B %Y"
+)
+
+date_named
+```
+
+# 4. Common format codes
+
+| Code | Meaning |
+|---|---|
+| `%Y` | four-digit year |
+| `%y` | two-digit year |
+| `%m` | two-digit month |
+| `%d` | day of month |
+| `%B` | full month name |
+| `%b` | abbreviated month |
+| `%A` | full weekday name |
+| `%a` | abbreviated weekday |
+| `%H` | hour, 00–23 |
+| `%M` | minute |
+| `%S` | second |
+
+# 5. Parsing a vector of dates
+
+```{r parse-date-vector}
+raw_dates <- c(
+  "01/01/2026",
+  "15/02/2026",
+  "31/03/2026"
+)
+
+parsed_dates <- as.Date(
+  raw_dates,
+  format = "%d/%m/%Y"
+)
+
+parsed_dates
+```
+
+# 6. Invalid dates
+
+```{r invalid-date}
+invalid_date <- as.Date(
+  "31/02/2026",
+  format = "%d/%m/%Y"
+)
+
+invalid_date
+```
+
+Invalid dates become `NA`.
+
+# 7. Detecting failed date conversion
+
+```{r detect-date-conversion-failure}
+raw_dates_with_error <- c(
+  "01/01/2026",
+  "31/02/2026",
+  "15/03/2026"
+)
+
+converted_dates <- as.Date(
+  raw_dates_with_error,
+  format = "%d/%m/%Y"
+)
+
+date_conversion_report <- data.frame(
+  raw = raw_dates_with_error,
+  converted = converted_dates,
+  failed =
+    is.na(converted_dates) &
+    !is.na(
+      raw_dates_with_error
+    ),
+  stringsAsFactors = FALSE
+)
+
+date_conversion_report
+```
+
+# 8. Formatting dates
+
+```{r format-dates}
+format(
+  study_date,
+  "%d %B %Y"
+)
+
+format(
+  study_date,
+  "%A, %d %B %Y"
+)
+```
+
+`format()` returns character output.
+
+# 9. Extracting date components
+
+```{r extract-date-components}
+format(
+  study_date,
+  "%Y"
+)
+
+format(
+  study_date,
+  "%m"
+)
+
+format(
+  study_date,
+  "%d"
+)
+
+format(
+  study_date,
+  "%A"
+)
+```
+
+Convert numeric components where appropriate:
+
+```{r numeric-date-components}
+year_number <- as.integer(
+  format(
+    study_date,
+    "%Y"
+  )
+)
+
+month_number <- as.integer(
+  format(
+    study_date,
+    "%m"
+  )
+)
+
+day_number <- as.integer(
+  format(
+    study_date,
+    "%d"
+  )
+)
+
+year_number
+month_number
+day_number
+```
+
+# 10. Date comparison
+
+```{r compare-dates}
+start_date <- as.Date(
+  "2026-01-15"
+)
+
+end_date <- as.Date(
+  "2026-03-20"
+)
+
+end_date > start_date
+end_date == start_date
+```
+
+# 11. Sorting dates
+
+```{r sort-dates}
+event_dates <- as.Date(
+  c(
+    "2026-03-10",
+    "2026-01-15",
+    "2026-02-20"
+  )
+)
+
+sort(
+  event_dates
+)
+```
+
+# 12. Date arithmetic
+
+Add days:
+
+```{r add-days}
+study_date + 7
+```
+
+Subtract days:
+
+```{r subtract-days}
+study_date - 30
+```
+
+Difference between dates:
+
+```{r date-difference}
+end_date - start_date
+```
+
+# 13. `difftime`
+
+```{r explicit-difftime}
+difftime(
+  end_date,
+  start_date,
+  units = "days"
+)
+```
+
+Possible units include:
+
+- seconds;
+- minutes;
+- hours;
+- days;
+- weeks;
+- auto.
+
+# 14. Date sequences
+
+Daily:
+
+```{r daily-date-sequence}
+seq(
+  from = as.Date(
+    "2026-01-01"
+  ),
+  to = as.Date(
+    "2026-01-10"
+  ),
+  by = "day"
+)
+```
+
+Weekly:
+
+```{r weekly-date-sequence}
+seq(
+  from = as.Date(
+    "2026-01-01"
+  ),
+  by = "week",
+  length.out = 6
+)
+```
+
+Monthly:
+
+```{r monthly-date-sequence}
+seq(
+  from = as.Date(
+    "2026-01-01"
+  ),
+  by = "month",
+  length.out = 12
+)
+```
+
+# 15. Current date and time
+
+```{r current-date-time}
+Sys.Date()
+Sys.time()
+```
+
+# 16. Date-time objects
+
+```{r create-posixct}
+appointment_time <- as.POSIXct(
+  "2026-07-14 09:30:00",
+  format = "%Y-%m-%d %H:%M:%S",
+  tz = "Africa/Accra"
+)
+
+appointment_time
+class(appointment_time)
+typeof(appointment_time)
+```
+
+# 17. Time zones
+
+```{r inspect-time-zone}
+attr(
+  appointment_time,
+  "tzone"
+)
+```
+
+Ghana uses:
+
+```text
+Africa/Accra
+```
+
+List available time zones:
+
+```{r available-time-zones}
+head(
+  OlsonNames()
+)
+```
+
+# 18. Converting display time zones
+
+```{r convert-time-zone-display}
+format(
+  appointment_time,
+  tz = "Europe/London",
+  usetz = TRUE
+)
+```
+
+The instant remains the same; the displayed local clock time may change.
+
+# 19. Date-time arithmetic
+
+```{r add-hours}
+appointment_time + 2 * 60 * 60
+```
+
+Subtract:
+
+```{r subtract-minutes}
+appointment_time - 30 * 60
+```
+
+# 20. Elapsed time between date-times
+
+```{r elapsed-time}
+start_time <- as.POSIXct(
+  "2026-07-14 09:15:00",
+  tz = "Africa/Accra"
+)
+
+end_time <- as.POSIXct(
+  "2026-07-14 11:05:00",
+  tz = "Africa/Accra"
+)
+
+difftime(
+  end_time,
+  start_time,
+  units = "mins"
+)
+```
+
+# 21. Converting date-time to date
+
+```{r datetime-to-date}
+as.Date(
+  appointment_time,
+  tz = "Africa/Accra"
+)
+```
+
+# 22. Combining separate date and time text
+
+```{r combine-date-time-text}
+date_text <- "2026-07-14"
+time_text <- "14:45:00"
+
+combined_text <- paste(
+  date_text,
+  time_text
+)
+
+combined_datetime <- as.POSIXct(
+  combined_text,
+  format = "%Y-%m-%d %H:%M:%S",
+  tz = "Africa/Accra"
+)
+
+combined_datetime
+```
+
+# 23. Clock-time text
+
+R base does not have a universal standalone time-of-day class. One practical
+approach is to attach the time to a reference date.
+
+```{r parse-clock-time}
+clock_time <- strptime(
+  "14:45:00",
+  format = "%H:%M:%S",
+  tz = "Africa/Accra"
+)
+
+clock_time
+```
+
+# 24. Chronological validation
+
+```{r chronological-validation}
+registration_date <- as.Date(
+  "2026-01-10"
+)
+
+completion_date <- as.Date(
+  "2026-03-15"
+)
+
+completion_date >=
+  registration_date
+```
+
+Invalid order:
+
+```{r invalid-chronology}
+registration_dates <- as.Date(
+  c(
+    "2026-01-10",
+    "2026-03-20"
+  )
+)
+
+completion_dates <- as.Date(
+  c(
+    "2026-03-15",
+    "2026-02-15"
+  )
+)
+
+chronology_is_valid <-
+  completion_dates >=
+  registration_dates
+
+chronology_is_valid
+```
+
+# 25. Future-date validation
+
+```{r future-date-check}
+dates_to_check <- as.Date(
+  c(
+    "2025-12-01",
+    "2027-01-01",
+    NA
+  )
+)
+
+future_status <-
+  dates_to_check >
+  Sys.Date()
+
+future_status
+```
+
+Interpret future dates according to the data-collection context.
+
+# 26. Age calculation
+
+Approximate age in years:
+
+```{r approximate-age}
+birth_date <- as.Date(
+  "1990-06-15"
+)
+
+reference_date <- as.Date(
+  "2026-07-14"
+)
+
+approximate_age_years <- as.numeric(
+  difftime(
+    reference_date,
+    birth_date,
+    units = "days"
+  )
+) / 365.2425
+
+approximate_age_years
+```
+
+Exact age requires calendar-aware treatment.
+
+# 27. Optional `lubridate`
+
+Check availability:
+
+```{r check-lubridate}
+requireNamespace(
+  "lubridate",
+  quietly = TRUE
+)
+```
+
+Parsing examples:
+
+```{r lubridate-parsing, eval=FALSE}
+lubridate::ymd(
+  "2026-07-14"
+)
+
+lubridate::dmy(
+  "14/07/2026"
+)
+
+lubridate::mdy(
+  "07/14/2026"
+)
+
+lubridate::ymd_hms(
+  "2026-07-14 09:30:00",
+  tz = "Africa/Accra"
+)
+```
+
+# 28. Extracting components with `lubridate`
+
+```{r lubridate-components, eval=FALSE}
+lubridate::year(
+  appointment_time
+)
+
+lubridate::month(
+  appointment_time,
+  label = TRUE
+)
+
+lubridate::day(
+  appointment_time
+)
+
+lubridate::wday(
+  appointment_time,
+  label = TRUE
+)
+```
+
+# 29. Durations and periods
+
+A duration represents an exact number of seconds.
+
+A period represents calendar units such as months or years.
+
+```{r lubridate-duration-period, eval=FALSE}
+appointment_time +
+  lubridate::duration(
+    hours = 24
+  )
+
+appointment_time +
+  lubridate::days(
+    1
+  )
+```
+
+These may differ around daylight-saving changes in some time zones.
+
+# 30. Month arithmetic
+
+Base R:
+
+```{r base-month-sequence}
+seq(
+  as.Date(
+    "2026-01-31"
+  ),
+  by = "month",
+  length.out = 4
+)
+```
+
+End-of-month arithmetic can be surprising. Calendar-aware functions should be
+used deliberately.
+
+# 31. Date cleaning function
+
+```{r date-cleaning-function}
+parse_date_safely <- function(
+  x,
+  format
+) {
+  if (!is.character(x)) {
+    stop(
+      "`x` must be character.",
+      call. = FALSE
+    )
+  }
+
+  parsed <- as.Date(
+    x,
+    format = format
+  )
+
+  data.frame(
+    raw = x,
+    parsed = parsed,
+    failed =
+      is.na(parsed) &
+      !is.na(x) &
+      trimws(x) != "",
+    stringsAsFactors = FALSE
+  )
+}
+
+parse_date_safely(
+  c(
+    "14/07/2026",
+    "31/02/2026",
+    ""
+  ),
+  format = "%d/%m/%Y"
+)
+```
+
+# 32. Date-time validation function
+
+```{r datetime-validation-function}
+validate_datetime_order <- function(
+  start,
+  end
+) {
+  if (!inherits(
+    start,
+    "POSIXt"
+  ) ||
+      !inherits(
+        end,
+        "POSIXt"
+      )) {
+    stop(
+      "Both inputs must be date-time objects.",
+      call. = FALSE
+    )
+  }
+
+  data.frame(
+    start = start,
+    end = end,
+    valid =
+      is.na(start) |
+      is.na(end) |
+      end >= start
+  )
+}
+```
+
+# 33. Integrated example: monthly reporting dates
+
+```{r integrated-monthly-dates}
+reporting_dates <- seq(
+  from = as.Date(
+    "2026-01-01"
+  ),
+  by = "month",
+  length.out = 12
+)
+
+reporting_schedule <- data.frame(
+  reporting_date = reporting_dates,
+  year = format(
+    reporting_dates,
+    "%Y"
+  ),
+  month_number = format(
+    reporting_dates,
+    "%m"
+  ),
+  month_name = format(
+    reporting_dates,
+    "%B"
+  ),
+  weekday = format(
+    reporting_dates,
+    "%A"
+  ),
+  stringsAsFactors = FALSE
+)
+
+reporting_schedule
+```
+
+# 34. Common mistakes
+
+- storing dates permanently as unvalidated character text;
+- confusing day-month-year and month-day-year;
+- omitting the parsing format;
+- ignoring failed conversion to `NA`;
+- treating date-times as ordinary numbers;
+- ignoring time zones;
+- assuming a day always equals the same calendar behaviour everywhere;
+- using 365 days for exact age;
+- ignoring end-of-month behaviour;
+- comparing dates and character strings directly.
+
+# 35. Independent exercises
+
+1. create and inspect `Date` objects.
+2. parse day-month-year and month-day-year text.
+3. identify invalid dates.
+4. format dates for reporting.
+5. extract year, month, day and weekday.
+6. compare and sort dates.
+7. calculate date differences.
+8. create daily, weekly and monthly sequences.
+9. create `POSIXct` date-times.
+10. specify and convert time zones.
+11. calculate elapsed minutes.
+12. validate chronological order.
+13. detect future dates.
+14. write a safe date-parsing function.
+15. create a monthly reporting schedule.
+
+# 36. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. distinguishes dates, date-times and durations;
+2. parses several date formats;
+3. identifies failed conversions;
+4. formats dates for reporting;
+5. extracts components;
+6. performs date arithmetic;
+7. creates date sequences;
+8. creates time-zone-aware date-times;
+9. calculates elapsed time;
+10. validates chronology;
+11. demonstrates optional `lubridate` code; and
+12. creates reusable date-cleaning functions.
+
+# 37. Completion checklist
+
+Confirm that you can:
+
+- create `Date` objects;
+- parse explicit formats;
+- detect invalid dates;
+- format dates;
+- extract components;
+- compare and sort dates;
+- perform date arithmetic;
+- create sequences;
+- create `POSIXct` objects;
+- specify time zones;
+- calculate elapsed time;
+- validate chronology;
+- detect future dates;
+- explain durations and periods; and
+- build reusable date-cleaning functions.
+
+# Lesson conclusion
+
+Dates and times require explicit formats, time zones and validation rules.
+Reliable date-time analysis begins by converting raw text into appropriate
+classes before calculation.
+
+\[
+\boxed{
+\text{identify format}
+\rightarrow
+\text{parse}
+\rightarrow
+\text{inspect}
+\rightarrow
+\text{validate}
+\rightarrow
+\text{calculate}
+}
+\]

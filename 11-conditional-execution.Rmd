@@ -1,0 +1,945 @@
+---
+title: "Lesson 11: Conditional Execution with if, else and ifelse()"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Conditional execution allows a program to choose what to do based on the
+current data or situation. Instead of running every command unconditionally, R
+can evaluate a logical test and execute only the appropriate branch.
+
+This lesson develops:
+
+- `if`;
+- `else`;
+- `else if`;
+- nested conditions;
+- vectorised `ifelse()`;
+- `switch()`;
+- defensive validation;
+- early stopping;
+- conditional messages; and
+- decision rules in applied contexts.
+
+The central distinction is that `if` makes one decision, while `ifelse()`
+usually makes element-wise decisions across a vector.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. write a valid `if` statement;
+2. use `if` with `else`;
+3. construct several branches using `else if`;
+4. understand scalar logical conditions;
+5. distinguish `if` from `ifelse()`;
+6. create vectorised classifications;
+7. handle missing conditions safely;
+8. use `switch()` for named choices;
+9. stop execution when validation fails;
+10. issue warnings and messages conditionally;
+11. avoid deeply nested and ambiguous logic;
+12. translate decision rules into control flow; and
+13. test conditional code systematically.
+
+# 1. Basic `if`
+
+The general structure is:
+
+```text
+if (condition) {
+  code_to_run
+}
+```
+
+Example:
+
+```{r basic-if}
+score <- 72
+
+if (score >= 50) {
+  print(
+    "The student passed."
+  )
+}
+```
+
+The body executes only when the condition is `TRUE`.
+
+# 2. `if` requires one logical decision
+
+```{r if-scalar-condition}
+condition <- score >= 50
+
+condition
+length(condition)
+```
+
+The condition should be one logical value.
+
+Using a vector condition is inappropriate:
+
+```{r if-vector-condition, error=TRUE}
+scores <- c(
+  45,
+  72,
+  81
+)
+
+if (scores >= 50) {
+  print(
+    "At least one student passed."
+  )
+}
+```
+
+Create a single summary condition:
+
+```{r if-any-condition}
+if (any(scores >= 50)) {
+  print(
+    "At least one student passed."
+  )
+}
+```
+
+Or:
+
+```{r if-all-condition}
+if (all(scores >= 50)) {
+  print(
+    "Every student passed."
+  )
+}
+```
+
+# 3. `if` and `else`
+
+```{r if-else-example}
+score <- 42
+
+if (score >= 50) {
+  result <- "Pass"
+} else {
+  result <- "Fail"
+}
+
+result
+```
+
+Exactly one branch runs.
+
+# 4. Bracing and line placement
+
+In R, `else` should normally appear on the same line as the closing brace:
+
+```r
+if (condition) {
+  ...
+} else {
+  ...
+}
+```
+
+This avoids parsing problems in interactive execution.
+
+# 5. `else if`
+
+```{r else-if-grading}
+score <- 76
+
+if (score >= 80) {
+  grade <- "A"
+} else if (score >= 70) {
+  grade <- "B"
+} else if (score >= 60) {
+  grade <- "C"
+} else if (score >= 50) {
+  grade <- "D"
+} else {
+  grade <- "F"
+}
+
+grade
+```
+
+Conditions are checked from top to bottom. The first true branch is selected.
+
+# 6. Order matters
+
+Incorrect ordering:
+
+```{r incorrect-ordering}
+score <- 85
+
+if (score >= 50) {
+  classification <- "Pass"
+} else if (score >= 80) {
+  classification <- "Distinction"
+} else {
+  classification <- "Fail"
+}
+
+classification
+```
+
+The distinction branch is never reached because every distinction score also
+satisfies `score >= 50`.
+
+Correct:
+
+```{r correct-ordering}
+if (score >= 80) {
+  classification <- "Distinction"
+} else if (score >= 50) {
+  classification <- "Pass"
+} else {
+  classification <- "Fail"
+}
+
+classification
+```
+
+# 7. Compound conditions inside `if`
+
+```{r compound-if-condition}
+score <- 84
+attendance <- 0.93
+
+if (
+  score >= 80 &&
+  attendance >= 0.90
+) {
+  award_status <- "Eligible"
+} else {
+  award_status <- "Not eligible"
+}
+
+award_status
+```
+
+Because both components are scalar logical values, `&&` is appropriate.
+
+# 8. Nested `if` statements
+
+```{r nested-if}
+registered <- TRUE
+fees_paid <- FALSE
+
+if (registered) {
+  if (fees_paid) {
+    access_status <- "Full access"
+  } else {
+    access_status <-
+      "Registration confirmed, fees outstanding"
+  }
+} else {
+  access_status <- "Not registered"
+}
+
+access_status
+```
+
+Nested conditions can be useful, but excessive nesting reduces readability.
+
+# 9. Flattening nested logic
+
+The previous example can be written with `else if`:
+
+```{r flattened-if}
+if (!registered) {
+  access_status <- "Not registered"
+} else if (!fees_paid) {
+  access_status <-
+    "Registration confirmed, fees outstanding"
+} else {
+  access_status <- "Full access"
+}
+
+access_status
+```
+
+# 10. Returning values from `if`
+
+`if` is an expression and can return a value.
+
+```{r if-return-value}
+score <- 68
+
+result <- if (score >= 50) {
+  "Pass"
+} else {
+  "Fail"
+}
+
+result
+```
+
+This form can be concise and readable.
+
+# 11. Missing conditions
+
+```{r missing-if-condition, error=TRUE}
+score <- NA
+
+if (score >= 50) {
+  print(
+    "Pass"
+  )
+}
+```
+
+A missing condition is neither true nor false.
+
+Handle it explicitly:
+
+```{r handle-missing-if}
+if (is.na(score)) {
+  result <- "Score missing"
+} else if (score >= 50) {
+  result <- "Pass"
+} else {
+  result <- "Fail"
+}
+
+result
+```
+
+# 12. `isTRUE()` in control flow
+
+```{r istrue-control-flow}
+condition <- NA
+
+if (isTRUE(condition)) {
+  status <- "Condition confirmed"
+} else {
+  status <- "Condition not confirmed"
+}
+
+status
+```
+
+`isTRUE()` returns `TRUE` only when the input is exactly a single true value.
+
+# 13. Vectorised `ifelse()`
+
+The general form is:
+
+```text
+ifelse(test, yes, no)
+```
+
+```{r ifelse-basic}
+scores <- c(
+  45,
+  58,
+  72,
+  84
+)
+
+pass_status <- ifelse(
+  scores >= 50,
+  "Pass",
+  "Fail"
+)
+
+pass_status
+```
+
+`ifelse()` makes one decision for each vector element.
+
+# 14. Nested `ifelse()`
+
+```{r nested-ifelse}
+grade <- ifelse(
+  scores >= 80,
+  "A",
+  ifelse(
+    scores >= 70,
+    "B",
+    ifelse(
+      scores >= 60,
+      "C",
+      ifelse(
+        scores >= 50,
+        "D",
+        "F"
+      )
+    )
+  )
+)
+
+grade
+```
+
+Nested `ifelse()` works, but deeply nested code becomes difficult to read.
+
+# 15. `if` versus `ifelse()`
+
+Use `if` when:
+
+- one decision is required;
+- a block of commands may run;
+- validation or control flow is involved.
+
+Use `ifelse()` when:
+
+- element-wise vector classification is required;
+- the output should have the same length as the test.
+
+Example:
+
+```{r compare-if-ifelse}
+single_score <- 72
+
+single_result <- if (
+  single_score >= 50
+) {
+  "Pass"
+} else {
+  "Fail"
+}
+
+vector_results <- ifelse(
+  scores >= 50,
+  "Pass",
+  "Fail"
+)
+
+single_result
+vector_results
+```
+
+# 16. Type coercion in `ifelse()`
+
+```{r ifelse-type-coercion}
+ifelse(
+  c(
+    TRUE,
+    FALSE
+  ),
+  1,
+  "No"
+)
+```
+
+The result becomes character because the `yes` and `no` values require a common
+type.
+
+# 17. Missing tests in `ifelse()`
+
+```{r ifelse-missing-test}
+test_values <- c(
+  TRUE,
+  FALSE,
+  NA
+)
+
+ifelse(
+  test_values,
+  "Yes",
+  "No"
+)
+```
+
+The result corresponding to a missing test is `NA`.
+
+Handle explicitly:
+
+```{r ifelse-handle-missing}
+ifelse(
+  is.na(test_values),
+  "Unknown",
+  ifelse(
+    test_values,
+    "Yes",
+    "No"
+  )
+)
+```
+
+# 18. Conditional replacement
+
+```{r conditional-replacement}
+scores <- c(
+  45,
+  58,
+  108,
+  84
+)
+
+corrected_scores <- ifelse(
+  scores > 100,
+  100,
+  scores
+)
+
+corrected_scores
+```
+
+A direct indexing replacement may be clearer:
+
+```{r direct-conditional-replacement}
+corrected_scores <- scores
+
+corrected_scores[
+  corrected_scores > 100
+] <- 100
+
+corrected_scores
+```
+
+# 19. `switch()`
+
+`switch()` is useful when selecting among named alternatives.
+
+```{r switch-example}
+output_format <- "html"
+
+selected_description <- switch(
+  output_format,
+  html = "Web document",
+  word = "Microsoft Word document",
+  pdf = "PDF document",
+  "Unknown format"
+)
+
+selected_description
+```
+
+# 20. Numeric `switch()`
+
+```{r numeric-switch}
+choice <- 2
+
+switch(
+  choice,
+  "First option",
+  "Second option",
+  "Third option"
+)
+```
+
+Named forms are generally clearer.
+
+# 21. Conditional messages
+
+```{r conditional-message}
+file_path <- "data/student_scores.csv"
+
+if (file.exists(file_path)) {
+  message(
+    "The student dataset is available."
+  )
+}
+```
+
+# 22. Conditional warnings
+
+```{r conditional-warning}
+scores <- c(
+  65,
+  72,
+  105
+)
+
+if (any(scores > 100)) {
+  warning(
+    "At least one score exceeds 100.",
+    call. = FALSE
+  )
+}
+```
+
+# 23. Stopping execution
+
+```{r stop-on-invalid-score, error=TRUE}
+invalid_scores <- c(
+  65,
+  72,
+  -5
+)
+
+if (any(
+  invalid_scores < 0 |
+    invalid_scores > 100
+)) {
+  stop(
+    "Scores must lie between 0 and 100.",
+    call. = FALSE
+  )
+}
+```
+
+`stop()` is appropriate when continuing would invalidate the analysis.
+
+# 24. Defensive file validation
+
+```{r defensive-file-validation}
+student_path <-
+  "data/student_scores.csv"
+
+if (!file.exists(student_path)) {
+  stop(
+    paste(
+      "Required file not found:",
+      student_path
+    ),
+    call. = FALSE
+  )
+}
+
+students <- read.csv(
+  student_path,
+  stringsAsFactors = FALSE
+)
+```
+
+# 25. Defensive variable validation
+
+```{r defensive-variable-validation}
+required_variables <- c(
+  "student_id",
+  "programme",
+  "final_score"
+)
+
+missing_variables <- setdiff(
+  required_variables,
+  names(students)
+)
+
+if (length(missing_variables) > 0L) {
+  stop(
+    paste(
+      "Missing variables:",
+      paste(
+        missing_variables,
+        collapse = ", "
+      )
+    ),
+    call. = FALSE
+  )
+}
+```
+
+# 26. Decision table thinking
+
+Before writing code, state the decision rules.
+
+| Condition | Result |
+|---|---|
+| score is missing | Missing |
+| score at least 80 | Distinction |
+| score at least 50 | Pass |
+| otherwise | Fail |
+
+Implementation:
+
+```{r decision-table-implementation}
+score <- 76
+
+if (is.na(score)) {
+  result <- "Missing"
+} else if (score >= 80) {
+  result <- "Distinction"
+} else if (score >= 50) {
+  result <- "Pass"
+} else {
+  result <- "Fail"
+}
+
+result
+```
+
+# 27. Applied example: procurement approval
+
+Rule:
+
+- value below GH₵10,000: departmental approval;
+- GH₵10,000 through GH₵49,999: director approval;
+- GH₵50,000 or more: tender committee review.
+
+```{r procurement-approval}
+procurement_value <- 42000
+
+if (procurement_value < 0) {
+  approval_level <- "Invalid value"
+} else if (procurement_value < 10000) {
+  approval_level <- "Departmental approval"
+} else if (procurement_value < 50000) {
+  approval_level <- "Director approval"
+} else {
+  approval_level <-
+    "Tender committee review"
+}
+
+approval_level
+```
+
+# 28. Applied example: clinic triage
+
+```{r clinic-triage}
+waiting_time <- 55
+severity <- "High"
+
+if (
+  severity == "High" ||
+  waiting_time > 60
+) {
+  triage_status <- "Immediate attention"
+} else if (waiting_time > 30) {
+  triage_status <- "Priority queue"
+} else {
+  triage_status <- "Standard queue"
+}
+
+triage_status
+```
+
+# 29. Applied example: agricultural advisory
+
+```{r agricultural-advisory}
+rainfall_mm <- 72
+soil_moisture <- "Low"
+
+if (
+  rainfall_mm < 50 &&
+  soil_moisture == "Low"
+) {
+  advice <- "Irrigation strongly recommended"
+} else if (
+  rainfall_mm < 80
+) {
+  advice <- "Monitor soil moisture"
+} else {
+  advice <- "Rainfall currently adequate"
+}
+
+advice
+```
+
+# 30. Vectorised classification of imported data
+
+```{r import-student-classification}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+student_data$result <- ifelse(
+  student_data$final_score >= 50,
+  "Pass",
+  "Fail"
+)
+
+student_data$distinction <- ifelse(
+  student_data$final_score >= 80,
+  "Yes",
+  "No"
+)
+
+head(student_data)
+```
+
+# 31. Safer multi-category vector classification
+
+Use `cut()` when categories are based on intervals:
+
+```{r cut-grade-classification}
+student_data$grade <- cut(
+  student_data$final_score,
+  breaks = c(
+    -Inf,
+    49,
+    59,
+    69,
+    79,
+    Inf
+  ),
+  labels = c(
+    "F",
+    "D",
+    "C",
+    "B",
+    "A"
+  ),
+  right = TRUE
+)
+
+head(
+  student_data[
+    c(
+      "final_score",
+      "grade"
+    )
+  ]
+)
+```
+
+This is often clearer than deeply nested `ifelse()`.
+
+# 32. Testing branches
+
+A conditional statement should be tested with values that exercise every
+branch.
+
+```{r branch-test-values}
+test_scores <- c(
+  NA,
+  45,
+  65,
+  85
+)
+
+classify_one_score <- function(score) {
+  if (is.na(score)) {
+    "Missing"
+  } else if (score >= 80) {
+    "Distinction"
+  } else if (score >= 50) {
+    "Pass"
+  } else {
+    "Fail"
+  }
+}
+
+vapply(
+  test_scores,
+  classify_one_score,
+  FUN.VALUE = character(1)
+)
+```
+
+The function syntax will be treated fully in a later lesson. It is used here
+only to demonstrate systematic branch testing.
+
+# 33. Common mistakes
+
+- supplying a vector condition to `if`;
+- confusing `if` and `ifelse()`;
+- placing broad conditions before specific conditions;
+- failing to handle `NA`;
+- using `&` instead of `&&` in scalar control flow;
+- creating deeply nested code;
+- continuing after invalid input;
+- using `ifelse()` where direct indexing is clearer;
+- allowing `ifelse()` to coerce output unexpectedly;
+- failing to test every branch.
+
+# 34. Independent exercises
+
+1. Write a basic `if` statement.
+2. Write an `if`-`else` pass rule.
+3. Create an `else if` grading system.
+4. demonstrate why branch order matters.
+5. combine two scalar conditions.
+6. handle a missing input.
+7. classify a vector using `ifelse()`.
+8. demonstrate type coercion in `ifelse()`.
+9. use `switch()` for three named choices.
+10. stop execution when a file is missing.
+11. issue a warning for invalid values.
+12. create decision rules for education, health or procurement.
+13. classify imported student data.
+14. test every branch of a rule.
+
+# 35. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. demonstrates `if`;
+2. demonstrates `if` with `else`;
+3. uses several `else if` branches;
+4. handles a missing condition;
+5. distinguishes `if` and `ifelse()`;
+6. performs vectorised classification;
+7. uses `switch()`;
+8. validates a file and required variables;
+9. issues a warning and an error condition appropriately;
+10. applies a contextual decision rule; and
+11. tests every possible branch.
+
+# 36. Completion checklist
+
+Confirm that you can:
+
+- write an `if` statement;
+- add an `else` branch;
+- use `else if`;
+- order conditions correctly;
+- combine scalar conditions;
+- handle missing conditions;
+- distinguish `if` and `ifelse()`;
+- classify vectors;
+- recognise `ifelse()` coercion;
+- use `switch()`;
+- issue messages and warnings;
+- stop invalid execution;
+- validate files and variables;
+- translate decision tables into code; and
+- test all branches.
+
+# Lesson conclusion
+
+Conditional execution converts rules into program behaviour. Reliable
+conditions require clear decision tables, correct branch ordering, explicit
+missing-value handling and systematic testing.
+
+\[
+\boxed{
+\text{state decision rule}
+\rightarrow
+\text{order branches}
+\rightarrow
+\text{handle missingness}
+\rightarrow
+\text{execute}
+\rightarrow
+\text{test every branch}
+}
+\]

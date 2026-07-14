@@ -1,0 +1,902 @@
+---
+title: "Lesson 19: Character Data, Text Cleaning and Regular Expressions"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Text data appear in names, addresses, categories, codes, responses, comments
+and identifiers. Even apparently simple categories may contain:
+
+- inconsistent capitalisation;
+- leading or trailing spaces;
+- punctuation differences;
+- spelling variants;
+- embedded numbers;
+- duplicated spaces;
+- missing-value codes;
+- or multiple pieces of information in one field.
+
+This lesson develops base R tools for character inspection, cleaning,
+searching, extraction and replacement. It introduces regular expressions as a
+formal language for describing text patterns.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. create and inspect character vectors;
+2. measure string length;
+3. change case;
+4. trim and normalise whitespace;
+5. combine and split text;
+6. search text with literal and regular-expression patterns;
+7. extract and replace matched content;
+8. use anchors, character classes and quantifiers;
+9. handle punctuation and special characters;
+10. standardise categories;
+11. validate identifiers;
+12. extract numbers from text;
+13. work with missing text values;
+14. use `stringr` when available; and
+15. create reproducible text-cleaning functions.
+
+# 1. Character vectors
+
+```{r create-character-vector}
+programmes <- c(
+  "Statistics",
+  "Procurement",
+  "Hospitality",
+  "Agriculture"
+)
+
+programmes
+typeof(programmes)
+class(programmes)
+```
+
+# 2. String length
+
+```{r string-length}
+nchar(
+  programmes
+)
+```
+
+Missing values remain missing:
+
+```{r string-length-missing}
+nchar(
+  c(
+    "R",
+    NA,
+    ""
+  )
+)
+```
+
+# 3. Changing case
+
+```{r change-case}
+tolower(
+  programmes
+)
+
+toupper(
+  programmes
+)
+```
+
+Title case:
+
+```{r title-case}
+tools::toTitleCase(
+  tolower(
+    c(
+      "applied statistics",
+      "PROCUREMENT MANAGEMENT"
+    )
+  )
+)
+```
+
+# 4. Trimming whitespace
+
+```{r trim-whitespace}
+messy_text <- c(
+  " Statistics",
+  "Procurement ",
+  "  Hospitality  "
+)
+
+trimws(
+  messy_text
+)
+```
+
+# 5. Repeated internal spaces
+
+```{r collapse-repeated-spaces}
+text_with_spaces <- c(
+  "Bolgatanga   Technical University",
+  "Applied  Statistics"
+)
+
+gsub(
+  "[[:space:]]+",
+  " ",
+  text_with_spaces
+)
+```
+
+# 6. Combining text
+
+```{r paste-example}
+paste(
+  "Student",
+  1:5
+)
+```
+
+Specify separator:
+
+```{r paste-separator}
+paste(
+  "Student",
+  1:5,
+  sep = "_"
+)
+```
+
+Collapse a vector:
+
+```{r paste-collapse}
+paste(
+  programmes,
+  collapse = ", "
+)
+```
+
+`paste0()` uses no separator:
+
+```{r paste-zero}
+paste0(
+  "S",
+  sprintf(
+    "%03d",
+    1:5
+  )
+)
+```
+
+# 7. Formatted identifiers
+
+```{r formatted-identifiers}
+student_ids <- sprintf(
+  "S%04d",
+  1:10
+)
+
+student_ids
+```
+
+# 8. Splitting text
+
+```{r split-text}
+full_names <- c(
+  "Ama Mensah",
+  "Kojo Asante",
+  "Esi Ayisi"
+)
+
+strsplit(
+  full_names,
+  split = " "
+)
+```
+
+Extract first names:
+
+```{r extract-first-name}
+name_parts <- strsplit(
+  full_names,
+  split = " "
+)
+
+first_names <- vapply(
+  name_parts,
+  `[`,
+  FUN.VALUE = character(1),
+  1
+)
+
+first_names
+```
+
+# 9. Substrings
+
+```{r substring-extraction}
+substr(
+  student_ids,
+  start = 1,
+  stop = 1
+)
+```
+
+Extract numeric part:
+
+```{r identifier-number-part}
+substr(
+  student_ids,
+  start = 2,
+  stop = 5
+)
+```
+
+# 10. Literal search with `grepl()`
+
+```{r literal-search}
+grepl(
+  "Statistics",
+  programmes,
+  fixed = TRUE
+)
+```
+
+`grepl()` returns logical values.
+
+# 11. Locate matches with `grep()`
+
+```{r locate-text-matches}
+grep(
+  "Statistics",
+  programmes,
+  fixed = TRUE
+)
+```
+
+Return matched values:
+
+```{r return-matched-values}
+grep(
+  "Statistics",
+  programmes,
+  fixed = TRUE,
+  value = TRUE
+)
+```
+
+# 12. Regular expressions
+
+A regular expression describes a text pattern.
+
+```{r basic-regex-search}
+codes <- c(
+  "S001",
+  "S002",
+  "P010",
+  "X999"
+)
+
+grepl(
+  "^S",
+  codes
+)
+```
+
+`^` means start of string.
+
+# 13. Anchors
+
+Start anchor:
+
+```{r start-anchor}
+grepl(
+  "^S",
+  codes
+)
+```
+
+End anchor:
+
+```{r end-anchor}
+grepl(
+  "9$",
+  codes
+)
+```
+
+Complete pattern:
+
+```{r complete-anchor-pattern}
+grepl(
+  "^S[0-9]{3}$",
+  codes
+)
+```
+
+# 14. Character classes
+
+Digits:
+
+```{r digit-character-class}
+grepl(
+  "[0-9]",
+  codes
+)
+```
+
+Letters:
+
+```{r letter-character-class}
+grepl(
+  "[A-Za-z]",
+  codes
+)
+```
+
+Predefined digit class:
+
+```{r predefined-digit-class}
+grepl(
+  "\\d",
+  codes,
+  perl = TRUE
+)
+```
+
+# 15. Quantifiers
+
+| Quantifier | Meaning |
+|---|---|
+| `*` | zero or more |
+| `+` | one or more |
+| `?` | zero or one |
+| `{n}` | exactly n |
+| `{n,}` | at least n |
+| `{n,m}` | between n and m |
+
+Example:
+
+```{r regex-quantifier}
+grepl(
+  "^[A-Z][0-9]{3}$",
+  codes
+)
+```
+
+# 16. Alternatives
+
+```{r regex-alternatives}
+grepl(
+  "Statistics|Procurement",
+  programmes
+)
+```
+
+# 17. Dot wildcard
+
+```{r dot-wildcard}
+sample_codes <- c(
+  "A1",
+  "AB",
+  "A-"
+)
+
+grepl(
+  "^A.$",
+  sample_codes
+)
+```
+
+The dot matches any one character.
+
+# 18. Escaping special characters
+
+```{r escape-special-character}
+amounts <- c(
+  "GH₵100",
+  "GH₵250",
+  "USD50"
+)
+
+grepl(
+  "GH₵",
+  amounts,
+  fixed = TRUE
+)
+```
+
+Using `fixed = TRUE` is safest when searching literal punctuation.
+
+# 19. Replacement with `sub()`
+
+`sub()` replaces the first match.
+
+```{r sub-replacement}
+sub(
+  "Statistics",
+  "Applied Statistics",
+  c(
+    "Statistics",
+    "Statistics Department"
+  )
+)
+```
+
+# 20. Replacement with `gsub()`
+
+`gsub()` replaces all matches.
+
+```{r gsub-replacement}
+gsub(
+  "[[:space:]]+",
+  " ",
+  "Bolgatanga   Technical   University"
+)
+```
+
+# 21. Removing punctuation
+
+```{r remove-punctuation}
+raw_categories <- c(
+  "Statistics.",
+  "Procurement!",
+  "Hospitality,"
+)
+
+gsub(
+  "[[:punct:]]",
+  "",
+  raw_categories
+)
+```
+
+# 22. Extracting numbers from text
+
+```{r extract-numbers}
+text_values <- c(
+  "Age 25",
+  "Score 78",
+  "Room 104"
+)
+
+numeric_text <- gsub(
+  "[^0-9.-]",
+  "",
+  text_values
+)
+
+numeric_values <- as.numeric(
+  numeric_text
+)
+
+data.frame(
+  original = text_values,
+  extracted = numeric_text,
+  numeric = numeric_values,
+  stringsAsFactors = FALSE
+)
+```
+
+# 23. Standardising categories
+
+```{r standardise-categories}
+messy_programmes <- c(
+  "statistics",
+  " Statistics ",
+  "STATISTICS",
+  "Procurement",
+  "procurement management"
+)
+
+standardise_programme <- function(
+  x
+) {
+  cleaned <- trimws(
+    tolower(x)
+  )
+
+  cleaned <- gsub(
+    "[[:space:]]+",
+    " ",
+    cleaned
+  )
+
+  cleaned[
+    cleaned %in%
+      c(
+        "statistics",
+        "applied statistics"
+      )
+  ] <- "Statistics"
+
+  cleaned[
+    cleaned %in%
+      c(
+        "procurement",
+        "procurement management"
+      )
+  ] <- "Procurement"
+
+  cleaned
+}
+
+standardise_programme(
+  messy_programmes
+)
+```
+
+# 24. Case-insensitive search
+
+```{r case-insensitive-search}
+grepl(
+  "statistics",
+  messy_programmes,
+  ignore.case = TRUE
+)
+```
+
+# 25. Missing text values
+
+```{r clean-missing-text}
+responses <- c(
+  "Yes",
+  "",
+  " ",
+  "N/A",
+  "No",
+  NA
+)
+
+clean_responses <- trimws(
+  responses
+)
+
+clean_responses[
+  clean_responses %in%
+    c(
+      "",
+      "N/A"
+    )
+] <- NA
+
+clean_responses
+```
+
+# 26. Identifier validation
+
+Valid form:
+
+```text
+S followed by exactly four digits
+```
+
+```{r validate-identifiers}
+student_ids <- c(
+  "S0001",
+  "S0012",
+  "0013",
+  "S14",
+  "S12345"
+)
+
+valid_identifier <- grepl(
+  "^S[0-9]{4}$",
+  student_ids
+)
+
+data.frame(
+  student_id = student_ids,
+  valid = valid_identifier,
+  stringsAsFactors = FALSE
+)
+```
+
+# 27. Email validation pattern
+
+```{r simple-email-validation}
+emails <- c(
+  "ama@example.com",
+  "invalid-email",
+  "kojo@university.edu.gh"
+)
+
+email_pattern <-
+  "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$"
+
+grepl(
+  email_pattern,
+  emails
+)
+```
+
+This is a practical pattern, not a complete implementation of every valid
+email form.
+
+# 28. Telephone-number cleaning
+
+```{r telephone-cleaning}
+telephone_numbers <- c(
+  "+233 24 123 4567",
+  "024-123-4567",
+  "(024) 123 4567"
+)
+
+digits_only <- gsub(
+  "[^0-9]",
+  "",
+  telephone_numbers
+)
+
+digits_only
+```
+
+# 29. Splitting composite variables
+
+```{r composite-variable}
+location_values <- c(
+  "Bolgatanga|Upper East",
+  "Tamale|Northern",
+  "Wa|Upper West"
+)
+
+location_parts <- strsplit(
+  location_values,
+  split = "|",
+  fixed = TRUE
+)
+
+town <- vapply(
+  location_parts,
+  `[`,
+  FUN.VALUE = character(1),
+  1
+)
+
+region <- vapply(
+  location_parts,
+  `[`,
+  FUN.VALUE = character(1),
+  2
+)
+
+data.frame(
+  original = location_values,
+  town = town,
+  region = region,
+  stringsAsFactors = FALSE
+)
+```
+
+# 30. Optional `stringr`
+
+Check availability:
+
+```{r check-stringr}
+requireNamespace(
+  "stringr",
+  quietly = TRUE
+)
+```
+
+Examples:
+
+```{r stringr-examples, eval=FALSE}
+stringr::str_trim(
+  messy_text
+)
+
+stringr::str_to_lower(
+  programmes
+)
+
+stringr::str_detect(
+  codes,
+  "^S"
+)
+
+stringr::str_replace_all(
+  text_with_spaces,
+  "\\s+",
+  " "
+)
+```
+
+# 31. Text-cleaning pipeline function
+
+```{r text-cleaning-function}
+clean_character_vector <- function(
+  x,
+  missing_codes = c(
+    "",
+    "NA",
+    "N/A",
+    "."
+  )
+) {
+  if (!is.character(x)) {
+    stop(
+      "`x` must be character.",
+      call. = FALSE
+    )
+  }
+
+  cleaned <- trimws(x)
+
+  cleaned <- gsub(
+    "[[:space:]]+",
+    " ",
+    cleaned
+  )
+
+  cleaned[
+    cleaned %in%
+      missing_codes
+  ] <- NA
+
+  cleaned
+}
+
+clean_character_vector(
+  c(
+    " Statistics ",
+    "N/A",
+    "Procurement   Management"
+  )
+)
+```
+
+# 32. Integrated example: clean programme values
+
+```{r integrated-programme-cleaning}
+student_data <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+raw_programme <- student_data$programme
+
+clean_programme <-
+  clean_character_vector(
+    raw_programme
+  )
+
+sort(
+  unique(
+    clean_programme
+  )
+)
+```
+
+# 33. Common mistakes
+
+- using regular expressions when literal matching is sufficient;
+- forgetting to escape backslashes;
+- overlooking leading or trailing spaces;
+- changing case without preserving the original value;
+- converting identifiers to numeric;
+- using an overly broad replacement pattern;
+- treating empty strings and `NA` as identical without cleaning;
+- validating emails or telephone numbers with unrealistic certainty;
+- overwriting raw text before auditing changes;
+- failing to review unmatched categories.
+
+# 34. Independent exercises
+
+1. inspect character vectors and string lengths.
+2. convert text to lower, upper and title case.
+3. trim and normalise whitespace.
+4. combine text with `paste()` and `paste0()`.
+5. split full names.
+6. search with `grep()` and `grepl()`.
+7. use anchors and character classes.
+8. use quantifiers.
+9. replace and remove text.
+10. extract numbers from character values.
+11. standardise categories.
+12. validate student identifiers.
+13. clean telephone numbers.
+14. split a composite field.
+15. write a reusable text-cleaning function.
+
+# 35. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+1. demonstrates character-vector creation;
+2. measures and transforms text;
+3. trims and normalises whitespace;
+4. combines and splits strings;
+5. demonstrates literal and regular-expression matching;
+6. uses anchors, classes and quantifiers;
+7. extracts and replaces text;
+8. standardises categories;
+9. validates identifiers;
+10. handles missing text codes; and
+11. creates a reusable cleaning function.
+
+# 36. Completion checklist
+
+Confirm that you can:
+
+- inspect character vectors;
+- measure string length;
+- change case;
+- trim whitespace;
+- combine text;
+- split text;
+- search literally;
+- use regular expressions;
+- use anchors and quantifiers;
+- replace matched text;
+- remove punctuation;
+- extract numbers;
+- standardise categories;
+- validate identifiers;
+- clean missing text; and
+- build reusable text-cleaning functions.
+
+# Lesson conclusion
+
+Text cleaning converts inconsistent human-entered values into analysable and
+traceable categories. Reliable cleaning preserves raw values, uses explicit
+patterns and documents every transformation.
+
+\[
+\boxed{
+\text{inspect}
+\rightarrow
+\text{normalise}
+\rightarrow
+\text{match}
+\rightarrow
+\text{replace}
+\rightarrow
+\text{validate}
+}
+\]

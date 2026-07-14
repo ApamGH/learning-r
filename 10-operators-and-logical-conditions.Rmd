@@ -1,0 +1,822 @@
+---
+title: "Lesson 10: Operators, Comparisons and Logical Conditions"
+author: "Dr. Apam"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    code_folding: show
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  word_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    latex_engine: xelatex
+lang: en-GB
+---
+
+```{r setup, include=FALSE}
+options(
+  digits = 4,
+  scipen = 999,
+  width = 90
+)
+
+set.seed(20260714)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = TRUE,
+  error = FALSE,
+  comment = "#>",
+  collapse = TRUE,
+  fig.align = "centre",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+
+# Lesson overview
+
+Operators allow R to combine values, compare observations, test membership and
+construct logical conditions. These operations form the foundation of data
+validation, recoding, filtering and decision-making.
+
+This lesson develops arithmetic, relational, logical, membership and special
+operators. It also explains precedence, vectorised versus short-circuit logic,
+floating-point comparison and missing-value behaviour.
+
+## Learning outcomes
+
+After completing this lesson, the learner should be able to:
+
+1. use arithmetic operators correctly;
+2. distinguish assignment and comparison;
+3. apply relational operators;
+4. combine conditions using logical operators;
+5. distinguish `&` from `&&` and `|` from `||`;
+6. use membership and sequence operators;
+7. understand operator precedence;
+8. test approximate numerical equality;
+9. handle missing logical values;
+10. create validation conditions;
+11. translate verbal criteria into code; and
+12. inspect complex logical expressions systematically.
+
+# 1. Arithmetic operators
+
+| Operator | Meaning |
+|---|---|
+| `+` | addition |
+| `-` | subtraction |
+| `*` | multiplication |
+| `/` | division |
+| `^` | exponentiation |
+| `%/%` | integer division |
+| `%%` | remainder |
+
+```{r arithmetic-operators}
+10 + 3
+10 - 3
+10 * 3
+10 / 3
+10 ^ 3
+10 %/% 3
+10 %% 3
+```
+
+# 2. Unary operators
+
+```{r unary-operators}
++5
+-5
+```
+
+The minus sign can negate a value.
+
+```{r negate-vector}
+values <- c(
+  5,
+  -3,
+  8
+)
+
+-values
+```
+
+# 3. Relational operators
+
+| Operator | Meaning |
+|---|---|
+| `>` | greater than |
+| `<` | less than |
+| `>=` | greater than or equal to |
+| `<=` | less than or equal to |
+| `==` | equal to |
+| `!=` | not equal to |
+
+```{r relational-operators}
+75 > 50
+75 < 50
+75 >= 75
+75 <= 74
+75 == 75
+75 != 70
+```
+
+# 4. Assignment is not comparison
+
+```{r assignment-comparison}
+score <- 75
+
+score == 75
+```
+
+`<-` stores a value. `==` tests equality.
+
+# 5. Vectorised comparisons
+
+```{r vectorised-comparisons}
+scores <- c(
+  45,
+  58,
+  72,
+  84,
+  91
+)
+
+scores >= 50
+scores < 70
+scores == 72
+scores != 72
+```
+
+# 6. Logical AND
+
+Use `&` when both conditions must be true.
+
+```{r logical-and}
+attendance <- c(
+  0.80,
+  0.92,
+  0.88,
+  0.95,
+  0.70
+)
+
+eligible <-
+  (scores >= 70) &
+  (attendance >= 0.85)
+
+eligible
+```
+
+# 7. Logical OR
+
+Use `|` when at least one condition must be true.
+
+```{r logical-or}
+requires_support <-
+  (scores < 50) |
+  (attendance < 0.75)
+
+requires_support
+```
+
+# 8. Logical NOT
+
+```{r logical-not}
+!eligible
+```
+
+Negation reverses `TRUE` and `FALSE`.
+
+# 9. Exclusive OR
+
+```{r exclusive-or}
+xor(
+  TRUE,
+  FALSE
+)
+
+xor(
+  TRUE,
+  TRUE
+)
+```
+
+`xor()` is true when exactly one condition is true.
+
+# 10. Vectorised and short-circuit operators
+
+`&` and `|` operate element by element.
+
+```{r vectorised-logical-operators}
+c(
+  TRUE,
+  FALSE,
+  TRUE
+) & c(
+  TRUE,
+  TRUE,
+  FALSE
+)
+```
+
+`&&` and `||` examine only the first element and are mainly used in control
+flow.
+
+```{r short-circuit-operators}
+first_condition <- TRUE
+second_condition <- FALSE
+
+first_condition &&
+  second_condition
+
+first_condition ||
+  second_condition
+```
+
+The operands supplied to `&&` and `||` must each be a single logical value.
+
+To show the contrast with vectorised operators:
+
+```{r vectorised-versus-short-circuit}
+left_vector <- c(
+  TRUE,
+  FALSE
+)
+
+right_vector <- c(
+  TRUE,
+  TRUE
+)
+
+left_vector &
+  right_vector
+
+left_vector |
+  right_vector
+
+left_vector[1] &&
+  right_vector[1]
+```
+
+Use:
+
+- `&` and `|` for vectors;
+- `&&` and `||` for single decision conditions.
+
+# 11. Membership operator
+
+```{r membership-operator}
+programme <- c(
+  "Statistics",
+  "Hospitality",
+  "Agriculture",
+  "Procurement"
+)
+
+programme %in% c(
+  "Statistics",
+  "Procurement"
+)
+```
+
+Negated membership:
+
+```{r negated-membership}
+!programme %in% c(
+  "Statistics",
+  "Procurement"
+)
+```
+
+For readability, parentheses are often helpful:
+
+```{r parenthesised-negated-membership}
+!(
+  programme %in% c(
+    "Statistics",
+    "Procurement"
+  )
+)
+```
+
+# 12. Sequence operator
+
+```{r sequence-operator}
+1:10
+```
+
+The colon operator has relatively high precedence.
+
+```{r sequence-precedence}
+1:3 + 1
+```
+
+This is interpreted as:
+
+```r
+(1:3) + 1
+```
+
+# 13. Matrix multiplication and outer product
+
+Matrix multiplication:
+
+```{r matrix-multiplication-operator}
+a <- matrix(
+  1:4,
+  nrow = 2
+)
+
+b <- matrix(
+  5:8,
+  nrow = 2
+)
+
+a %*% b
+```
+
+Outer product:
+
+```{r outer-product-operator}
+1:3 %o% 1:4
+```
+
+# 14. Set and model-related operators
+
+The formula operator `~` is used later in statistical models.
+
+```{r formula-operator}
+model_formula <-
+  final_score ~
+  coursework_score +
+  examination_score
+
+model_formula
+```
+
+The namespace operator identifies a package function:
+
+```{r namespace-operator}
+rmarkdown::pandoc_available()
+```
+
+# 15. Operator precedence
+
+Consider:
+
+```{r precedence-example-one}
+10 + 2 * 5
+```
+
+Multiplication occurs before addition.
+
+```{r precedence-example-two}
+(10 + 2) * 5
+```
+
+Parentheses change the order.
+
+Logical example:
+
+```{r logical-precedence}
+TRUE | FALSE & FALSE
+```
+
+`&` is evaluated before `|`.
+
+Prefer explicit parentheses:
+
+```{r explicit-logical-precedence}
+TRUE | (
+  FALSE & FALSE
+)
+```
+
+# 16. Chained comparisons are invalid logic
+
+In mathematics one may write:
+
+\[
+50 \leq x \leq 100.
+\]
+
+Do not translate this as:
+
+```r
+50 <= x <= 100
+```
+
+Correct:
+
+```{r correct-range-comparison}
+x <- 75
+
+x >= 50 &
+  x <= 100
+```
+
+# 17. Floating-point comparison
+
+Some decimal calculations cannot be represented exactly in binary floating
+point.
+
+```{r floating-point-example}
+0.1 + 0.2
+```
+
+Direct comparison:
+
+```{r floating-point-direct-comparison}
+0.1 + 0.2 == 0.3
+```
+
+Use `all.equal()`:
+
+```{r floating-point-all-equal}
+all.equal(
+  0.1 + 0.2,
+  0.3
+)
+```
+
+Or use a tolerance:
+
+```{r floating-point-tolerance}
+abs(
+  (0.1 + 0.2) - 0.3
+) < 1e-8
+```
+
+# 18. Missing values in comparisons
+
+```{r missing-comparison}
+x <- c(
+  10,
+  NA,
+  20
+)
+
+x > 15
+```
+
+The result for the missing value is `NA`.
+
+```{r missing-logical-summary}
+sum(
+  x > 15
+)
+```
+
+This returns `NA`.
+
+Use:
+
+```{r missing-logical-summary-remove}
+sum(
+  x > 15,
+  na.rm = TRUE
+)
+```
+
+# 19. Three-valued logic
+
+R logical expressions may produce:
+
+- `TRUE`;
+- `FALSE`;
+- `NA`.
+
+```{r three-valued-logic}
+TRUE & NA
+FALSE & NA
+TRUE | NA
+FALSE | NA
+```
+
+Interpretation:
+
+- `FALSE & NA` is definitely false;
+- `TRUE | NA` is definitely true;
+- other results remain unknown.
+
+# 20. `isTRUE()` and `isFALSE()`
+
+```{r istrue-isfalse}
+isTRUE(TRUE)
+isTRUE(NA)
+isFALSE(FALSE)
+isFALSE(NA)
+```
+
+These functions are useful when a control-flow condition must be exactly true
+or false.
+
+# 21. `identical()`
+
+```{r identical-examples}
+identical(
+  1,
+  1
+)
+
+identical(
+  1,
+  1L
+)
+```
+
+The second result is false because type is considered.
+
+```{r equality-versus-identical}
+1 == 1L
+```
+
+Numerical equality and complete identity are different concepts.
+
+# 22. Validation conditions
+
+```{r validation-condition}
+scores <- c(
+  65,
+  72,
+  81,
+  59
+)
+
+scores_are_numeric <-
+  is.numeric(scores)
+
+scores_have_no_missing_values <-
+  !anyNA(scores)
+
+scores_are_in_range <-
+  all(
+    scores >= 0 &
+      scores <= 100
+  )
+
+scores_are_numeric
+scores_have_no_missing_values
+scores_are_in_range
+```
+
+Combine:
+
+```{r combined-validation-condition}
+scores_are_valid <-
+  scores_are_numeric &&
+  scores_have_no_missing_values &&
+  scores_are_in_range
+
+scores_are_valid
+```
+
+The component conditions are single logical values, so `&&` is appropriate.
+
+# 23. Translating verbal rules
+
+Rule:
+
+> A student progresses when the final score is at least 50 and attendance is at
+> least 75 per cent.
+
+```{r translate-progression-rule}
+final_score <- 64
+attendance_rate <- 0.82
+
+progresses <-
+  final_score >= 50 &&
+  attendance_rate >= 0.75
+
+progresses
+```
+
+Rule:
+
+> A procurement record requires review when the value exceeds GH₵50,000 or
+> delivery is more than seven days late.
+
+```{r translate-procurement-rule}
+contract_value <- 62000
+delay_days <- 4
+
+requires_review <-
+  contract_value > 50000 ||
+  delay_days > 7
+
+requires_review
+```
+
+# 24. Vectorised rule application
+
+```{r vectorised-rule-data}
+final_scores <- c(
+  45,
+  58,
+  72,
+  84
+)
+
+attendance_rates <- c(
+  0.90,
+  0.72,
+  0.80,
+  0.95
+)
+
+progress_status <-
+  (final_scores >= 50) &
+  (attendance_rates >= 0.75)
+
+progress_status
+```
+
+# 25. Logical counts and proportions
+
+```{r logical-counts-proportions}
+sum(progress_status)
+mean(progress_status)
+mean(progress_status) * 100
+```
+
+# 26. De Morgan's laws
+
+Negation of “A and B”:
+
+\[
+\neg(A\land B)
+=
+(\neg A)\lor(\neg B).
+\]
+
+```{r de-morgan-and}
+a <- c(
+  TRUE,
+  TRUE,
+  FALSE,
+  FALSE
+)
+
+b <- c(
+  TRUE,
+  FALSE,
+  TRUE,
+  FALSE
+)
+
+!(a & b)
+
+(!a) | (!b)
+```
+
+Negation of “A or B”:
+
+\[
+\neg(A\lor B)
+=
+(\neg A)\land(\neg B).
+\]
+
+```{r de-morgan-or}
+!(a | b)
+
+(!a) & (!b)
+```
+
+# 27. Integrated example: student eligibility
+
+```{r import-student-eligibility}
+students <- read.csv(
+  "data/student_scores.csv",
+  stringsAsFactors = FALSE
+)
+
+head(students)
+```
+
+Create conditions:
+
+```{r eligibility-conditions}
+pass_condition <-
+  students$final_score >= 50
+
+distinction_condition <-
+  students$final_score >= 80
+
+programme_condition <-
+  students$programme %in%
+  c(
+    "Statistics",
+    "Procurement"
+  )
+```
+
+Select distinction students in selected programmes:
+
+```{r combined-eligibility-subset}
+selected_students <- students[
+  distinction_condition &
+    programme_condition,
+  c(
+    "student_id",
+    "programme",
+    "final_score"
+  )
+]
+
+selected_students
+```
+
+# 28. Common mistakes
+
+- confusing `<-` and `==`;
+- using `=` when comparison is intended;
+- using `&&` on vectors;
+- writing chained comparisons;
+- ignoring missing logical values;
+- comparing floating-point values with exact equality;
+- omitting parentheses in complex expressions;
+- using `&` when the rule requires `|`;
+- failing to test each component condition separately.
+
+# 29. Independent exercises
+
+1. Demonstrate all arithmetic operators.
+2. Create relational comparisons on a vector.
+3. Combine two logical conditions with `&`.
+4. Combine two conditions with `|`.
+5. Demonstrate negation.
+6. Compare vectorised and short-circuit operators.
+7. Use `%in%` and negated membership.
+8. demonstrate precedence with and without parentheses.
+9. test approximate numerical equality.
+10. demonstrate three-valued logic.
+11. create a multi-part validation condition.
+12. translate three verbal decision rules into R.
+13. apply a rule vector-wise to imported data.
+14. verify De Morgan's laws.
+
+# 30. Lesson assessment
+
+Create a standalone R Markdown report that:
+
+- demonstrates arithmetic and relational operators;
+- distinguishes assignment from comparison;
+- uses `&`, `|`, `!`, `&&` and `||`;
+- uses `%in%`;
+- demonstrates precedence;
+- explains floating-point comparison;
+- handles missing logical results;
+- creates and combines validation conditions; and
+- applies a multi-condition rule to a supplied dataset.
+
+# 31. Completion checklist
+
+Confirm that you can:
+
+- use arithmetic operators;
+- use relational operators;
+- distinguish assignment and comparison;
+- combine logical conditions;
+- choose vectorised or short-circuit operators;
+- test membership;
+- apply precedence correctly;
+- avoid chained comparisons;
+- compare decimals approximately;
+- interpret three-valued logic;
+- create validation conditions; and
+- translate verbal rules into code.
+
+# Lesson conclusion
+
+Operators are the grammar of computational decisions. Reliable analytical
+conditions require correct operators, explicit parentheses, appropriate
+missing-value handling and careful translation of verbal rules.
+
+\[
+\boxed{
+\text{state rule}
+\rightarrow
+\text{build component conditions}
+\rightarrow
+\text{combine}
+\rightarrow
+\text{inspect}
+\rightarrow
+\text{apply}
+}
+\]
