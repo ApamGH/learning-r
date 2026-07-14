@@ -384,9 +384,6 @@ in areas such as:
 - package development;
 - and production analytical workflows.
 
-## Licence and attribution
+## Licence
 
-The course materials should be used, adapted and distributed in accordance with
-the licence selected for the repository. Any institutional branding, authorship
-and attribution requirements should be preserved in derivative teaching
-materials.
+This repository is licensed under the MIT License.
