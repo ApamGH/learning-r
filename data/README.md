@@ -13,7 +13,7 @@ They are provided solely for:
 - and reproducible analytical workflows.
 
 The datasets do not contain official student, patient, institutional, business
-or meteorological records.
+or meteorological records. They are generated for the purpose of illustration but do not reflect the actual case of any company/institution or individual.
 
 ## General rules
 
@@ -377,11 +377,14 @@ The data directory is part of the reproducible course environment.
 \[
 oxed{
 	ext{preserve raw data}
-ightarrow
+
+ightarrow
 	ext{transform in code}
-ightarrow
+
+ightarrow
 	ext{document decisions}
-ightarrow
+
+ightarrow
 	ext{save derived data separately}
 }
 \]
